@@ -4,78 +4,75 @@ description: "Use when: running economy projections, simulating upgrade cost pay
 type: skill
 ---
 
-# Balance Sim Skill — Hexar Numeric Validation
+# Balance Sim Skill — Hexar Quantitative Validation
 
-Runs traced simulations of Hexar economy, combat, and tech timelines using exact CLAUDE.md numbers. Finds numeric imbalances before they become bugs in running code.
+Runs traced, step-by-step numeric simulations using **exact current CLAUDE.md values**. Proves or disproves claims about game balance with math.
+
+**Not for:** suggesting mechanic redesigns or evaluating design health — use `/game-designer` for that.
+
+**Prerequisites:** None. Can be invoked anytime.
 
 ## Workflow
 
-### 1. Load Current Numbers
-- Read CLAUDE.md for all constants: base income, maintenance tiers, building costs, upgrade curves, TP rates, tech costs
-- Note any numbers marked as estimates or unverified
+### 1. Load Constants from CLAUDE.md (MANDATORY)
+- **Read CLAUDE.md at the start of every simulation.** Extract all relevant values fresh.
+- Never use numbers remembered from a previous conversation or cached in this file.
+- List the constants used at the top of your output so the user can verify.
 
-### 2. Run Requested Simulation
-- Trace step-by-step with explicit math at each step
-- Show intermediate values (not just final result)
-- Flag where assumptions were made
+### 2. Define Simulation Parameters
+- What scenario is being tested? (e.g., "time to reach Tech Level 4 with 3 Research buildings")
+- What are the initial conditions? (starting hexes, gold, time)
+- What assumptions are made? (player behavior, expansion rate, opponent interference)
 
-### 3. Compare Against Design Intent
-- Does the result match the CLAUDE.md design goal?
-- Is a victory condition reachable in the intended time window?
-- Does a strategy feel rewarding or punishing in the right ways?
+### 3. Run Step-by-Step Trace
+- Show every intermediate value — not just final results.
+- Use exact arithmetic, no rounding unless stated.
+- Mark each time step clearly (T=Xs: state → calculation → new state).
+- If the trace branches (player makes a choice), show both paths.
 
-### 4. Identify Numeric Issues
-- Values that make a strategy dominant or useless
-- Thresholds that are never reached in practice
-- Costs that pay off too fast or too slowly
+### 4. Compare Against Design Target
+- What does CLAUDE.md say the result SHOULD be?
+- Does the simulation match? If not, by how much?
+- Is the discrepancy a problem or within acceptable range?
 
-### 5. Propose Adjustments
-- Suggest specific number changes (not mechanic redesigns)
-- Show the simulation result after the proposed change
-- Let game-designer skill handle mechanic-level redesigns
+### 5. Report Finding
+- If numbers match design intent: confirm with proof.
+- If numbers diverge: quantify the gap and suggest a specific constant adjustment.
+- Hand off to `/game-designer` if the problem requires a mechanic redesign rather than a number tweak.
 
 ---
 
-## Common Simulations
+## Common Simulation Types
 
 ### Economy Projection
-Trace gold over time for a given strategy:
-```
-Input: hex expansion rate, building timing, tech unlocks
-Output: gold/sec at T=2min, T=5min, T=10min, T=20min
-Validate: can player save 100g for first enemy attack at the right time?
-```
+Trace gold accumulation over time for a given expansion/building strategy.
+- Input: expansion rate, building placement timing, tech unlocks
+- Output: gold/sec and total gold at key time points
+- Validate: can player afford key actions at intended time?
 
 ### Upgrade Payoff (Break-Even)
-How many seconds until an upgrade pays for itself:
-```
-Economy L1: costs 40g, gains +0.75/sec (at base ×1.5 multiplier)
-Break-even: 40 / 0.75 = 53 seconds
-Question: is 53 seconds a good investment in a 30-min game? (Yes — pays off 27x)
-```
+Calculate how long until an upgrade pays for itself.
+- Input: upgrade cost, income delta from upgrade
+- Output: break-even time in seconds
+- Validate: is break-even fast enough to matter in a 30-min game?
 
-### Maintenance Cap Trace
-At what hex count does income go negative without Economy buildings:
-```
-Trace: 1 hex → 2 hex → ... → 31 hex
-Show net income at each step using stepped maintenance tiers
-Validate: CLAUDE.md claims auto-drop triggers at 31 hexes — confirm
-```
+### Maintenance Threshold
+Trace at what hex count income goes negative (auto-drop trigger).
+- Input: number of hexes, number/level of Economy buildings
+- Output: exact hex count where net income ≤ 0
+- Validate: does it match CLAUDE.md's claimed threshold?
 
 ### TP Timeline
-How long to reach Tech Level 4 with different Research investment:
-```
-Input: number of Research buildings, upgrade levels, start time
-Output: time to unlock each tech, time to Tech Level 4
-Validate: Tech Level 4 + 35% map reachable in 15-18 min (CLAUDE.md claim)
-```
+Calculate time to reach specific Tech Levels.
+- Input: number of Research buildings, their levels, start time
+- Output: time to unlock each tech tier
+- Validate: is Tech Dominance achievable in the intended time window?
 
-### Battle Outcome Table
-Given two Power values, show all outcomes:
-```
-Input: attacker Power, defender Power
-Output: result (fail / standard battle duration / instant), counter-spend options remaining
-```
+### Battle Outcome Matrix
+Given Power values, enumerate all possible outcomes including counter-spend.
+- Input: attacker Power, defender Power, Garrison status
+- Output: result (fail/standard/instant), battle duration, counter-spend options
+- Validate: do battles resolve in intended time frame?
 
 ---
 
@@ -83,31 +80,62 @@ Output: result (fail / standard battle duration / instant), counter-spend option
 
 ```
 ## Simulation: [Name]
-**Setup:** [Initial conditions]
-**Constants used:** [Which CLAUDE.md values]
+**Question:** [What we're trying to prove/disprove]
+**Constants loaded from CLAUDE.md:**
+  [list each value used and where it appears in CLAUDE.md]
 
-Step-by-step trace:
-  T=Xs: [state] → [calculation] → [new state]
+**Setup:** [Initial conditions and assumptions]
+
+**Trace:**
+  T=0s:   [state] → [calculation] → [result]
+  T=10s:  [state] → [calculation] → [result]
   ...
 
-**Result:** [Final value]
-**Design target:** [What CLAUDE.md says it should be]
-**Match:** YES / NO — [explanation if no]
+**Result:** [Final answer]
+**Design target (from CLAUDE.md):** [What it should be]
+**Verdict:** MATCH / MISMATCH — [explanation]
 
-## Finding (if any)
-**Issue:** [What the numbers reveal]
-**Suggested fix:** [Specific number change]
-**Revised result:** [Simulation after fix]
+## Adjustment (if mismatch)
+**Suggested constant change:** [specific value → new value]
+**Revised trace (abbreviated):** [show key steps with new value]
+**New result:** [confirm it hits design target]
 ```
 
 ---
 
-## Notes
+## Quick Reference (verify against CLAUDE.md — these may be outdated)
 
-- Always show the math, not just conclusions
-- Use CLAUDE.md numbers exactly — don't round unless stated
-- Economy formula: `(base + 0.5 × level) × 1.5` for Economy buildings
-- Maintenance tiers: 1/sec (hexes 1-10), 2/sec (11-20), 3/sec (21+)
-- Battle duration: `5 + (AttackerPower + DefenderPower) / 2` seconds
-- Counter-spend cap: `min(+3, seconds_remaining)`
-- All 4 tech costs: Iron Grip 50, Production Boom 40, Efficient Conquest 35, Garrison 60 = 185 TP total
+```
+Economy:
+  Base income: 2/sec per hex
+  Maintenance: 1/sec (hexes 1-10), 2/sec (11-20), 3/sec (21+)
+  Economy building: +50% bonus, formula = (base + 0.5 × level) × 1.5
+  Upgrade costs (all buildings): doubles each level (L1=40, L2=80, L3=160...)
+
+Combat:
+  Unclaimed hex: 10 gold, instant
+  Enemy hex: 100 gold, battle
+  Battle duration: 5 + (Attacker Power + Defender Power) / 2 seconds
+  Counter-spend: 50 gold/sec, cap = min(+3, seconds_remaining)
+  Instant takeover: Power diff > 3
+
+Tech:
+  Research: +0.1 TP/sec per level
+  Iron Grip: 50 TP | Production Boom: 40 TP | Efficient Conquest: 35 TP | Garrison: 60 TP
+  Total for all 4 techs: 185 TP
+
+Victory:
+  Conquest: 60% map for 10 consecutive seconds
+  Tech Dominance: Tech Level 4 + 35% map for 10 seconds
+  Time limit: 30 min, highest hex count
+```
+
+---
+
+## Rules
+
+- **Source of truth:** CLAUDE.md, loaded fresh every invocation. Use quick reference above for orientation only — if it conflicts with CLAUDE.md, CLAUDE.md wins.
+- **Show your work:** Every calculation visible, no "and therefore the result is X"
+- **No mechanic opinions:** If the problem is the mechanic design (not the number), say "hand off to /game-designer" and stop
+- **Precision:** Use exact values. Only round for display if stated explicitly
+- **Assumptions visible:** State all behavioral assumptions (e.g., "player expands 1 hex every 5 seconds")
