@@ -145,8 +145,10 @@ During the battle countdown, defender can spend resources to boost Defense Power
 - Cost: 50 gold/second during battle
 - Effect: +1 Power per second spent
 - **Cap:** min(+3 power, seconds remaining in battle) — cannot boost more than time allows
+- **Garrison interaction:** If Garrison tech is unlocked, adjacent owned hexes each add +1 Power automatically (cap: +3 total). Counter-spend and Garrison share this cap — combined boost cannot exceed +3.
 - Example: Battle at 9 seconds, you're losing 3 vs 5. Spend 150 gold over 3 sec → Power jumps to 6, you win
 - Example: Only 1 second left in battle → max +1 Power boost (50 gold), even if you have gold to spare
+- Example (Garrison): 2 adjacent owned hexes give +2 passive. Counter-spend max is now +1 (cap already at +3 with 2 spent)
 - Cap prevents defender from "buying" complete victory; time pressure makes decisions tense
 
 ---
@@ -160,7 +162,7 @@ Research buildings generate Tech Points. Spend TP to unlock perks (global bonuse
 | Iron Grip | 50 TP | All hexes +1 Power |
 | Production Boom | 40 TP | All hexes +30% resource generation |
 | Efficient Conquest | 35 TP | Attack cost reduced to 75 gold |
-| Garrison | 60 TP | During battle, adjacent hexes can reinforce defender (add their Power) |
+| Garrison | 60 TP | During battle, each adjacent owned hex adds +1 Power to defense (cap: +3 total, shared with counter-spend) |
 
 **Tech Level:** Total number of techs unlocked. Reaching Tech Level 4 (all techs unlocked) triggers Tech Dominance victory when combined with map control (see Victory Conditions).
 
