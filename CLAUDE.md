@@ -34,23 +34,54 @@ Hexar is a fast-paced, real-time multiplayer hex strategy game inspired by Antiy
 - **Starting position:** Each player starts with exactly 1 hex (their capital)
 - **Capital hex:** Has innate Power 1 (no building needed). All other owned hexes start at Power 0 until a Defense building is placed.
 - **Owned hex generates:** 2 resources/sec (base)
-- **Maintenance cost:** 1 resource/sec per hex controlled (owned)
-- **Net income per hex:** +1 resource/sec (before buildings/upgrades)
+- **Maintenance cost (Stepped):**
+  - Hexes 1-10: 1 resource/sec each
+  - Hexes 11-20: 2 resources/sec each
+  - Hexes 21+: 3 resources/sec each
+- **Why stepped:** Flat maintenance (1/sec) can never exceed base income (2/sec), making auto-drop unreachable. Stepped costs force Economy building investment to sustain large territories.
+
+**Maintenance math:**
+```
+10 hexes:  maintenance 10/sec vs income 20/sec  → net +10/sec (healthy)
+20 hexes:  maintenance 30/sec vs income 40/sec  → net +10/sec (requires some Economy)
+30 hexes:  maintenance 60/sec vs income 60/sec  → net  0/sec  (needs Economy buildings)
+31 hexes:  maintenance 63/sec vs income 62/sec  → net  -1/sec (auto-drop triggers!)
+
+With 10 Economy buildings on 30 hexes:
+  income = 10 × 3/sec + 20 × 2/sec = 70/sec → net +10/sec (sustainable)
+```
+
+**Hex auto-drop rules:**
+- When net income goes negative, the player must shed hexes until income is positive
+- Player chooses which hex to drop (UI prompt, 10-second grace period)
+- If no choice made, the hex with the lowest income drops automatically
+- On drop: player receives **50% refund of the building cost** on that hex (if any building present)
+- Dropped hex becomes unclaimed instantly (enemy can grab it for 10 gold)
+- Net income per hex +1/sec (before buildings/upgrades)
 
 ### Resources
 
 - **Gold:** Main currency for buildings, upgrades, and attacks
 - **Tech Points (TP):** Earned from Research buildings (0.1 TP/sec per Research level), spent on tech tree
 
+**Tech bonus stacking (additive):** All bonuses to resource generation stack additively inside one multiplier:
+```
+hex_income = base × (1 + economy_bonus + tech_bonuses)
+
+Example: Economy building (+50%) + Production Boom (+30%) + Economic Synergy (+10% on top of +50%):
+  = 2 × (1 + 0.60 + 0.30) = 2 × 1.90 = 3.8/sec
+```
+
 ### Buildings (One per Hex)
 
 Each hex can have **one building** of three types. Building can be demolished (refund 50%) and replaced.
 
 #### Economy Building
-- **Effect:** +50% resources/sec from that hex (stacks additively with other bonuses)
+- **Effect:** +50% resources/sec from that hex (stacks additively with tech bonuses)
 - **Build cost:** 80 gold
 - **Upgrade cost (Exponential):** L1=40, L2=80, L3=160, L4=320, L5=640 (doubles each level)
-- **Reward (Linear):** +0.5 resources/sec per level (constant gain)
+- **Reward (Compounding):** +0.5 resources/sec per level, multiplied by the +50% bonus
+- **Formula:** `(base + 0.5 × level) × 1.5` → Level 5: (2 + 2.5) × 1.5 = 6.75/sec
 - **Max level:** Unlimited (incremental)
 
 #### Defense Building
@@ -101,8 +132,10 @@ Max: ~15 seconds (Power 10 vs 8)
 ```
 
 - Battle timer visible to both players during countdown
-- Attacker takes hex if battle completes (hex becomes attacker's immediately)
-- If attacker retreats or loses: hex stays with defender, no cost to defender
+- Winner is determined when timer reaches 0 — whoever has higher Power at that moment wins
+- Attacker **cannot cancel** once attack is committed (100 gold is spent, no refund)
+- Defender counter-spending mid-battle can flip the outcome, but neither side exits early
+- Attacker takes hex if they win when timer expires; defender keeps hex if they win
 
 ### Attacker Hex Damage (Cost of Victory)
 
@@ -251,9 +284,14 @@ T=5 min+:  Border warfare begins in earnest
 - 5-10 minute mark: players meet at borders
 - Game stays competitive until ~15-minute mark if balanced play
 
----
+### Capital Hex Rules
 
-## Design Decisions
+- **If capital is captured:** Player immediately loses the game. All their hexes become unclaimed instantly.
+- **Captured capital:** Becomes a normal hex for the conqueror (no innate Power 1, no special rules)
+- **Building on capital:** Owner can place Defense buildings on their capital (Power stacks on top of innate Power 1, e.g., Defense L2 = Power 3 total)
+- **Strategic implication:** Capital is a high-value target — losing it ends the game, so defending it is critical. Attacker targeting capital forces defender to split attention between borders and home base.
+
+---
 
 ### No "Neutral" Hex State (Only Unclaimed)
 - **Simplified model:** Hexes are either **owned by a player** or **unclaimed (empty)**
@@ -326,7 +364,6 @@ T=5 min+:  Border warfare begins in earnest
 ### Mechanical Unknowns
 
 - [ ] **Player starting position:** Do all players start equidistant? Random corners? (Recommend: opposite corners for 1v1)
-- [ ] **Capital hex rules:** Should capital be undestroyable? Or can it be taken like any hex? (Recommend: can be taken, increases risk)
 - [ ] **Building demolish refund:** Is 50% refund fair or should it be 100%?
 - [ ] **Multiple battles:** Can hex be attacked by multiple enemies simultaneously? (Recommend: one attacker at a time, queue battles)
 - [ ] **Choke point deadlock:** Narrow maps allow a single high-Power hex to block all expansion indefinitely. Map generation must avoid single-hex corridors, or a flanking/bypass mechanic is needed.
