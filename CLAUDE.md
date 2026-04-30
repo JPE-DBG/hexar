@@ -21,7 +21,7 @@ Hexar is a fast-paced, real-time multiplayer hex strategy game inspired by Antiy
 1. **Economic Competition:** Victory through resource management and smart upgrades, not reflexes
 2. **Meaningful Decisions:** Each building choice and tech unlock trades off against alternatives
 3. **Tense Endgame:** Border warfare and tight resource battles in final minutes
-4. **No Snowballing:** Maintenance costs and battle attrition keep powerful players vulnerable
+4. **No Snowballing:** Maintenance costs keep powerful players vulnerable
 
 ---
 
@@ -68,8 +68,8 @@ With 10 Economy buildings on 30 hexes:
 ```
 hex_income = base × (1 + economy_bonus + tech_bonuses)
 
-Example: Economy building (+50%) + Production Boom (+30%) + Economic Synergy (+10% on top of +50%):
-  = 2 × (1 + 0.60 + 0.30) = 2 × 1.90 = 3.8/sec
+Example: Economy building (+50%) + Production Boom (+30%):
+  = 2 × (1 + 0.50 + 0.30) = 2 × 1.80 = 3.60/sec
 ```
 
 ### Buildings (One per Hex)
@@ -137,21 +137,6 @@ Max: ~15 seconds (Power 10 vs 8)
 - Defender counter-spending mid-battle can flip the outcome, but neither side exits early
 - Attacker takes hex if they win when timer expires; defender keeps hex if they win
 
-### Attacker Hex Damage (Cost of Victory)
-
-**Only applies to standard battles (Power diff 1-3). Instant takeovers (diff > 3) have no attrition.**
-
-Winning attacker's hex loses levels based on power differential:
-
-```
-Power diff = +1:  Attacker loses 0 levels (clean win)
-Power diff = +2:  Attacker loses 0 levels (solid win)
-Power diff = +3:  Attacker loses 1 level (costly)
-```
-
-- Example: Your Power 5 hex attacks enemy Power 2 hex (diff +3). You win but drop to Power 4.
-- Instant takeover example: Your Power 10 attacks enemy Power 1 (diff +9 > 3). Instant conquest, zero level loss.
-
 ### Defender Options (Active Defense)
 
 **Counter-Spend (Capped)**
@@ -175,12 +160,9 @@ Research buildings generate Tech Points. Spend TP to unlock perks (global bonuse
 | Iron Grip | 50 TP | All hexes +1 Power |
 | Production Boom | 40 TP | All hexes +30% resource generation |
 | Efficient Conquest | 35 TP | Attack cost reduced to 75 gold |
-| Fortified Borders | 25 TP | Enemy attacks cost them +25 gold |
-| Economic Synergy | 50 TP | Economy buildings give +60% (instead of +50%) |
-| Blitzkrieg | 40 TP | Reduce battle duration by 2 seconds (min 5 sec) |
 | Garrison | 60 TP | During battle, adjacent hexes can reinforce defender (add their Power) |
 
-**Tech Level:** Total number of techs unlocked. Reaching Tech Level 3 is significant (see Victory Conditions).
+**Tech Level:** Total number of techs unlocked. Reaching Tech Level 4 (all techs unlocked) triggers Tech Dominance victory when combined with map control (see Victory Conditions).
 
 **Rationale:** Costs reduced by ~40% from original to make tech tree achievable in 30-min games. First few techs are cheap to encourage early tech investment as a viable alternative to pure military.
 
@@ -234,8 +216,7 @@ T=5 min+:  Border warfare begins in earnest
 - Race to 60% yourself
 
 ### 2. Tech Dominance (Mid-Game Alternative)
-- Reach **Tech Level 3 AND hold 35% map simultaneously** for 10 consecutive seconds
-- OR reach **Tech Level 5 alone** (no map control requirement)
+- Reach **Tech Level 4 (all techs unlocked) AND hold 35% map simultaneously** for 10 consecutive seconds
 - Rewards investing in research as a viable win condition
 
 **Strategic implications:** Tech rush is faster than pure conquest (tech scaling matters). Early investment in Research building pays off. Opponent can counter by military pressure.
@@ -244,7 +225,7 @@ T=5 min+:  Border warfare begins in earnest
 - Rush military early while they tech
 - Attack their Research hexes specifically
 - Keep them pinned defending, prevent expansion
-- Example: While opponent gets Tech 2-3, you've conquered 40% through aggression, win by Conquest
+- Example: While opponent reaches Tech 2-3, you've conquered 40% through aggression, win by Conquest
 
 ### 3. Time Limit (Tiebreaker)
 - At 30 minutes, highest hex count wins
@@ -268,14 +249,9 @@ T=5 min+:  Border warfare begins in earnest
 - At ~10+ hexes, income caps out without production upgrades
 - If maintenance exceeds income, slowest hexes auto-drop (player chooses order)
 
-### Combat Attrition
-- Only applies to standard battles (diff 1-3). Instant takeovers have no attrition.
-- Diff +1 or +2: attacker loses 0 levels. Diff +3: attacker loses 1 level.
-- Discourages grinding close battles repeatedly; rewards decisive power advantages
-
 ### Tech Scaling (Achievable in 30 min)
-- Tech costs reduced for viability (first 3 techs = 130 TP total, ~1300 seconds with 1 Research hex)
-- Tech progression is a viable win condition (Tech Level 3 + 35% map in ~15 min)
+- Tech costs reduced for viability (all 4 techs = 185 TP total, achievable with 2-3 Research hexes by mid-game)
+- Tech progression is a viable win condition (Tech Level 4 + 35% map achievable in ~15-18 min with Research investment)
 - Opponents must balance military pressure with allowing tech growth
 
 ### Early Game Parity
