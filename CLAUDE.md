@@ -32,6 +32,7 @@ Hexar is a fast-paced, real-time multiplayer hex strategy game inspired by Antiy
 - **Player hexes (owned):** Controlled by a player, generates income, has buildings
 - **Unclaimed hexes (empty):** No owner, Power 0, no buildings
 - **Starting position:** Each player starts with exactly 1 hex (their capital)
+- **Capital hex:** Has innate Power 1 (no building needed). All other owned hexes start at Power 0 until a Defense building is placed.
 - **Owned hex generates:** 2 resources/sec (base)
 - **Maintenance cost:** 1 resource/sec per hex controlled (owned)
 - **Net income per hex:** +1 resource/sec (before buildings/upgrades)
@@ -71,21 +72,24 @@ Each hex can have **one building** of three types. Building can be demolished (r
 
 ### Attack Rules
 
-- **Requirement:** Attacker Power > Defender Power (strictly greater than, ≤ fails with no cost)
-- **Attack cost:** 100 gold (only attacker pays)
 - **Adjacent only:** Can only attack hexes touching your hex
+- **Unclaimed hex cost:** 10 gold (instant takeover, no battle)
+- **Enemy hex cost:** 100 gold (triggers battle)
+- **Requirement vs enemy:** Attacker Power > Defender Power (strictly greater, ≤ fails with no cost)
 
 ### Battle Resolution
 
 **Attacking Empty Hex (Power 0):**
-- If attacker Power ≥ 1: **Instant takeover** (no battle, no resource cost beyond attack)
-- Reason: Early game expansion should be fast; bottleneck is economy, not combat
+- Cost: 10 gold → Instant takeover, no battle
+- Requirement: Attacker Power ≥ 1 (capital hex has innate Power 1, no building needed)
+- Reason: Early land-grab is fast; gold bottleneck only matters for enemy combat
 
 **Attacking Enemy Hex (Owned):**
+- Cost: 100 gold (only attacker pays)
 - **Requirement:** Attacker Power > Defender Power (strictly greater)
-- If Power diff > 3: **Instant takeover** (no battle timer, immediate conquest)
+- If Power diff > 3: **Instant takeover** (no battle timer, no attrition)
 - If Power diff = 1, 2, or 3: **Standard battle** (6-15 sec, see below)
-- If Power diff ≤ 0: **Attack fails** (attacker wasted 100 gold, can retry)
+- If Power diff ≤ 0: **Attack fails** (no gold spent, can retry)
 
 **Standard Battle (1-3 power difference):**
 
@@ -97,8 +101,8 @@ Max: ~15 seconds (Power 10 vs 8)
 ```
 
 - Battle timer visible to both players during countdown
-- Attacker takes hex if battle completes
-- Defender's hex becomes neutral (not captured by attacker) if they own it
+- Attacker takes hex if battle completes (hex becomes attacker's immediately)
+- If attacker retreats or loses: hex stays with defender, no cost to defender
 
 ### Attacker Hex Damage (Cost of Victory)
 
@@ -131,7 +135,7 @@ Research buildings generate Tech Points. Spend TP to unlock perks (global bonuse
 
 | Tech | Cost | Effect |
 |------|------|--------|
-| Iron Grip | 30 TP | All hexes +1 Power |
+| Iron Grip | 50 TP | All hexes +1 Power |
 | Production Boom | 40 TP | All hexes +30% resource generation |
 | Efficient Conquest | 35 TP | Attack cost reduced to 75 gold |
 | Fortified Borders | 25 TP | Enemy attacks cost them +25 gold |
@@ -148,38 +152,30 @@ Research buildings generate Tech Points. Spend TP to unlock perks (global bonuse
 ## Economy Example (Early Game)
 
 ```
-T=0s:      Control 1 hex (capital), Power 1, no buildings
+T=0s:      Control 1 hex (capital), Power 1 (innate), no buildings
            Income: 2/sec, Maintenance: 1/sec → Net +1/sec
            Gold: 0
 
-T=0-20s:   Accumulate 20 gold (1/sec × 20)
+T=0-10s:   Accumulate 10 gold → Claim adjacent unclaimed hex (10g, instant)
+T=10-15s:  2 hexes, +2/sec net → Claim hex 3 (5 sec)
+T=15-18s:  3 hexes, +3/sec net → Claim hex 4 (3 sec)
+T=18-20s:  4 hexes, +4/sec net → Claim hex 5 (2 sec)
+T=~2 min:  ~10 hexes claimed, land-grab phase slows as map fills
 
-T=20s:     Spend 100 gold → Attack adjacent unclaimed hex (instant, Power 1 > 0)
-           Now control 2 hexes
-           Income: 4/sec, Maintenance: 2/sec → Net +2/sec
-           Gold: 0
+T=2 min:   Save 80 gold → Build Economy on hex 1 (~8 sec at +10/sec)
+           Income: hex 1 = 3/sec, rest = 2/sec each → Total: 21/sec gross
+           Maintenance: 10/sec → Net +11/sec
 
-T=20-40s:  Accumulate 40 gold (2/sec × 20)
+T=2.5 min: Save 60 gold → Build Defense on border hex (~5 sec at +11/sec)
+           Spend 30 → Upgrade Defense L1. Power = 2 on that hex.
 
-T=40s:     Spend 80 gold → Build Economy on hex 1
-           Income now: hex 1 = 2 × 1.5 = 3/sec, hex 2 = 2/sec → Total 5/sec
-           Maintenance: 2/sec → Net +3/sec
-           Gold: 0
+T=3 min:   First enemy contact at borders
+           Save 100 gold for first enemy hex attack (~9 sec at +11/sec)
+           Power 2 vs enemy Power 1 → Standard battle (6.5 sec), you win
 
-T=40-80s:  Accumulate 240 gold (3/sec × 80)
-
-T=80s:     Spend 60 → Build Defense on hex 2
-           Spend 30 → Upgrade Defense Level 1 (Power now 2)
-           Gold remaining: 150
-
-T=80-150s: Expand to 3-4 hexes via instant conquest of unclaimed hexes
-           Now 4 hexes = 4 maintenance, ~8-10 income/sec
-           Spend resources upgrading buildings (L2 Defense costs 60 gold for hex 2)
-
-T=150s+:   Meet enemy around this time
-           Accumulated ~300+ gold for upgrades
-           Have ~4-5 hexes, Power 2-3 depending on defense investment
-           Ready for first border skirmish
+T=5 min+:  Border warfare begins in earnest
+           ~300-400 gold saved for upgrades and attacks
+           Power 2-3 on borders, Economy building on 2-3 hexes
 ```
 
 ---
