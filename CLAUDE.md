@@ -106,6 +106,8 @@ Max: ~15 seconds (Power 10 vs 8)
 
 ### Attacker Hex Damage (Cost of Victory)
 
+**Only applies to standard battles (Power diff 1-3). Instant takeovers (diff > 3) have no attrition.**
+
 Winning attacker's hex loses levels based on power differential:
 
 ```
@@ -116,6 +118,7 @@ Power diff = +4+: Attacker loses 2+ levels (pyrrhic)
 ```
 
 - Example: Your Power 5 hex attacks enemy Power 2 hex (diff +3). You win but drop to Power 4.
+- Instant takeover example: Your Power 10 attacks enemy Power 1 (diff +9 > 3). Instant conquest, zero level loss.
 
 ### Defender Options (Active Defense)
 
@@ -123,9 +126,11 @@ Power diff = +4+: Attacker loses 2+ levels (pyrrhic)
 
 During the battle countdown, defender can spend resources to boost Defense Power:
 - Cost: 50 gold/second during battle
-- Effect: +1 Power per second spent (capped at +3 power total)
-- Example: Battle at 9 seconds, you're losing 3 vs 5. Spend 150 gold over 3 sec → Power jumps to 6, you win battle
-- Cap prevents defender from "buying" complete victory; makes battles tactical instead of pay-to-win
+- Effect: +1 Power per second spent
+- **Cap:** min(+3 power, seconds remaining in battle) — cannot boost more than time allows
+- Example: Battle at 9 seconds, you're losing 3 vs 5. Spend 150 gold over 3 sec → Power jumps to 6, you win
+- Example: Only 1 second left in battle → max +1 Power boost (50 gold), even if you have gold to spare
+- Cap prevents defender from "buying" complete victory; time pressure makes decisions tense
 
 ---
 
@@ -183,16 +188,18 @@ T=5 min+:  Border warfare begins in earnest
 ## Victory Conditions
 
 ### 1. Conquest Victory (Primary)
-- Hold **50% of map for 10 consecutive seconds**
-- Timer resets if you drop below 50%
+- Hold **60% of map for 10 consecutive seconds**
+- Timer resets if you drop below 60%
 - This is the most common win condition
+
+**Why 60%:** In 1v1, 50% means each player holds half the map — a draw state, not a decisive lead. 60% requires genuinely dominating your opponent, not just tying.
 
 **Strategic implications:** Aggressive players win by pushing early; defensive players must hold the line and counter-attack to reset timer.
 
 **How to stop opponent:**
 - Attack their border hexes aggressively
-- Bring them below 50%, reset their timer
-- Race to 50% yourself
+- Bring them below 60%, reset their timer
+- Race to 60% yourself
 
 ### 2. Tech Dominance (Mid-Game Alternative)
 - Reach **Tech Level 3 AND hold 35% map simultaneously** for 10 consecutive seconds
@@ -321,6 +328,7 @@ T=5 min+:  Border warfare begins in earnest
 - [ ] **Capital hex rules:** Should capital be undestroyable? Or can it be taken like any hex? (Recommend: can be taken, increases risk)
 - [ ] **Building demolish refund:** Is 50% refund fair or should it be 100%?
 - [ ] **Multiple battles:** Can hex be attacked by multiple enemies simultaneously? (Recommend: one attacker at a time, queue battles)
+- [ ] **Choke point deadlock:** Narrow maps allow a single high-Power hex to block all expansion indefinitely. Map generation must avoid single-hex corridors, or a flanking/bypass mechanic is needed.
 
 ### Future Mechanics (Post-MVP)
 
