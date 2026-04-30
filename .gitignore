@@ -1,8 +1,9 @@
 # Dependencies
 node_modules/
 
-# Build output
+# Build output & Vite cache
 client/dist/
+.vite/
 
 # IDE
 .idea/
