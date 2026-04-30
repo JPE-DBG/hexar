@@ -29,9 +29,11 @@ Hexar is a fast-paced, real-time multiplayer hex strategy game inspired by Antiy
 
 ### Hexes & Ownership
 
-- Each hex can be owned by a player, be neutral, or empty
+- **Player hexes (owned):** Controlled by a player, generates income, has buildings
+- **Unclaimed hexes (empty):** No owner, Power 0, no buildings
+- **Starting position:** Each player starts with exactly 1 hex (their capital)
 - **Owned hex generates:** 2 resources/sec (base)
-- **Maintenance cost:** 1 resource/sec per hex controlled (owned or neutral claimed)
+- **Maintenance cost:** 1 resource/sec per hex controlled (owned)
 - **Net income per hex:** +1 resource/sec (before buildings/upgrades)
 
 ### Resources
@@ -46,7 +48,8 @@ Each hex can have **one building** of three types. Building can be demolished (r
 #### Economy Building
 - **Effect:** +50% resources/sec from that hex (stacks additively with other bonuses)
 - **Build cost:** 80 gold
-- **Upgrade cost:** 40 gold/level
+- **Upgrade cost (Exponential):** L1=40, L2=80, L3=160, L4=320, L5=640 (doubles each level)
+- **Reward (Linear):** +0.5 resources/sec per level (constant gain)
 - **Max level:** Unlimited (incremental)
 
 #### Defense Building
@@ -57,8 +60,9 @@ Each hex can have **one building** of three types. Building can be demolished (r
 
 #### Research Building
 - **Effect:** +0.1 TP/sec per level (fuel for tech tree)
-- **Build cost:** 120 gold
-- **Upgrade cost:** 50 gold/level
+- **Build cost:** 80 gold (reduced from 120)
+- **Upgrade cost (Exponential):** L1=40, L2=80, L3=160, L4=320, L5=640 (doubles each level)
+- **Reward (Linear):** +0.1 TP/sec per level (constant gain)
 - **Max level:** Unlimited (incremental)
 
 ---
@@ -73,21 +77,15 @@ Each hex can have **one building** of three types. Building can be demolished (r
 
 ### Battle Resolution
 
-**Power Difference Rule:**
+**Attacking Empty Hex (Power 0):**
+- If attacker Power ≥ 1: **Instant takeover** (no battle, no resource cost beyond attack)
+- Reason: Early game expansion should be fast; bottleneck is economy, not combat
 
-```
-Power diff = Attacker Power - Defender Power
-
-If diff > 3:
-  → Instant takeover (no battle timer)
-  → Attacker takes hex immediately
-
-If diff = 1, 2, or 3:
-  → Standard battle (see below)
-
-If diff ≤ 0:
-  → Attack fails (attacker wasted 100 gold but can retry)
-```
+**Attacking Enemy Hex (Owned):**
+- **Requirement:** Attacker Power > Defender Power (strictly greater)
+- If Power diff > 3: **Instant takeover** (no battle timer, immediate conquest)
+- If Power diff = 1, 2, or 3: **Standard battle** (6-15 sec, see below)
+- If Power diff ≤ 0: **Attack fails** (attacker wasted 100 gold, can retry)
 
 **Standard Battle (1-3 power difference):**
 
@@ -117,12 +115,13 @@ Power diff = +4+: Attacker loses 2+ levels (pyrrhic)
 
 ### Defender Options (Active Defense)
 
-**Option A: Counter-Spend (Recommended start)**
+**Counter-Spend (Capped)**
 
 During the battle countdown, defender can spend resources to boost Defense Power:
 - Cost: 50 gold/second during battle
-- Effect: +1 Power per second spent
-- Example: Battle at 9 seconds, you're losing 3 vs 5. Spend 100 gold over 2 sec → Power jumps to 5, you win
+- Effect: +1 Power per second spent (capped at +3 power total)
+- Example: Battle at 9 seconds, you're losing 3 vs 5. Spend 150 gold over 3 sec → Power jumps to 6, you win battle
+- Cap prevents defender from "buying" complete victory; makes battles tactical instead of pay-to-win
 
 ---
 
@@ -132,28 +131,30 @@ Research buildings generate Tech Points. Spend TP to unlock perks (global bonuse
 
 | Tech | Cost | Effect |
 |------|------|--------|
-| Iron Grip | 50 TP | All hexes +1 Power |
-| Production Boom | 80 TP | All hexes +30% resource generation |
-| Efficient Conquest | 60 TP | Attack cost reduced to 75 gold |
-| Fortified Borders | 40 TP | Enemy attacks cost them +25 gold |
-| Economic Synergy | 100 TP | Economy buildings give +60% (instead of +50%) |
-| Blitzkrieg | 80 TP | Reduce battle duration by 2 seconds (min 5 sec) |
-| Garrison | 100 TP | During battle, adjacent hexes can reinforce defender (add their Power) |
+| Iron Grip | 30 TP | All hexes +1 Power |
+| Production Boom | 40 TP | All hexes +30% resource generation |
+| Efficient Conquest | 35 TP | Attack cost reduced to 75 gold |
+| Fortified Borders | 25 TP | Enemy attacks cost them +25 gold |
+| Economic Synergy | 50 TP | Economy buildings give +60% (instead of +50%) |
+| Blitzkrieg | 40 TP | Reduce battle duration by 2 seconds (min 5 sec) |
+| Garrison | 60 TP | During battle, adjacent hexes can reinforce defender (add their Power) |
 
-**Tech Level:** Total number of techs unlocked. Reaching Tech Level 8 is significant (see Victory Conditions).
+**Tech Level:** Total number of techs unlocked. Reaching Tech Level 3 is significant (see Victory Conditions).
+
+**Rationale:** Costs reduced by ~40% from original to make tech tree achievable in 30-min games. First few techs are cheap to encourage early tech investment as a viable alternative to pure military.
 
 ---
 
 ## Economy Example (Early Game)
 
 ```
-T=0s:      Control 1 hex, Power 1, no buildings
+T=0s:      Control 1 hex (capital), Power 1, no buildings
            Income: 2/sec, Maintenance: 1/sec → Net +1/sec
            Gold: 0
 
 T=0-20s:   Accumulate 20 gold (1/sec × 20)
 
-T=20s:     Spend 100 gold → Attack adjacent empty hex (instant, Power 1 > 0+3)
+T=20s:     Spend 100 gold → Attack adjacent unclaimed hex (instant, Power 1 > 0)
            Now control 2 hexes
            Income: 4/sec, Maintenance: 2/sec → Net +2/sec
            Gold: 0
@@ -171,11 +172,14 @@ T=80s:     Spend 60 → Build Defense on hex 2
            Spend 30 → Upgrade Defense Level 1 (Power now 2)
            Gold remaining: 150
 
-T=80-100s: Enemy attacks hex 2 (their Power 2 vs your Power 2)
-           Battle lasts 5 + (2+2)/2 = 9 seconds
-           You counter-spend 50 gold → Power +1, you win battle
-           Enemy's hex dropped to Power 1
-           You control 2 hexes, opponent still has theirs
+T=80-150s: Expand to 3-4 hexes via instant conquest of unclaimed hexes
+           Now 4 hexes = 4 maintenance, ~8-10 income/sec
+           Spend resources upgrading buildings (L2 Defense costs 60 gold for hex 2)
+
+T=150s+:   Meet enemy around this time
+           Accumulated ~300+ gold for upgrades
+           Have ~4-5 hexes, Power 2-3 depending on defense investment
+           Ready for first border skirmish
 ```
 
 ---
@@ -183,25 +187,29 @@ T=80-100s: Enemy attacks hex 2 (their Power 2 vs your Power 2)
 ## Victory Conditions
 
 ### 1. Conquest Victory (Primary)
-- Hold **70% of map for 20 consecutive seconds**
-- Timer resets if you drop below 70%
+- Hold **50% of map for 10 consecutive seconds**
+- Timer resets if you drop below 50%
 - This is the most common win condition
+
+**Strategic implications:** Aggressive players win by pushing early; defensive players must hold the line and counter-attack to reset timer.
 
 **How to stop opponent:**
 - Attack their border hexes aggressively
-- Bring them below 70%, reset their timer
-- Race to 70% yourself
+- Bring them below 50%, reset their timer
+- Race to 50% yourself
 
-### 2. Tech Dominance (Long-Game)
-- Reach **Tech Level 5 AND hold 50% map simultaneously** for 15 consecutive seconds
-- OR reach **Tech Level 8 alone** (no map control requirement)
-- Rewards investing in research but requires map presence or extreme tech lead
+### 2. Tech Dominance (Mid-Game Alternative)
+- Reach **Tech Level 3 AND hold 35% map simultaneously** for 10 consecutive seconds
+- OR reach **Tech Level 5 alone** (no map control requirement)
+- Rewards investing in research as a viable win condition
+
+**Strategic implications:** Tech rush is faster than pure conquest (tech scaling matters). Early investment in Research building pays off. Opponent can counter by military pressure.
 
 **How to stop opponent:**
 - Rush military early while they tech
 - Attack their Research hexes specifically
 - Keep them pinned defending, prevent expansion
-- Example: While opponent gets Tech 3-4, you've conquered 55% through aggression
+- Example: While opponent gets Tech 2-3, you've conquered 40% through aggression, win by Conquest
 
 ### 3. Time Limit (Tiebreaker)
 - At 30 minutes, highest hex count wins
@@ -211,32 +219,52 @@ T=80-100s: Enemy attacks hex 2 (their Power 2 vs your Power 2)
 
 ## Balance Rules & Constraints
 
-### Maintenance System (Prevents Snowballing)
+### Exponential Upgrade Costs (Prevents Snowballing)
+- Economy and Research buildings use exponential cost scaling: L1=40, L2=80, L3=160, L4=320, L5=640 (doubles each level)
+- **Linear rewards:** Each level provides constant +0.5 resources/sec (or +0.1 TP/sec for Research)
+- **Effect:** Early game upgrades are cheap (quick power spikes). Late game upgrades cost exponentially more, capping power growth
+- **Math:** L1-L4 costs ~840 gold total. L5 adds 640. Each additional level doubles cost.
+- **Example:** Player A has 10 hexes earning 20 resources/sec. Upgrading to L5 on 3 hexes = 1920 gold = 96 seconds of savings. By then, Player B has scaled up too.
+
+### Maintenance System (Prevents Extreme Expansion)
 - Each hex costs 1 maintenance/sec to hold
 - Forces quality over quantity
 - At ~10+ hexes, income caps out without production upgrades
 - If maintenance exceeds income, slowest hexes auto-drop (player chooses order)
 
 ### Combat Attrition
-- Attackers lose levels based on power difference
+- Attackers lose levels based on power difference (0 levels at +1-2 diff, 1 level at +3, 2+ at +4+)
 - Discourages overkill attacks
-- Creates cost to conquest: attacking with Power 10 vs Power 2 (instant) is free, but Power 5 vs Power 3 costs attacker a level
+- Creates cost to conquest
 
-### Tech Scaling
-- Tech is slow (0.1 TP/sec per Research level)
-- To reach Tech Level 8: ~800 TP needed = 8,000 seconds = 2+ hours (impossible in 30-min game)
-- Realistic max: Tech Level 4-5 in a game
-- Tech advantage is real but not insurmountable with military pressure
+### Tech Scaling (Achievable in 30 min)
+- Tech costs reduced for viability (first 3 techs = 130 TP total, ~1300 seconds with 1 Research hex)
+- Tech progression is a viable win condition (Tech Level 3 + 35% map in ~15 min)
+- Opponents must balance military pressure with allowing tech growth
 
 ### Early Game Parity
-- All players start identical (1 hex, Power 1, no buildings)
-- First 2 minutes are roughly equal economy
-- First conquest (empty hex) at ~20 sec gives first advantage
-- Game stays competitive until ~10-minute mark
+- All players start with 1 capital hex, Power 1, no buildings
+- First minute: rapid hex expansion (unclaimed hexes taken instantly)
+- 5-10 minute mark: players meet at borders
+- Game stays competitive until ~15-minute mark if balanced play
 
 ---
 
 ## Design Decisions
+
+### No "Neutral" Hex State (Only Unclaimed)
+- **Simplified model:** Hexes are either **owned by a player** or **unclaimed (empty)**
+- **Dropped "neutral" concept:** Initial design had unclaimed hexes revert to "neutral" after conquest, but this adds complexity without benefit
+- **Why:** 
+  - When you attack an enemy hex and win, you capture it directly (you own it)
+  - No intermediate "neutral" state where other players can immediately reclaim it
+  - Simpler UI: only 2 states instead of 3
+  - Matches Antiyoy's design (conquered = owned)
+
+### Instant Takeover on Unclaimed Hexes Only
+- Players can instantly claim any adjacent unclaimed hex if they have Power ≥ 1
+- Conquering **enemy hexes** always requires battles (6-15 sec or instant if diff > 3)
+- Effect: Early game is about **speed of expansion** into unclaimed territory. Midgame is about **tactical battles** over enemy hexes.
 
 ### Adjacent-Only Conquest
 - Reinforces territorial control and front-line battles
@@ -244,40 +272,59 @@ T=80-100s: Enemy attacks hex 2 (their Power 2 vs your Power 2)
 - Creates natural borders and defensive positions
 
 ### Only Attacker Pays
-- Defender can react (counter-spend) rather than commit upfront
+- Defender can react (counter-spend, capped at +3) rather than commit upfront
 - Asymmetric costs reward smart positioning
 - Encourages aggressive expansion but punishes poor decisions
 
-### Power Difference Auto-Takeover (diff > 3)
-- Instant conquests feel rewarding (massive advantage)
+### Power Difference Auto-Takeover (diff > 3, Enemy Hexes Only)
+- Instant conquests feel rewarding (massive advantage in hex battles)
 - Close fights (1-3 diff) are tense and tactical
-- Prevents "grinding" low-power battles
+- Prevents "grinding" low-power battles between evenly matched players
+- Limited to enemy hexes only; unclaimed hexes always taken instantly
 
-### Unlimited Incremental Upgrades
-- No hard level caps on buildings
-- Economy scales toward 30-min endgame (exponential growth slows down due to maintenance)
-- Players with 8 hexes + Economy buildings can sustain constant upgrades
-- Prevents "tech walls" where players get stuck
+### Exponential Upgrade Costs with Linear Rewards
+- **Cost:** Doubles each level (40, 80, 160, 320, 640...)
+- **Reward:** Constant per level (+0.5 resources/sec or +0.1 TP/sec)
+- **Effect:** Early power spikes are cheap and quick. Late-game upgrades cost exponentially more, capping power growth
+- **Why:** Prevents snowballing by making the path to dominance prohibitively expensive. No player can spam upgrades to 10+ levels without massive time investment
 
 ---
 
 ## Open Questions / TODO
 
+### Map Size & Pacing Analysis
+
+**Recommended:** 60-80 total hexes per 1v1 map
+
+**Rationale:**
+- Players start with 1 hex each (2 total)
+- ~30-40 unclaimed hexes available
+- ~25-30 hexes per player after midgame (realistic distribution)
+
+**Pacing with 70 hexes (example):**
+- **T=0-3min:** Each player conquers 3-4 unclaimed hexes → 4-5 hexes each
+- **T=3-5min:** Meet at borders (players are ~5 hexes from each other)
+- **T=5-15min:** Border skirmishes, some territory trades hands
+- **T=15-25min:** One player pushes toward 50% (35 hexes) or secures Tech Level 3
+- **T=25-30min:** Final race to victory condition
+
+**Too small (30 hexes total):** Players meet at T=1min, constant warfare, no economy buildup, RNG-heavy
+**Too large (120+ hexes):** Players farm 15+ minutes unopposed, snowball guaranteed, long game
+
 ### Playtesting Needs
 
-- [ ] **Battle timing:** Does 6-14 sec range feel right? Too long/short?
-- [ ] **Counter-spend balance:** Is 50 gold/sec too cheap or too expensive?
-- [ ] **Conquest threshold:** Does 70% + 20 sec endgame feel tense?
-- [ ] **Tech progression:** Should Tech costs scale (exponential) to slow late-game tech rush?
-- [ ] **Map size impact:** How many hexes total? 30? 50? 100?
+- [ ] **Exponential cost feel:** Does progression curve feel right? Too fast/slow?
+- [ ] **Counter-spend cap:** Is +3 power cap balanced? Create interesting battles?
+- [ ] **Map size:** Does 70-hex map hit 30-min target? Adjust if needed.
+- [ ] **Conquest threshold:** Does 50% + 10 sec create tense endgame?
+- [ ] **Tech viability:** Do players build Research? Or pure military?
 
 ### Mechanical Unknowns
 
-- [ ] **Player starting position:** Do all players start equidistant? Random corners?
-- [ ] **Neutral hex power:** Do unclaimed hexes have Power 0 or random?
+- [ ] **Player starting position:** Do all players start equidistant? Random corners? (Recommend: opposite corners for 1v1)
+- [ ] **Capital hex rules:** Should capital be undestroyable? Or can it be taken like any hex? (Recommend: can be taken, increases risk)
 - [ ] **Building demolish refund:** Is 50% refund fair or should it be 100%?
-- [ ] **Defender escape option:** Should there be a "Retreat" button to lose hex but save 50% gold?
-- [ ] **Multiple battles:** Can hex be attacked by multiple enemies simultaneously?
+- [ ] **Multiple battles:** Can hex be attacked by multiple enemies simultaneously? (Recommend: one attacker at a time, queue battles)
 
 ### Future Mechanics (Post-MVP)
 
