@@ -42,9 +42,9 @@ const (
 )
 
 type Player struct {
-	ID   PlayerID `json:"id"`
-	Gold float64  `json:"gold"`
-	TP   float64  `json:"tp"`
+	ID   PlayerID        `json:"id"`
+	Gold float64         `json:"gold"`
+	TP   float64         `json:"tp"`
 	Tech [TechCount]bool `json:"tech"`
 }
 
@@ -67,12 +67,12 @@ type Battle struct {
 }
 
 type GameState struct {
-	Hexes   map[Hex]*HexState `json:"hexes"`
+	Hexes   map[Hex]*HexState    `json:"hexes"`
 	Players map[PlayerID]*Player `json:"players"`
-	Battles []Battle `json:"battles"`
-	Elapsed float64  `json:"elapsed"`
-	Over    bool     `json:"over"`
-	Winner  PlayerID `json:"winner"`
+	Battles []Battle             `json:"battles"`
+	Elapsed float64              `json:"elapsed"`
+	Over    bool                 `json:"over"`
+	Winner  PlayerID             `json:"winner"`
 }
 
 func NewGameState() *GameState {

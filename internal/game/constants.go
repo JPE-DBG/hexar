@@ -4,12 +4,12 @@ const (
 	TickRate = 100 // milliseconds per tick
 	TickDt   = 0.1 // seconds per tick
 
-	BaseIncomePerSec     = 2.0
-	MaintenanceTier1     = 1.0 // hexes 1-10
-	MaintenanceTier2     = 2.0 // hexes 11-20
-	MaintenanceTier3     = 3.0 // hexes 21+
-	MaintenanceTier1Cap  = 10
-	MaintenanceTier2Cap  = 20
+	BaseIncomePerSec    = 2.0
+	MaintenanceTier1    = 1.0 // hexes 1-10
+	MaintenanceTier2    = 2.0 // hexes 11-20
+	MaintenanceTier3    = 3.0 // hexes 21+
+	MaintenanceTier1Cap = 10
+	MaintenanceTier2Cap = 20
 
 	ClaimCost  = 10.0
 	AttackCost = 100.0
@@ -44,10 +44,10 @@ const (
 
 	GameDuration = 30 * 60 // seconds
 
-	TechCostIronGrip         = 50.0
-	TechCostProductionBoom   = 40.0
+	TechCostIronGrip          = 50.0
+	TechCostProductionBoom    = 40.0
 	TechCostEfficientConquest = 35.0
-	TechCostGarrison         = 60.0
+	TechCostGarrison          = 60.0
 
 	EfficientConquestAttackCost = 75.0
 	ProductionBoomBonus         = 0.30

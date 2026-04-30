@@ -12,19 +12,19 @@ const (
 )
 
 type SnapshotMsg struct {
-	Type    MsgType          `json:"type"`
-	Hexes   map[string]*HexDTO `json:"hexes"`
+	Type    MsgType               `json:"type"`
+	Hexes   map[string]*HexDTO    `json:"hexes"`
 	Players map[string]*PlayerDTO `json:"players"`
-	Elapsed float64          `json:"elapsed"`
+	Elapsed float64               `json:"elapsed"`
 }
 
 type HexDTO struct {
-	Q        int              `json:"q"`
-	R        int              `json:"r"`
-	Owner    int              `json:"owner"`
-	Building int              `json:"building"`
-	Level    int              `json:"level"`
-	Capital  bool             `json:"capital"`
+	Q        int  `json:"q"`
+	R        int  `json:"r"`
+	Owner    int  `json:"owner"`
+	Building int  `json:"building"`
+	Level    int  `json:"level"`
+	Capital  bool `json:"capital"`
 }
 
 type PlayerDTO struct {
