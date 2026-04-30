@@ -358,9 +358,46 @@ T=5 min+:  Border warfare begins in earnest
 
 ## Implementation Notes
 
+### Scope
 - **Start with 1v1** — Easier to balance before adding 3-4 player variants
-- **Hex grid rendering:** Use offset or axial coordinates for grid math
-- **Real-time simulation:** Tick-based economy (every 100ms or server-dependent)
-- **Networking:** Send only delta state (hex ownership changes, resource updates) not full state
 - **UI priority:** Show hex Power prominently, battle timer clearly, resource flow transparent
+
+### Tech Stack (Decided)
+
+| Layer | Choice | Swap later to |
+|---|---|---|
+| Server | Go | — |
+| Client | TypeScript | — |
+| Rendering | HTML Canvas (hex grid) + DOM (UI overlays) | Svelte for complex UI |
+| Bundler | Vite | — |
+| Networking | WebSocket, JSON messages | MessagePack for 4-player |
+| WebSocket lib | `github.com/coder/websocket` | — |
+| Game loop | Goroutine + `time.Ticker` (100ms) | — |
+| Deployment | localhost (MVP) | VPS or Fly.io |
+| Database | None — in-memory state | SQLite for match history |
+| Auth | None (MVP) | OAuth when accounts added |
+| Testing | Go `testing` (headless) + manual browser | Playwright |
+
+### Architecture Constraints
+- **Server-authoritative:** Client never modifies game state — only sends intentions ("claim hex X", "attack hex Y"), server validates and responds
+- **Tick-based economy:** Every 100ms tick: process queued player actions → update gold/TP → advance battle timers → check victory → emit delta to clients
+- **Delta state sync:** Send only what changed per tick (hex ownership, resource updates, battle progress). Full state dump only on initial connect/reconnect.
+- **Hex grid math:** Axial coordinates. Pixel ↔ hex conversion for click detection.
+- **One goroutine per game room.** Player actions arrive via WebSocket, queued into a channel, processed at next tick boundary.
+- **Message types (JSON):** Define shared message schema early — client and server must agree on shape. Keep message types in a shared doc or generate from a single source.
+
+### Rejected Alternatives
+- **Node.js server:** Go developer, worse concurrency model for tick loops
+- **Phaser/PixiJS:** Overkill for colored hexagons + text; adds framework weight
+- **React/Vue/Svelte (for MVP):** Adds ceremony for simple "draw hexagons, update numbers" UI
+- **WebRTC:** Massive complexity for P2P; WebSocket latency (100ms ticks) is fine for Hexar
+- **Serverless (Lambda):** Can't maintain WebSocket + tick loop — wrong model for real-time games
+- **Player-hosted P2P:** Trust issues, NAT traversal, cheating risk
+
+### First-Week Prototype Tasks (ordered by risk)
+1. Go tick loop → WebSocket → browser Canvas hex grid (prove full pipeline: 100ms ticks render in real time)
+2. Click-to-hex detection (axial math: click pixel → identify hex → send action to server)
+3. Two-tab 1v1 (two browser tabs, same game, both see same state within 100ms)
+4. Economy tick test — headless Go test asserting gold matches CLAUDE.md math after N seconds
+
 
