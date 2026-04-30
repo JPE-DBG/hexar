@@ -1,103 +1,70 @@
 ---
 name: game-designer
-description: "Use when: analyzing game balance, finding design edge cases, validating economy math, simulating scenarios, or refining CLAUDE.md mechanics"
+description: "Use when: analyzing game balance, finding design edge cases, suggesting mechanic changes, evaluating design holes, or refining CLAUDE.md. For pure math/number validation, use /balance-sim instead."
 type: skill
 ---
 
-# Game Designer Skill — Hexar Refinement
+# Game Designer Skill — Hexar Qualitative Analysis
 
-On-demand skill for iterating on the Hexar game design. Helps identify balance issues, edge cases, economy math validation, and suggests refinements to CLAUDE.md.
+On-demand skill for **qualitative** design iteration: finding broken interactions, dead strategies, snowball risks, undefined edge cases, and mechanic improvements.
+
+**Not for:** running exact numeric simulations or break-even calculations — use `/balance-sim` for that.
+
+**Prerequisites:** None. Can be invoked anytime.
 
 ## Workflow
 
-### 1. **Analyze Current Design**
-- Read CLAUDE.md to understand current state
-- Identify which mechanic/system the user wants to examine
-- Run preliminary balance checks
+### 1. Load Current State (MANDATORY)
+- **Always read CLAUDE.md first.** Never rely on cached values from this skill file.
+- Extract current mechanics, costs, and rules fresh each invocation.
+- Identify which mechanic/system the user wants examined.
 
-### 2. **Find Edge Cases & Issues**
-- Simulate specific scenarios (e.g., "What if player rushes Economy early?")
-- Check for snowballing risks
-- Identify unfair advantages or dead strategies
-- Test boundary conditions (min/max values)
+### 2. Identify Issues (Qualitative)
+- Look for **broken interactions** between systems (e.g., two techs that cancel each other)
+- Find **dead strategies** (options no rational player would ever pick)
+- Spot **dominant strategies** (options that are always optimal regardless of opponent)
+- Check for **undefined behavior** (what happens when X meets Y?)
+- Test **degenerate cases** (what if a player does nothing? Rushes one thing only?)
 
-### 3. **Validate Economy Math**
-- Trace resource flow through scenarios
-- Check early-game parity
-- Verify maintenance doesn't break at different hex counts
-- Ensure victory conditions are reachable
+### 3. Evaluate Design Health
+For each mechanic, ask:
+- Does this create meaningful player decisions? (If one choice is always better, it's fake)
+- Does this interact with other systems in interesting ways? (Isolated mechanics add complexity without depth)
+- Can the opponent counterplay? (No counterplay = frustrating, not fun)
+- Does this fit the 30-minute session target? (Mechanics that matter at minute 45 are dead weight)
 
-### 4. **Present Findings**
-- List specific issues with examples
-- Show the math or scenario that causes it
-- Suggest 2-3 concrete fixes (with trade-offs)
-- Highlight which systems interact unexpectedly
+### 4. Present Findings
+Use the output format below. Always show:
+- The specific scenario that causes the problem
+- Why it breaks the design intent
+- Multiple fix options with trade-offs
 
-### 5. **Update CLAUDE.md**
+### 5. Update CLAUDE.md
 - Apply user's chosen fix
-- Update affected sections (balance rules, economy examples, open questions)
-- Note rationale in commit message
+- Remove/update all affected cross-references
+- Check that the fix doesn't introduce new contradictions
 
 ---
 
-## Common Refinement Tasks
+## Analysis Prompts (Examples)
 
-**Ask me to:**
-- ✅ "Analyze early-game economy balance"
-- ✅ "Find edge cases in combat Power rules"
-- ✅ "Validate victory condition thresholds (70% + 20s reachable?)"
-- ✅ "Simulate tech rush vs military rush strategies"
-- ✅ "Check if maintenance system prevents/allows snowballing"
-- ✅ "Propose new tech tree entry and balance it"
-- ✅ "Identify dominant strategies that need rebalancing"
-- ✅ "Design test scenarios for playtesting"
-
-**Examples:**
-- "Is 50 gold/sec counter-spend too cheap?"
-- "What happens if player ignores map control and only techs?"
-- "Can a 5-hex player win vs a 10-hex player?"
-- "Should Blitzkrieg tech cost more than 80 TP?"
-
----
-
-## Key Mechanics to Stress-Test
-
-### Economy
-- Resource generation per hex (2/sec base)
-- Maintenance scaling (1/sec per hex)
-- Building upgrade costs and payoff
-- Income cap with different hex counts
-
-### Combat
-- Power difference rules (instant takeover at >+3)
-- Battle duration formula (5 + (A+D)/2)
-- Attacker damage (loses levels based on diff)
-- Counter-spend cost (50 gold/sec)
-
-### Tech Tree
-- Research generation (0.1 TP/sec per level)
-- Tech cost scaling (should it be exponential?)
-- Which techs are must-haves vs situational
-- Tech synergies and combos
-
-### Victory
-- 70% threshold reachable in 30 min?
-- 20-second hold time creates endgame tension?
-- Tech Level 5 + 50% map achievable?
-- Time limit (30 min) realistic?
+- "Find mechanics that don't create meaningful decisions"
+- "Which strategies are dominant / which are dead?"
+- "What interactions between systems are undefined?"
+- "Stress-test [specific mechanic] against degenerate play"
+- "Review all victory conditions for achievability and counterplay"
+- "What does a player do if they're losing at minute 15?"
 
 ---
 
 ## Output Format
 
-When analyzing, provide:
-
 ```
 ## Issue: [Name]
-**Problem:** [What's wrong]
-**Example:** [Concrete scenario showing the problem]
-**Math:** [Numbers that prove it]
-**Impact:** [How this breaks balance]
+**Problem:** [What's wrong — qualitative description]
+**Scenario:** [Concrete example showing the problem]
+**Design intent violated:** [Which design pillar this breaks]
+**Impact:** [How this degrades player experience]
 
 ## Proposed Fix
 Option A: [Change description]
@@ -113,10 +80,21 @@ Option B: [Alternative]
 
 ---
 
+## Anti-Patterns to Flag
+
+- **Fake choices:** "Pick A or B" where A is always better
+- **Complexity without depth:** A rule that's hard to learn but doesn't create interesting play
+- **Unfun counterplay:** "The only counter to X is to also do X"
+- **Win-more mechanics:** Strong players get stronger, weak players get weaker
+- **Unresolvable stalemates:** Two players can lock each other out indefinitely
+- **Too-early wins:** Victory conditions achievable before the "interesting phase" of the game
+- **Dead features:** Mechanics that never trigger in realistic play
+
+---
+
 ## Notes
 
-- All analysis refs current CLAUDE.md state
-- Economy math assumes tick-based simulation (100ms or faster)
-- Victory conditions tested with 30-min target playtime
-- Assumes 1v1 start (balance for 2v2 later)
-
+- All analysis must reference the CURRENT CLAUDE.md state — not remembered values
+- Focus on qualitative design health, not numeric precision
+- When a finding requires exact math to prove, hand off to `/balance-sim`
+- Design changes should be minimal — fix the problem, don't redesign adjacent systems

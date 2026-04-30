@@ -6,108 +6,90 @@ type: skill
 
 # Milestone Planner Skill — Hexar Build Sequence
 
-Breaks the full CLAUDE.md design into ordered, testable milestones. Each milestone is shippable, validates a core assumption, and unlocks the next. Prevents building features whose dependencies aren't ready.
+Breaks the current CLAUDE.md design into ordered, testable milestones. Each milestone is shippable, validates a core assumption, and unlocks the next.
+
+**Prerequisites:** Run `/tech-stack` and `/architect` first — milestone sequencing depends on knowing what you're building with and how systems connect.
 
 ## Workflow
 
-### 1. Inventory All Features
-- Read CLAUDE.md and list every mechanic as a discrete feature
-- Tag each: core loop / balance system / win condition / UI / networking
+### 1. Inventory All Features (from CLAUDE.md)
+- Read CLAUDE.md fresh. Extract every distinct mechanic as a discrete feature.
+- Tag each: `core-loop` / `balance` / `win-condition` / `ui` / `networking` / `polish`
+- A "feature" is buildable and testable in isolation (if it's not, break it down further)
 
-### 2. Find Dependencies
-- Which features require others to be working first?
-- What can be stubbed (e.g., static map before map generation)?
-- What must be tested early to catch design flaws (economy ticks, combat resolution)?
+### 2. Map Dependencies
+For each feature, ask:
+- What other features must exist before this one can work?
+- What can be stubbed? (e.g., hardcoded map before procedural generation)
+- What must be tested early because it's high-risk? (most likely to surface a design flaw)
 
-### 3. Define Milestones
-- Group features into milestones of 1-2 weeks each
-- Each milestone ends with something playable or demonstrably testable
-- Flag features that are post-MVP (nice-to-have, not needed to validate core loop)
+### 3. Group into Milestones
+- Each milestone = 1-2 weeks of work for one developer
+- Each milestone ends with something **playable or demonstrably testable**
+- Rule: never more than 2 milestones without a playable checkpoint
+- Separate "validation milestones" (prove the design works) from "feature milestones" (add content)
 
-### 4. Write Acceptance Criteria
-- For each milestone: what does "done" look like?
-- Prefer functional tests over unit tests at this stage ("can two players complete a game?")
+### 4. Define Acceptance Criteria
+For each milestone:
+- **Done when:** concrete observable behavior, not "code is written"
+- **Design risk:** what CLAUDE.md assumption might break here?
+- **If it breaks:** what's the fallback or redesign path?
 
-### 5. Identify Risk Items
-- Which milestone is most likely to surface a design flaw?
-- Where might CLAUDE.md need revision based on implementation reality?
-
----
-
-## Hexar Feature Inventory (from CLAUDE.md)
-
-### Core Loop (must be in MVP)
-- Hex grid rendering with ownership colors
-- Economy tick (gold income, maintenance, net calculation)
-- Unclaimed hex claiming (10 gold, instant)
-- Defense building + Power system
-- Enemy hex attack (100 gold, battle timer, counter-spend)
-- Capital capture = game over
-- Conquest victory (60% + 10 sec)
-
-### Secondary Systems (MVP or early Phase 2)
-- Economy building (income boost)
-- Research building + TP generation
-- Tech tree (4 techs)
-- Tech Dominance victory condition
-- Garrison passive defense
-- Auto-drop on negative income
-
-### Polish / Phase 3
-- Map generation (avoid choke points)
-- Multiplayer networking
-- UI overlays (battle timer, resource counters, victory progress)
-- Time limit tiebreaker
-- Building demolish / refund
+### 5. Identify What Gets Cut
+- Tag features as MVP-required vs post-MVP
+- If total milestone count > 6, something needs to move to post-MVP
+- Post-MVP features should not block any MVP milestone
 
 ---
 
-## Suggested Milestone Structure
+## Milestone Design Principles
 
-```
-M1 — Local Hex Grid (no game logic)
-  Render hex grid, click to select, show coordinates
-  Done when: grid displays correctly at target map size
+**Validate risky assumptions first:**
+- The economy tick loop is the highest-risk system (does stepped maintenance *feel* right?)
+- Combat resolution is second-highest (does the battle timer create tension or frustration?)
+- Network sync is a known hard problem but well-understood — defer after local play works
 
-M2 — Economy Loop (single player)
-  Gold ticks, claim unclaimed hexes, maintenance, auto-drop
-  Done when: one player can expand to 20 hexes and income math matches CLAUDE.md
+**Local before networked:**
+- All game logic works in local 1v1 before adding network layer
+- Network bugs are 10x harder to debug than logic bugs
+- Design flaws found locally cost 1/10th to fix vs found after networking is built
 
-M3 — Combat (single player vs dummy)
-  Defense building, Power, attack button, battle timer, counter-spend
-  Done when: all battle resolution cases (instant takeover, standard, fail) work correctly
-
-M4 — Full 1v1 Local
-  Two players on same machine, all buildings, tech tree, both victory conditions
-  Done when: a complete game can be played and won
-
-M5 — Networking
-  Server-authoritative tick, delta state sync, two browser tabs as two players
-  Done when: M4 game works over localhost WebSocket
-
-M6 — Playtest Ready
-  Map generation, UI polish, 30-min session target validated
-  Done when: external playtesters can complete a game without guidance
-```
+**Stubbing strategy:**
+- Map generation → use a hardcoded test map (fixed layout, known hex positions)
+- AI opponent → use a second player on same machine, or simple scripted behavior
+- UI polish → placeholder rectangles/text until gameplay validates
 
 ---
 
 ## Output Format
 
 ```
-## Milestone N — [Name]
-**Goal:** [What assumption this validates]
-**Features included:** [List]
-**Explicitly deferred:** [What's NOT in this milestone]
-**Done when:** [Acceptance criteria]
-**Design risk:** [What CLAUDE.md assumption might break here]
+## Feature Inventory
+[Table of features extracted from CLAUDE.md, tagged by category]
+
+## Dependency Graph
+[Which features depend on which — text format, not visual]
+
+## Milestone Plan
+
+### M[N] — [Name] (~[time estimate])
+**Goal:** [What assumption/system this validates]
+**Features:** [List from inventory]
+**Stubbed:** [What's faked in this milestone]
+**Done when:** [Observable acceptance criteria]
+**Design risk:** [What might break and what to do if it does]
+
+...repeat for each milestone...
+
+## Post-MVP (deferred)
+[Features that don't make it into the initial build sequence]
 ```
 
 ---
 
-## Notes
+## Rules
 
-- Local 1v1 before networking — design flaws are cheaper to fix without network complexity
-- Economy loop is the highest-risk milestone (stepped maintenance math must feel right in practice)
-- Tech tree can be stubbed as manual toggles in M4 before full Research building flow
-- Map generation is a post-MVP concern — use a hardcoded test map for M1-M5
+- **Never cache milestones.** Generate fresh from current CLAUDE.md each invocation.
+- **No milestone without a "done when."** If you can't define acceptance criteria, the milestone is too vague.
+- **Shortest path to playable.** The first playable checkpoint should be ≤ 3 milestones in.
+- **Mark risks honestly.** Every milestone should name what could go wrong.
