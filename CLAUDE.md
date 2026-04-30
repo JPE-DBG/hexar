@@ -13,7 +13,7 @@ Hexar is a fast-paced, real-time multiplayer hex strategy game inspired by Antiy
 **Genre:** Real-time strategy (RTS), economic conquest  
 **Players:** 2-4 (starting with 1v1)  
 **Game Duration:** ~25-30 minutes  
-**Map:** Hexagonal grid, 15-25 hexes per player starter territory  
+**Map:** Hexagonal grid, 60-80 total hexes per 1v1 map (players start with 1 hex, expand to 25-35)  
 **Win Conditions:** Conquest, Tech Dominance, or Time Limit (see Victory Conditions)
 
 ### Design Pillars
@@ -56,7 +56,7 @@ Each hex can have **one building** of three types. Building can be demolished (r
 #### Defense Building
 - **Effect:** +1 Power per level (affects combat)
 - **Build cost:** 60 gold
-- **Upgrade cost:** 30 gold/level
+- **Upgrade cost (Exponential):** L1=30, L2=60, L3=120, L4=240, L5=480 (doubles each level)
 - **Max level:** Unlimited (incremental)
 
 #### Research Building
@@ -114,7 +114,6 @@ Winning attacker's hex loses levels based on power differential:
 Power diff = +1:  Attacker loses 0 levels (clean win)
 Power diff = +2:  Attacker loses 0 levels (solid win)
 Power diff = +3:  Attacker loses 1 level (costly)
-Power diff = +4+: Attacker loses 2+ levels (pyrrhic)
 ```
 
 - Example: Your Power 5 hex attacks enemy Power 2 hex (diff +3). You win but drop to Power 4.
@@ -223,11 +222,12 @@ T=5 min+:  Border warfare begins in earnest
 ## Balance Rules & Constraints
 
 ### Exponential Upgrade Costs (Prevents Snowballing)
-- Economy and Research buildings use exponential cost scaling: L1=40, L2=80, L3=160, L4=320, L5=640 (doubles each level)
-- **Linear rewards:** Each level provides constant +0.5 resources/sec (or +0.1 TP/sec for Research)
-- **Effect:** Early game upgrades are cheap (quick power spikes). Late game upgrades cost exponentially more, capping power growth
-- **Math:** L1-L4 costs ~840 gold total. L5 adds 640. Each additional level doubles cost.
-- **Example:** Player A has 10 hexes earning 20 resources/sec. Upgrading to L5 on 3 hexes = 1920 gold = 96 seconds of savings. By then, Player B has scaled up too.
+- All three buildings use exponential cost scaling (doubles each level)
+- Economy/Research: L1=40, L2=80, L3=160, L4=320, L5=640
+- Defense: L1=30, L2=60, L3=120, L4=240, L5=480 (slightly cheaper, same curve)
+- **Linear rewards:** Each level provides constant gain (+0.5 resources/sec, +0.1 TP/sec, or +1 Power)
+- **Effect:** Early upgrades are cheap (quick power spikes). Late upgrades cost exponentially more, capping runaway growth
+- **Example:** Defense Level 5 costs 60 + 30+60+120+240+480 = 990 gold total for Power 5. Previously (linear) it cost only 210 gold — a fortress was trivially cheap.
 
 ### Maintenance System (Prevents Extreme Expansion)
 - Each hex costs 1 maintenance/sec to hold
@@ -236,9 +236,9 @@ T=5 min+:  Border warfare begins in earnest
 - If maintenance exceeds income, slowest hexes auto-drop (player chooses order)
 
 ### Combat Attrition
-- Attackers lose levels based on power difference (0 levels at +1-2 diff, 1 level at +3, 2+ at +4+)
-- Discourages overkill attacks
-- Creates cost to conquest
+- Only applies to standard battles (diff 1-3). Instant takeovers have no attrition.
+- Diff +1 or +2: attacker loses 0 levels. Diff +3: attacker loses 1 level.
+- Discourages grinding close battles repeatedly; rewards decisive power advantages
 
 ### Tech Scaling (Achievable in 30 min)
 - Tech costs reduced for viability (first 3 techs = 130 TP total, ~1300 seconds with 1 Research hex)
@@ -305,10 +305,11 @@ T=5 min+:  Border warfare begins in earnest
 - ~25-30 hexes per player after midgame (realistic distribution)
 
 **Pacing with 70 hexes (example):**
-- **T=0-3min:** Each player conquers 3-4 unclaimed hexes → 4-5 hexes each
-- **T=3-5min:** Meet at borders (players are ~5 hexes from each other)
-- **T=5-15min:** Border skirmishes, some territory trades hands
-- **T=15-25min:** One player pushes toward 50% (35 hexes) or secures Tech Level 3
+- **T=0-2min:** Each player rapidly claims ~10 unclaimed hexes (10g each, income scales fast)
+- **T=2-3min:** Land-grab slows, players meet at borders with ~10 hexes each
+- **T=3-5min:** First border skirmishes, Economy and Defense buildings appear
+- **T=5-15min:** Active border warfare, territory trades hands
+- **T=15-25min:** One player pushes toward 60% (42 hexes) or secures Tech Level 3
 - **T=25-30min:** Final race to victory condition
 
 **Too small (30 hexes total):** Players meet at T=1min, constant warfare, no economy buildup, RNG-heavy
@@ -319,7 +320,7 @@ T=5 min+:  Border warfare begins in earnest
 - [ ] **Exponential cost feel:** Does progression curve feel right? Too fast/slow?
 - [ ] **Counter-spend cap:** Is +3 power cap balanced? Create interesting battles?
 - [ ] **Map size:** Does 70-hex map hit 30-min target? Adjust if needed.
-- [ ] **Conquest threshold:** Does 50% + 10 sec create tense endgame?
+- [ ] **Conquest threshold:** Does 60% + 10 sec create tense endgame?
 - [ ] **Tech viability:** Do players build Research? Or pure military?
 
 ### Mechanical Unknowns
