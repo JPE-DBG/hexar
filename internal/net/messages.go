@@ -9,7 +9,21 @@ type MsgType string
 
 const (
 	MsgSnapshot MsgType = "snapshot"
+	MsgWelcome  MsgType = "welcome"
+	MsgAction   MsgType = "action"
 )
+
+type WelcomeMsg struct {
+	Type     MsgType `json:"type"`
+	PlayerID int     `json:"playerId"`
+}
+
+type ActionMsg struct {
+	Type   MsgType `json:"type"`
+	Action string  `json:"action"`
+	Q      int     `json:"q"`
+	R      int     `json:"r"`
+}
 
 type SnapshotMsg struct {
 	Type    MsgType               `json:"type"`

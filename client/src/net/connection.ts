@@ -1,16 +1,32 @@
 import { SnapshotMsg } from '../state/state';
 
-export type MessageHandler = (msg: SnapshotMsg) => void;
+export interface WelcomeMsg {
+  type: 'welcome';
+  playerId: number;
+}
+
+type ServerMsg = SnapshotMsg | WelcomeMsg;
+
+export interface ConnectionHandlers {
+  onSnapshot: (msg: SnapshotMsg) => void;
+  onWelcome: (msg: WelcomeMsg) => void;
+}
 
 export class Connection {
   private ws: WebSocket | null = null;
-  private handler: MessageHandler;
+  private handlers: ConnectionHandlers;
   private url: string;
 
-  constructor(url: string, handler: MessageHandler) {
+  constructor(url: string, handlers: ConnectionHandlers) {
     this.url = url;
-    this.handler = handler;
+    this.handlers = handlers;
     this.connect();
+  }
+
+  send(msg: object) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(msg));
+    }
   }
 
   private connect() {
@@ -21,8 +37,15 @@ export class Connection {
     };
 
     this.ws.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data) as SnapshotMsg;
-      this.handler(msg);
+      const msg = JSON.parse(ev.data) as ServerMsg;
+      switch (msg.type) {
+        case 'welcome':
+          this.handlers.onWelcome(msg);
+          break;
+        case 'snapshot':
+          this.handlers.onSnapshot(msg);
+          break;
+      }
     };
 
     this.ws.onclose = () => {

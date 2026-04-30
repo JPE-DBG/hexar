@@ -11,9 +11,10 @@ import (
 )
 
 type Client struct {
-	conn *websocket.Conn
-	room *room.Room
-	send chan []byte
+	conn     *websocket.Conn
+	room     *room.Room
+	playerID game.PlayerID
+	send     chan []byte
 }
 
 func NewClient(conn *websocket.Conn, r *room.Room) *Client {
@@ -56,9 +57,24 @@ func (c *Client) WritePump(ctx context.Context) {
 
 func (c *Client) ReadPump(ctx context.Context) {
 	for {
-		_, _, err := c.conn.Read(ctx)
+		_, data, err := c.conn.Read(ctx)
 		if err != nil {
 			return
+		}
+		var raw struct {
+			Type   string `json:"type"`
+			Action string `json:"action"`
+			Q      int    `json:"q"`
+			R      int    `json:"r"`
+		}
+		if json.Unmarshal(data, &raw) != nil {
+			continue
+		}
+		if raw.Type == string(MsgAction) && raw.Action == "claim" {
+			c.room.EnqueueAction(game.ClaimAction{
+				Player: c.playerID,
+				Target: game.Hex{Q: raw.Q, R: raw.R},
+			})
 		}
 	}
 }
