@@ -28,8 +28,8 @@ func TestEconomy10Hexes30Seconds(t *testing.T) {
 
 func TestMaintenanceStepped(t *testing.T) {
 	tests := []struct {
-		hexes    int
-		wantMnt  float64
+		hexes   int
+		wantMnt float64
 	}{
 		{5, 5.0},
 		{10, 10.0},

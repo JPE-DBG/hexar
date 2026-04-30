@@ -8,9 +8,9 @@ type ClaimAction struct {
 }
 
 var (
-	ErrHexNotFound   = errors.New("hex not found")
-	ErrHexOwned      = errors.New("hex already owned")
-	ErrNotAdjacent   = errors.New("no adjacent owned hex with power")
+	ErrHexNotFound      = errors.New("hex not found")
+	ErrHexOwned         = errors.New("hex already owned")
+	ErrNotAdjacent      = errors.New("no adjacent owned hex with power")
 	ErrInsufficientGold = errors.New("insufficient gold")
 )
 
