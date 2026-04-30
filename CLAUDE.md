@@ -386,6 +386,78 @@ T=5 min+:  Border warfare begins in earnest
 - **One goroutine per game room.** Player actions arrive via WebSocket, queued into a channel, processed at next tick boundary.
 - **Message types (JSON):** Define shared message schema early — client and server must agree on shape. Keep message types in a shared doc or generate from a single source.
 
+### Tick Execution Order (6 phases, strict sequence)
+
+```
+Phase 1: PROCESS ACTIONS — drain queued player intentions, validate, apply
+Phase 2: ECONOMY — calculate income/maintenance, accrue gold/TP (×0.1 per tick)
+Phase 3: BATTLES — decrement timers by 0.1s, resolve expired (transfer or retain hex)
+Phase 4: AUTO-DROP — check negative income, manage 10s grace, drop if expired
+Phase 5: VICTORY — conquest (60%/10s), tech dom (4 techs+35%/10s), capital loss, time limit
+Phase 6: DELTA — diff vs previous tick, broadcast to clients
+```
+
+**Why:** Actions first = immediate effect. Economy before battles = counter-spend gold already deducted. Battles before victory = hex transfers count this tick. Victory last = reflects true final state.
+
+### Edge Case Decisions
+
+| Scenario | Decision |
+|---|---|
+| Disconnect mid-battle | Game continues 30s, then forfeit |
+| Two attacks on same hex | First-in-queue wins, second rejected (one battle per hex) |
+| Reconnection | Full snapshot (~3KB), no replay log |
+| Capital captured during outgoing attack | Immediate game over, all battles canceled |
+| Counter-spend same tick as battle expires | Applied (Phase 1 runs before Phase 3) |
+| Gold below 0 | Clamped to 0, actions rejected if insufficient |
+| Player trapped (no Power≥1 border) | Must build Defense to regain attack ability |
+
+### Project Structure
+
+```
+hexar/
+├── CLAUDE.md
+├── go.mod
+├── cmd/server/main.go           # entry point, HTTP+WS, serves client
+├── internal/
+│   ├── game/                    # PURE logic (zero I/O, zero network, deterministic)
+│   │   ├── state.go            # GameState, Hex, Player, Battle structs
+│   │   ├── tick.go             # RunTick(state, dt) — 6-phase function
+│   │   ├── economy.go          # income, maintenance, auto-drop
+│   │   ├── combat.go           # attack validation, battle resolution
+│   │   ├── building.go         # build, upgrade, demolish
+│   │   ├── tech.go             # unlock validation, bonus computation
+│   │   ├── victory.go          # victory condition checks
+│   │   ├── action.go           # Action types, validate+apply dispatch
+│   │   ├── hexmath.go          # axial coords, adjacency, distance
+│   │   └── constants.go        # ALL numeric constants from CLAUDE.md
+│   ├── room/                    # Owns GameState + ticker goroutine
+│   │   ├── room.go
+│   │   └── loop.go
+│   ├── net/                     # WebSocket, HTTP, message serialization
+│   │   ├── server.go
+│   │   ├── client.go
+│   │   ├── messages.go
+│   │   └── delta.go
+│   └── mapgen/                  # Hardcoded test map (MVP)
+│       └── generator.go
+├── client/
+│   ├── index.html
+│   ├── vite.config.ts
+│   ├── package.json
+│   └── src/
+│       ├── main.ts
+│       ├── net/                 # WebSocket, reconnect, message types
+│       ├── state/              # Game state mirror, apply delta/snapshot
+│       ├── render/             # Canvas hex grid, buildings, battles
+│       ├── input/              # Pixel→hex detection, action dispatch
+│       ├── ui/                 # DOM: HUD, build menu, tech tree
+│       ├── hexmath.ts          # Axial math (mirrors server)
+│       └── constants.ts        # Mirrors server constants
+└── .claude/skills/
+```
+
+**Key rule:** `internal/game/` has zero imports outside stdlib. `RunTick(state, dt)` is a pure function — fully testable with `go test` alone.
+
 ### Rejected Alternatives
 - **Node.js server:** Go developer, worse concurrency model for tick loops
 - **Phaser/PixiJS:** Overkill for colored hexagons + text; adds framework weight
