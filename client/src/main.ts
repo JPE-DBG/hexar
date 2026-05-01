@@ -4,6 +4,7 @@ import { Renderer } from './render/renderer';
 import { setupInput } from './input/input';
 import { updateHUD, calcMaintenance } from './ui/hud';
 import { BuildMenu } from './ui/buildmenu';
+import { neighbors } from './hexmath';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const hud = document.getElementById('hud')!;
@@ -57,7 +58,9 @@ function onSnapshot(msg: SnapshotMsg) {
         selectedHex = current;
         const isOwn = current.owner === myPlayerId;
         const isEnemy = current.owner !== 0 && current.owner !== myPlayerId;
-        buildMenu.updateWithActions(current, gold, isOwn, isEnemy);
+        const atkPwr = bestAdjacentPower(state, myPlayerId, current);
+        const hasBattle = state.battles.some(b => b.dq === current.q && b.dr === current.r);
+        buildMenu.updateWithActions(current, gold, isOwn, isEnemy, atkPwr, hasBattle);
       }
     }
   }
@@ -68,6 +71,20 @@ function hexIncome(hex: HexDTO): number {
     return (2.0 + 0.5 * hex.level) * 1.5;
   }
   return 2.0;
+}
+
+function bestAdjacentPower(gs: GameState, playerId: number, target: HexDTO): number {
+  let best = 0;
+  for (const n of neighbors({ q: target.q, r: target.r })) {
+    const key = `${n.q},${n.r}`;
+    const hs = gs.hexes.get(key);
+    if (!hs || hs.owner !== playerId) continue;
+    let p = 0;
+    if (hs.capital) p = 1;
+    if (hs.building === 2) p += hs.level;
+    if (p > best) best = p;
+  }
+  return best;
 }
 
 const wsUrl = `ws://${window.location.host}/ws`;
@@ -109,6 +126,8 @@ setupInput(
     const gold = player?.gold ?? 0;
     const isOwn = hex.owner === myPlayerId;
     const isEnemy = hex.owner !== 0 && hex.owner !== myPlayerId;
-    buildMenu.updateWithActions(hex, gold, isOwn, isEnemy);
+    const atkPwr = bestAdjacentPower(state, myPlayerId, hex);
+    const hasBattle = state.battles.some(b => b.dq === hex.q && b.dr === hex.r);
+    buildMenu.updateWithActions(hex, gold, isOwn, isEnemy, atkPwr, hasBattle);
   }
 );

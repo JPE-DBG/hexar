@@ -18,10 +18,6 @@ const (
 	DefenseBuildCost  = 60.0
 	ResearchBuildCost = 80.0
 
-	EconomyBaseUpgradeCost  = 40.0
-	DefenseBaseUpgradeCost  = 30.0
-	ResearchBaseUpgradeCost = 40.0
-
 	EconomyBonusMultiplier = 1.5
 	EconomyPerLevel        = 0.5
 	ResearchPerLevel       = 0.1

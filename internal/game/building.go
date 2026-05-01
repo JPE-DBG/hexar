@@ -13,29 +13,14 @@ func BuildCost(building BuildingType) float64 {
 	}
 }
 
-func UpgradeBaseCost(building BuildingType) float64 {
-	switch building {
-	case BuildingEconomy:
-		return EconomyBaseUpgradeCost
-	case BuildingDefense:
-		return DefenseBaseUpgradeCost
-	default:
-		return 0
-	}
-}
-
 func UpgradeCost(building BuildingType, currentLevel int) float64 {
-	base := UpgradeBaseCost(building)
+	base := BuildCost(building)
 	return base * math.Pow(2, float64(currentLevel))
 }
 
 func TotalInvested(building BuildingType, level int) float64 {
-	cost := BuildCost(building)
-	base := UpgradeBaseCost(building)
-	for i := range level {
-		cost += base * math.Pow(2, float64(i))
-	}
-	return cost
+	base := BuildCost(building)
+	return base * (math.Pow(2, float64(level)) - 1)
 }
 
 func ValidateBuild(state *GameState, action Action) error {
@@ -60,7 +45,7 @@ func ApplyBuild(state *GameState, action Action) {
 	state.Players[action.Player].Gold -= BuildCost(action.Building)
 	hs := state.Hexes[action.Target]
 	hs.Building = action.Building
-	hs.Level = 0
+	hs.Level = 1
 }
 
 func ValidateUpgrade(state *GameState, action Action) error {

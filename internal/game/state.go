@@ -26,7 +26,7 @@ func (h *HexState) Power() int {
 		p = 1
 	}
 	if h.Building == BuildingDefense {
-		p += h.Level + 1
+		p += h.Level
 	}
 	return p
 }
