@@ -22,6 +22,10 @@ export class Renderer {
     this.offsetY = this.canvas.height / 2;
   }
 
+  getOffset(): { x: number; y: number } {
+    return { x: this.offsetX, y: this.offsetY };
+  }
+
   render(state: GameState) {
     const ctx = this.ctx;
     ctx.fillStyle = COLORS.background;

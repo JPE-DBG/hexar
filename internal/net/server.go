@@ -2,6 +2,7 @@ package net
 
 import (
 	"context"
+	"encoding/json"
 	"hexar/internal/room"
 	"log"
 	"net/http"
@@ -38,7 +39,11 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	client := NewClient(conn, s.room)
-	s.room.AddClient(client)
+	pid := s.room.AddClient(client)
+	client.playerID = pid
+
+	welcome, _ := json.Marshal(WelcomeMsg{Type: MsgWelcome, PlayerID: int(pid)})
+	conn.Write(ctx, websocket.MessageText, welcome)
 
 	go client.WritePump(ctx)
 

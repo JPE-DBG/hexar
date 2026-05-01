@@ -11,10 +11,13 @@ type ClientSender interface {
 }
 
 type Room struct {
-	mu      sync.RWMutex
-	state   *game.GameState
-	clients []ClientSender
-	stop    chan struct{}
+	mu           sync.RWMutex
+	state        *game.GameState
+	clients      []ClientSender
+	clientPlayer map[ClientSender]game.PlayerID
+	nextSlot     int
+	actions      chan game.ClaimAction
+	stop         chan struct{}
 }
 
 func New() *Room {
@@ -30,8 +33,10 @@ func New() *Room {
 	}
 
 	return &Room{
-		state: state,
-		stop:  make(chan struct{}),
+		state:        state,
+		clientPlayer: make(map[ClientSender]game.PlayerID),
+		actions:      make(chan game.ClaimAction, 256),
+		stop:         make(chan struct{}),
 	}
 }
 
@@ -41,11 +46,18 @@ func (r *Room) State() *game.GameState {
 	return r.state
 }
 
-func (r *Room) AddClient(c ClientSender) {
+func (r *Room) AddClient(c ClientSender) game.PlayerID {
 	r.mu.Lock()
 	r.clients = append(r.clients, c)
+	var pid game.PlayerID
+	if r.nextSlot < 2 {
+		pid = game.PlayerID(r.nextSlot + 1)
+		r.nextSlot++
+	}
+	r.clientPlayer[c] = pid
 	r.mu.Unlock()
 	c.SendSnapshot(r.state)
+	return pid
 }
 
 func (r *Room) RemoveClient(c ClientSender) {
@@ -54,8 +66,16 @@ func (r *Room) RemoveClient(c ClientSender) {
 	for i, cl := range r.clients {
 		if cl == c {
 			r.clients = append(r.clients[:i], r.clients[i+1:]...)
-			return
+			break
 		}
+	}
+	delete(r.clientPlayer, c)
+}
+
+func (r *Room) EnqueueAction(action game.ClaimAction) {
+	select {
+	case r.actions <- action:
+	default:
 	}
 }
 
