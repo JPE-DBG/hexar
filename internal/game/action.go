@@ -23,7 +23,7 @@ func ValidateClaim(state *GameState, action ClaimAction) error {
 		return ErrHexOwned
 	}
 
-	if !hasAdjacentPower(state, action.Player, action.Target) {
+	if !hasAdjacentOwned(state, action.Player, action.Target) {
 		return ErrNotAdjacent
 	}
 
@@ -48,13 +48,13 @@ func ProcessActions(state *GameState, actions []ClaimAction) {
 	}
 }
 
-func hasAdjacentPower(state *GameState, player PlayerID, target Hex) bool {
+func hasAdjacentOwned(state *GameState, player PlayerID, target Hex) bool {
 	for _, n := range target.Neighbors() {
 		hs, ok := state.Hexes[n]
 		if !ok {
 			continue
 		}
-		if hs.Owner == player && hs.Power() >= 1 {
+		if hs.Owner == player {
 			return true
 		}
 	}

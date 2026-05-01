@@ -1,3 +1,8 @@
+const PLAYER_COLORS: Record<number, string> = {
+  1: '#4ecdc4',
+  2: '#ff6b6b',
+};
+
 export function updateHUD(
   el: HTMLElement,
   playerId: number,
@@ -8,7 +13,8 @@ export function updateHUD(
 ) {
   const net = income - maintenance;
   const sign = net >= 0 ? '+' : '';
-  el.textContent = `Player ${playerId} | Gold: ${gold.toFixed(0)} (${sign}${net.toFixed(1)}/s) | Hexes: ${hexCount}`;
+  const color = PLAYER_COLORS[playerId] ?? '#e0e0e0';
+  el.innerHTML = `<span style="color:${color}">Player ${playerId}</span> | Gold: ${gold.toFixed(0)} (${sign}${net.toFixed(1)}/s) | Hexes: ${hexCount}`;
 }
 
 export function calcIncome(hexCount: number): number {
