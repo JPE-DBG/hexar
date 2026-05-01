@@ -77,14 +77,26 @@ export class BuildMenu {
     let html = `<span style="margin-right:4px">[${hex.q},${hex.r}] Pwr:${defPower}</span>`;
 
     if (isOwn) {
-      if (hex.building === 0) {
-        html += this.makeBtn('Economy (80g)', gold >= 80, 'build-economy');
-        html += this.makeBtn('Defense (60g)', gold >= 60, 'build-defense');
-      } else {
-        const refund = demolishRefund(hex.building, hex.level);
-        html += this.makeBtn(`Demolish (+${refund}g)`, true, 'demolish');
+      const hasBuilding = hex.building !== 0;
+      const refund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
+
+      // Slot 1: Economy → Upgrade when economy built, greyed when defense built
+      if (hex.building === 1) {
         html += this.makeBtn(`Upgrade (${upgCost}g)`, gold >= upgCost, 'upgrade');
+      } else {
+        html += this.makeBtn('Economy (80g)', !hasBuilding && gold >= 80, 'build-economy');
       }
+
+      // Slot 2: Defense → Upgrade when defense built, greyed when economy built
+      if (hex.building === 2) {
+        html += this.makeBtn(`Upgrade (${upgCost}g)`, gold >= upgCost, 'upgrade');
+      } else {
+        html += this.makeBtn('Defense (60g)', !hasBuilding && gold >= 60, 'build-defense');
+      }
+
+      // Separator + Demolish (always present, greyed when no building)
+      html += `<span style="border-left:1px solid #555;height:20px;margin:0 8px;display:inline-block;vertical-align:middle"></span>`;
+      html += this.makeBtn(`🗑${hasBuilding ? ` (+${refund}g)` : ''}`, hasBuilding, 'demolish');
     } else if (isEnemy) {
       html += this.makeBtn('Attack (100g)', canAttack, 'attack');
       if (hasBattle) {
