@@ -13,16 +13,28 @@ export interface PlayerDTO {
   tp: number;
 }
 
+export interface BattleDTO {
+  aq: number;
+  ar: number;
+  dq: number;
+  dr: number;
+  timeLeft: number;
+  attacker: number;
+  defender: number;
+}
+
 export interface SnapshotMsg {
   type: 'snapshot';
   hexes: Record<string, HexDTO>;
   players: Record<string, PlayerDTO>;
+  battles: BattleDTO[];
   elapsed: number;
 }
 
 export interface GameState {
   hexes: Map<string, HexDTO>;
   players: Map<string, PlayerDTO>;
+  battles: BattleDTO[];
   elapsed: number;
 }
 
@@ -37,5 +49,5 @@ export function applySnapshot(msg: SnapshotMsg): GameState {
     players.set(key, player);
   }
 
-  return { hexes, players, elapsed: msg.elapsed };
+  return { hexes, players, battles: msg.battles || [], elapsed: msg.elapsed };
 }

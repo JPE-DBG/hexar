@@ -59,20 +59,20 @@ func TestClaimValidation(t *testing.T) {
 	state.Hexes[farHex] = &HexState{}
 
 	// Valid claim
-	err := ValidateClaim(state, ClaimAction{Player: pid, Target: target})
+	err := ValidateClaim(state, Action{Type: ActionClaim, Player: pid, Target: target})
 	if err != nil {
 		t.Errorf("expected valid claim, got: %v", err)
 	}
 
 	// Not adjacent
-	err = ValidateClaim(state, ClaimAction{Player: pid, Target: farHex})
+	err = ValidateClaim(state, Action{Type: ActionClaim, Player: pid, Target: farHex})
 	if err != ErrNotAdjacent {
 		t.Errorf("expected ErrNotAdjacent, got: %v", err)
 	}
 
 	// Already owned
 	state.Hexes[target].Owner = pid
-	err = ValidateClaim(state, ClaimAction{Player: pid, Target: target})
+	err = ValidateClaim(state, Action{Type: ActionClaim, Player: pid, Target: target})
 	if err != ErrHexOwned {
 		t.Errorf("expected ErrHexOwned, got: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestClaimDeductsGold(t *testing.T) {
 	state.Hexes[capital] = &HexState{Owner: pid, Capital: true}
 	state.Hexes[target] = &HexState{}
 
-	RunTick(state, TickDt, []ClaimAction{{Player: pid, Target: target}})
+	RunTick(state, TickDt, []Action{{Type: ActionClaim, Player: pid, Target: target}})
 
 	if state.Players[pid].Gold < 39.0 || state.Players[pid].Gold > 41.0 {
 		t.Errorf("gold = %.2f, want ~40 (50 - 10 + tick income)", state.Players[pid].Gold)
@@ -108,7 +108,7 @@ func TestInsufficientGold(t *testing.T) {
 	state.Hexes[capital] = &HexState{Owner: pid, Capital: true}
 	state.Hexes[target] = &HexState{}
 
-	err := ValidateClaim(state, ClaimAction{Player: pid, Target: target})
+	err := ValidateClaim(state, Action{Type: ActionClaim, Player: pid, Target: target})
 	if err != ErrInsufficientGold {
 		t.Errorf("expected ErrInsufficientGold, got: %v", err)
 	}

@@ -29,6 +29,7 @@ type SnapshotMsg struct {
 	Type    MsgType               `json:"type"`
 	Hexes   map[string]*HexDTO    `json:"hexes"`
 	Players map[string]*PlayerDTO `json:"players"`
+	Battles []*BattleDTO          `json:"battles"`
 	Elapsed float64               `json:"elapsed"`
 }
 
@@ -47,11 +48,22 @@ type PlayerDTO struct {
 	TP   float64 `json:"tp"`
 }
 
+type BattleDTO struct {
+	AQ       int     `json:"aq"`
+	AR       int     `json:"ar"`
+	DQ       int     `json:"dq"`
+	DR       int     `json:"dr"`
+	TimeLeft float64 `json:"timeLeft"`
+	Attacker int     `json:"attacker"`
+	Defender int     `json:"defender"`
+}
+
 func BuildSnapshot(state *game.GameState) *SnapshotMsg {
 	msg := &SnapshotMsg{
 		Type:    MsgSnapshot,
 		Hexes:   make(map[string]*HexDTO, len(state.Hexes)),
 		Players: make(map[string]*PlayerDTO, len(state.Players)),
+		Battles: make([]*BattleDTO, 0, len(state.Battles)),
 		Elapsed: state.Elapsed,
 	}
 
@@ -74,6 +86,18 @@ func BuildSnapshot(state *game.GameState) *SnapshotMsg {
 			Gold: p.Gold,
 			TP:   p.TP,
 		}
+	}
+
+	for _, b := range state.Battles {
+		msg.Battles = append(msg.Battles, &BattleDTO{
+			AQ:       b.AttackerHex.Q,
+			AR:       b.AttackerHex.R,
+			DQ:       b.DefenderHex.Q,
+			DR:       b.DefenderHex.R,
+			TimeLeft: b.TimeLeft,
+			Attacker: int(b.Attacker),
+			Defender: int(b.Defender),
+		})
 	}
 
 	return msg

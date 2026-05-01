@@ -62,19 +62,49 @@ func (c *Client) ReadPump(ctx context.Context) {
 			return
 		}
 		var raw struct {
-			Type   string `json:"type"`
-			Action string `json:"action"`
-			Q      int    `json:"q"`
-			R      int    `json:"r"`
+			Type     string `json:"type"`
+			Action   string `json:"action"`
+			Q        int    `json:"q"`
+			R        int    `json:"r"`
+			Building string `json:"building"`
 		}
 		if json.Unmarshal(data, &raw) != nil {
 			continue
 		}
-		if raw.Type == string(MsgAction) && raw.Action == "claim" {
-			c.room.EnqueueAction(game.ClaimAction{
-				Player: c.playerID,
-				Target: game.Hex{Q: raw.Q, R: raw.R},
-			})
+		if raw.Type != string(MsgAction) {
+			continue
 		}
+
+		target := game.Hex{Q: raw.Q, R: raw.R}
+		var action game.Action
+
+		switch raw.Action {
+		case "claim":
+			action = game.Action{Type: game.ActionClaim, Player: c.playerID, Target: target}
+		case "build":
+			bt := parseBuildingType(raw.Building)
+			action = game.Action{Type: game.ActionBuild, Player: c.playerID, Target: target, Building: bt}
+		case "upgrade":
+			action = game.Action{Type: game.ActionUpgrade, Player: c.playerID, Target: target}
+		case "demolish":
+			action = game.Action{Type: game.ActionDemolish, Player: c.playerID, Target: target}
+		case "attack":
+			action = game.Action{Type: game.ActionAttack, Player: c.playerID, Target: target}
+		default:
+			continue
+		}
+
+		c.room.EnqueueAction(action)
+	}
+}
+
+func parseBuildingType(s string) game.BuildingType {
+	switch s {
+	case "economy":
+		return game.BuildingEconomy
+	case "defense":
+		return game.BuildingDefense
+	default:
+		return game.BuildingNone
 	}
 }

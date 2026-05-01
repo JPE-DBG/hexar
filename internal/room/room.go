@@ -16,7 +16,7 @@ type Room struct {
 	clients      []ClientSender
 	clientPlayer map[ClientSender]game.PlayerID
 	nextSlot     int
-	actions      chan game.ClaimAction
+	actions      chan game.Action
 	stop         chan struct{}
 }
 
@@ -35,7 +35,7 @@ func New() *Room {
 	return &Room{
 		state:        state,
 		clientPlayer: make(map[ClientSender]game.PlayerID),
-		actions:      make(chan game.ClaimAction, 256),
+		actions:      make(chan game.Action, 256),
 		stop:         make(chan struct{}),
 	}
 }
@@ -72,7 +72,7 @@ func (r *Room) RemoveClient(c ClientSender) {
 	delete(r.clientPlayer, c)
 }
 
-func (r *Room) EnqueueAction(action game.ClaimAction) {
+func (r *Room) EnqueueAction(action game.Action) {
 	select {
 	case r.actions <- action:
 	default:
