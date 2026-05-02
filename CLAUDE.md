@@ -14,7 +14,7 @@ Hexar is a fast-paced, real-time multiplayer hex strategy game inspired by Antiy
 **Players:** 2-4 (starting with 1v1)  
 **Game Duration:** ~25-30 minutes  
 **Map:** Hexagonal grid, 60-80 total hexes per 1v1 map (players start with 1 hex, expand to 25-35)  
-**Win Conditions:** Conquest, Tech Dominance, or Time Limit (see Victory Conditions)
+**Win Conditions:** Conquest or Time Limit (see Victory Conditions)
 
 ### Design Pillars
 
@@ -62,14 +62,14 @@ With 10 Economy buildings (L1) on 30 hexes:
 ### Resources
 
 - **Gold:** Main currency for buildings, upgrades, and attacks
-- **Tech Points (TP):** Earned from Research buildings (0.1 TP/sec per Research level), spent on tech tree
+- **Tech Points (TP):** Earned from Research buildings (0.2 TP/sec per Research level), spent on tech tree
 
-**Tech bonus stacking (additive):** All bonuses to resource generation stack additively inside one multiplier:
+**Tech bonus stacking:** Economy building formula: `(base + 0.6 × level) × 1.5`. Flat tech bonuses (e.g., Prosperity +1/sec) add to output; multiplier techs (e.g., Compound Growth ×1.25) multiply the building formula output.
 ```
-hex_income = base × (1 + economy_bonus + tech_bonuses)
-
-Example: Economy building (+50%) + Production Boom (+30%):
-  = 2 × (1 + 0.50 + 0.30) = 2 × 1.80 = 3.60/sec
+hex_income (Economy, no techs)        = (2 + 0.6 × level) × 1.5       → L1: 3.9/sec, L5: 7.5/sec
+hex_income (Economy + Prosperity)     = (2 + 0.6 × level) × 1.5 + 1.0 → L1: 4.9/sec
+hex_income (Economy + Compound Growth)= (2 + 0.6 × level) × 1.5 × 1.25→ L1: 4.875/sec
+hex_income (Economy + both)           = (2 + 0.6 × level) × 1.5 × 1.25 + 1.0 → L1: 5.875/sec
 ```
 
 ### Buildings (One per Hex)
@@ -89,9 +89,9 @@ Each hex can have **one building** of three types. There is no separate "build" 
 - **Max level:** Unlimited (incremental)
 
 #### Research Building
-- **Effect:** +0.1 TP/sec per level (fuel for tech tree)
+- **Effect:** +0.2 TP/sec per level (fuel for tech tree)
 - **Upgrade cost:** L1=80, L2=160, L3=320, L4=640 (formula: `BuildCost × 2^level`, BuildCost=80)
-- **Reward (Linear):** +0.1 TP/sec per level (constant gain)
+- **Reward (Linear):** +0.2 TP/sec per level (constant gain)
 - **Max level:** Unlimited (incremental)
 
 ---
@@ -142,28 +142,45 @@ During the battle countdown, defender can spend resources to boost Defense Power
 - Cost: 50 gold/second during battle
 - Effect: +1 Power per second spent
 - **Cap:** min(+3 power, seconds remaining in battle) — cannot boost more than time allows
-- **Garrison interaction:** If Garrison tech is unlocked, adjacent owned hexes each add +1 Power automatically (cap: +3 total). Counter-spend and Garrison share this cap — combined boost cannot exceed +3.
-- Example: Battle at 9 seconds, you're losing 3 vs 5. Spend 150 gold over 3 sec → Power jumps to 6, you win
+- **Garrison interaction:** If Garrison tech is unlocked, adjacent owned hexes each add +1 Power automatically (cap: +2 from Garrison). Counter-spend and Garrison share a total cap of +3 — combined boost cannot exceed +3.
+- **Siege Mastery interaction:** If the attacker has Siege Mastery, their battle timers are 40% shorter. The seconds-remaining cap compresses the defender's reaction window — a 4-second battle still allows up to +3, but requires an immediate response.
+- Example: Battle at 7 seconds, you're losing 3 vs 5. Spend 150 gold over 3 sec → Power jumps to 6, you win
 - Example: Only 1 second left in battle → max +1 Power boost (50 gold), even if you have gold to spare
-- Example (Garrison): 2 adjacent owned hexes give +2 passive. Counter-spend max is now +1 (cap already at +3 with 2 spent)
+- Example (Garrison): 2 adjacent owned hexes give +2 passive (Garrison cap reached). Counter-spend max is now +1 (total cap is +3, Garrison already contributes +2)
 - Cap prevents defender from "buying" complete victory; time pressure makes decisions tense
 
 ---
 
 ## Tech Tree
 
-Research buildings generate Tech Points. Spend TP to unlock perks (global bonuses):
+Research buildings generate Tech Points at **0.2 TP/sec per Research level**. Spend TP to unlock any tech in any order — no prerequisites. **Total tree: 470 TP across 12 techs. No single game unlocks everything**, so every game has a distinct tech build.
 
-| Tech | Cost | Effect |
-|------|------|--------|
-| Iron Grip | 50 TP | All hexes +1 Power |
-| Production Boom | 40 TP | All hexes +30% resource generation |
-| Efficient Conquest | 35 TP | Attack cost reduced to 75 gold |
-| Garrison | 60 TP | During battle, each adjacent owned hex adds +1 Power to defense (cap: +3 total, shared with counter-spend) |
+| Tech | Cost | Effect | Archetype |
+|------|------|--------|-----------|
+| Blitz | 20 TP | Unclaimed hex claims cost 0g (was 10g) | Aggressor |
+| Fortify | 20 TP | New action: spend 40g to prevent instant-takeover on one hex for 90 seconds | Defender |
+| Prosperity | 25 TP | Each Economy (Gold) building generates +1/sec additional income | Builder |
+| Reclamation | 25 TP | Recapturing a hex you previously owned costs 50g instead of 100g | Territorial |
+| Vanguard | 30 TP | After capturing an enemy hex, next attack within 12 seconds costs 50g instead of 100g | Aggressor |
+| Garrison | 30 TP | During battle, each adjacent owned hex adds +1 Power to defense (cap: +2 from Garrison; total defensive cap remains +3, shared with counter-spend) | Defender |
+| Supply Lines | 40 TP | Maintenance costs reduced: 0.9/sec (hexes 1-10), 1.8/sec (hexes 11-20), 2.7/sec (hexes 21+) | Builder |
+| Dominion | 40 TP | Conquest victory timer reduced from 10 seconds to 6 seconds | Territorial |
+| Resilience | 45 TP | Auto-drop grace period doubled (10s → 20s); building refund on drop increased to 70% | Defender |
+| Iron Grip | 55 TP | All owned hexes permanently +1 Power | Aggressor |
+| Compound Growth | 65 TP | Economy (Gold) buildings output ×1.25 (applied before Prosperity's flat bonus) | Builder |
+| Siege Mastery | 75 TP | Your attack battle timers reduced by 40% (minimum 3s); when timer expires at equal Power, attacker wins | Aggressor |
 
-**Tech Level:** Total number of techs unlocked. Reaching Tech Level 4 (all techs unlocked) triggers Tech Dominance victory when combined with map control (see Victory Conditions).
+**Research investment guide:**
+- 1 Research L1 (0.2 TP/sec): ~180 TP in 15 min → ~5 techs from the cheap end
+- 2 Research L1 (0.4 TP/sec): ~360 TP in 15 min → ~8 techs (solid mix of cheap and mid-tier)
+- 3 Research L1 (0.6 TP/sec): ~540 TP in 15 min → ~11 techs (Research specialist — viable path to full tree by minute 13)
 
-**Rationale:** Costs reduced by ~40% from original to make tech tree achievable in 30-min games. First few techs are cheap to encourage early tech investment as a viable alternative to pure military.
+**Archetypes enabled by tech combinations:**
+- **Blitz Aggressor:** Blitz → Vanguard → Iron Grip — free land-grab, chain attacks, full-territory Power
+- **Economic Builder:** Prosperity → Supply Lines → Compound Growth — sustain wide territory, win by income weight
+- **Fortress Defender:** Garrison → Fortify → Iron Grip → Resilience — make attacking you too expensive
+- **Siege Striker:** Iron Grip → Siege Mastery → Vanguard — fast decisive battles with Power baseline across all hexes
+- **Territorial:** Reclamation → Vanguard → Dominion — fluid borders, fast win once 60% reached
 
 ---
 
@@ -214,19 +231,7 @@ T=5 min+:  Border warfare begins in earnest
 - Bring them below 60%, reset their timer
 - Race to 60% yourself
 
-### 2. Tech Dominance (Mid-Game Alternative)
-- Reach **Tech Level 4 (all techs unlocked) AND hold 35% map simultaneously** for 10 consecutive seconds
-- Rewards investing in research as a viable win condition
-
-**Strategic implications:** Tech rush is faster than pure conquest (tech scaling matters). Early investment in Research building pays off. Opponent can counter by military pressure.
-
-**How to stop opponent:**
-- Rush military early while they tech
-- Attack their Research hexes specifically
-- Keep them pinned defending, prevent expansion
-- Example: While opponent reaches Tech 2-3, you've conquered 40% through aggression, win by Conquest
-
-### 3. Time Limit (Tiebreaker)
+### 2. Time Limit (Tiebreaker)
 - At 30 minutes, highest hex count wins
 - Rarely triggers in well-balanced games
 
@@ -235,14 +240,14 @@ T=5 min+:  Border warfare begins in earnest
 ## Balance Rules & Constraints
 
 ### Upgrade Costs (Unified formula: `BuildCost × 2^currentLevel`)
-- **Economy (BuildCost=60):** L1=60, L2=120, L3=240, L4=480
-- **Defense (BuildCost=60):** L1=60, L2=120, L3=240, L4=480 (same curve as Economy)
+- **Gold (BuildCost=60):** L1=60, L2=120, L3=240, L4=480
+- **Power (BuildCost=60):** L1=60, L2=120, L3=240, L4=480 (same curve as Gold)
 - **Research (BuildCost=80):** L1=80, L2=160, L3=320, L4=640
 - There is no separate "build" action — upgrading empty hex to L1 costs `BuildCost × 2^0 = BuildCost`
-- **Economy rewards:** +0.6/sec per level × 1.5 multiplier = +0.9/sec net gain per level
-- **Defense/Research rewards:** +1 Power per level; +0.1 TP/sec per level (constant)
+- **Gold building rewards:** +0.6/sec per level × 1.5 multiplier = +0.9/sec net gain per level
+- **Power/Research rewards:** +1 Power per level; +0.2 TP/sec per level (constant)
 - **Demolish refund:** 50% of total invested; for all buildings: TotalInvested = `BuildCost × (2^level - 1)`, refund = `BuildCost × (2^level - 1) × 0.5`
-  - Economy L1: TotalInvested=60, refund=30; L2: TotalInvested=180, refund=90; L3: TotalInvested=420, refund=210
+  - Gold L1: TotalInvested=60, refund=30; L2: TotalInvested=180, refund=90; L3: TotalInvested=420, refund=210
 
 ### Maintenance System (Prevents Extreme Expansion)
 - Each hex costs 1 maintenance/sec to hold
@@ -250,10 +255,11 @@ T=5 min+:  Border warfare begins in earnest
 - At ~10+ hexes, income caps out without production upgrades
 - If maintenance exceeds income, slowest hexes auto-drop (player chooses order)
 
-### Tech Scaling (Achievable in 30 min)
-- Tech costs reduced for viability (all 4 techs = 185 TP total, achievable with 2-3 Research hexes by mid-game)
-- Tech progression is a viable win condition (Tech Level 4 + 35% map achievable in ~15-18 min with Research investment)
-- Opponents must balance military pressure with allowing tech growth
+### Tech Research Investment (Enhances Conquest)
+- Research buildings generate 0.2 TP/sec per level — doubled from initial design to make single-building investment meaningful
+- With 2-3 Research buildings, players unlock 6-10 techs in a 20-min game
+- Tech investment competes with Gold/Power building investment — no "free" tech path
+- All 12 techs support conquest; no separate tech-based win condition
 
 ### Early Game Parity
 - All players start with 1 capital hex, Power 1, no buildings
@@ -324,7 +330,7 @@ T=5 min+:  Border warfare begins in earnest
 - **T=2-3min:** Land-grab slows, players meet at borders with ~10 hexes each
 - **T=3-5min:** First border skirmishes, Economy and Defense buildings appear
 - **T=5-15min:** Active border warfare, territory trades hands
-- **T=15-25min:** One player pushes toward 60% (42 hexes) or secures Tech Level 3
+- **T=15-25min:** One player pushes toward 60% (42 hexes)
 - **T=25-30min:** Final race to victory condition
 
 **Too small (30 hexes total):** Players meet at T=1min, constant warfare, no economy buildup, RNG-heavy
@@ -336,7 +342,7 @@ T=5 min+:  Border warfare begins in earnest
 - [ ] **Counter-spend cap:** Is +3 power cap balanced? Create interesting battles?
 - [ ] **Map size:** Does 70-hex map hit 30-min target? Adjust if needed.
 - [ ] **Conquest threshold:** Does 60% + 10 sec create tense endgame?
-- [ ] **Tech viability:** Do players build Research? Or pure military?
+- [ ] **Tech build diversity:** Which techs do players prioritize? Do all archetypes (Aggressor, Builder, Defender, Territorial) appear in practice?
 
 ### Mechanical Unknowns
 
@@ -392,7 +398,7 @@ Phase 1: PROCESS ACTIONS — drain queued player intentions, validate, apply
 Phase 2: ECONOMY — calculate income/maintenance, accrue gold/TP (×0.1 per tick)
 Phase 3: BATTLES — decrement timers by 0.1s, resolve expired (transfer or retain hex)
 Phase 4: AUTO-DROP — check negative income, manage 10s grace, drop if expired
-Phase 5: VICTORY — conquest (60%/10s), tech dom (4 techs+35%/10s), capital loss, time limit
+Phase 5: VICTORY — conquest (60%/10s), capital loss, time limit
 Phase 6: DELTA — diff vs previous tick, broadcast to clients
 ```
 

@@ -13,20 +13,20 @@ Generated from CLAUDE.md. 6 milestones, ~6.5 weeks solo developer.
 | 3 | Claiming unclaimed hexes (10g, instant) | core-loop | Yes |
 | 4 | Gold income (2/sec base per hex) | core-loop | Yes |
 | 5 | Stepped maintenance (1/2/3 tiers) | balance | Yes |
-| 6 | Economy building (+50%, upgrades) | core-loop | Yes |
-| 7 | Defense building (+Power, upgrades) | core-loop | Yes |
-| 8 | Research building (+TP, upgrades) | core-loop | Yes |
+| 6 | Gold building (+50% income, upgrades) | core-loop | Yes |
+| 7 | Power building (+Power per level, upgrades) | core-loop | Yes |
+| 8 | Research building (+TP at 0.2 TP/sec per level, upgrades) | core-loop | Yes |
 | 9 | Building demolish (50% refund) | core-loop | Yes |
 | 10 | Exponential upgrade costs | balance | Yes |
 | 11 | Attack enemy hex (100g, Power check) | core-loop | Yes |
 | 12 | Battle timer (6-15 sec countdown) | core-loop | Yes |
 | 13 | Instant takeover (Power diff > 3) | core-loop | Yes |
 | 14 | Counter-spend during battle | core-loop | Yes |
-| 15 | Garrison tech (passive defense boost) | core-loop | Yes |
-| 16 | Tech tree (4 techs, TP spending) | core-loop | Yes |
+| 15 | Garrison tech (adjacent owned hexes +1 Power in defense, cap +2 from Garrison, 30 TP) | core-loop | Yes |
+| 16 | Tech tree (12 techs, TP spending, no prerequisites) | core-loop | Yes |
 | 17 | Auto-drop (negative income, grace period) | balance | Yes |
 | 18 | Conquest victory (60%/10s) | win-condition | Yes |
-| 19 | Tech Dominance victory (4 techs + 35%) | win-condition | Yes |
+| 19 | Fortify active action (spend 40g, prevent instant-takeover for 90s, requires Fortify tech) | core-loop | Yes |
 | 20 | Time limit victory (30 min) | win-condition | Yes |
 | 21 | Capital capture = instant loss | win-condition | Yes |
 | 22 | Tick loop (100ms, 6 phases) | networking | Yes |
@@ -52,13 +52,15 @@ Generated from CLAUDE.md. 6 milestones, ~6.5 weeks solo developer.
 
 ```
 Hex grid math (#1) ← everything else
-Tick loop (#22) ← economy (#4,5), battles (#12), victory (#18-21), delta (#24)
+Tick loop (#22) ← economy (#4,5), battles (#12), victory (#18, #20, #21), delta (#24)
 Hex ownership (#2) ← claiming (#3), buildings (#6-9), combat (#11-14)
 Gold income (#4) ← buildings (#6-9), combat (#11), counter-spend (#14)
 Stepped maintenance (#5) ← auto-drop (#17)
-Defense building (#7) ← combat (#11-13), counter-spend (#14)
+Power building (#7) ← combat (#11-13), counter-spend (#14)
 Research building (#8) ← tech tree (#16)
-Tech tree (#16) ← Garrison (#15), victory: tech dom (#19)
+Tech tree (#16) ← all tech effects (#15 and others within #16)
+Garrison (#15) ← tech tree (#16)  [Garrison effect active only after player unlocks Garrison tech]
+Fortify action (#19) ← tech tree (#16)  [action available only after player unlocks Fortify tech]
 Combat (#11-13) ← victory: conquest (#18), capital capture (#21)
 WebSocket (#23) ← delta sync (#24), snapshot (#25), disconnect (#34)
 Canvas render (#27) ← click detection (#28), all UI (#29-33)
@@ -136,35 +138,34 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 ---
 
-### M4 — Counter-Spend + Auto-Drop + Research 🔜 NEXT (~1 week)
+### M4 — Counter-Spend + Auto-Drop 🔜 NEXT (~1 week)
 
 **Goal:** Complete the defensive gameplay loop and economic pressure system. Games now have real tension and economic collapse risk.
 
-**Features:** #14 (counter-spend), #17 (auto-drop with grace period + UI), #33 (auto-drop UI), #5 (maintenance fully enforced)
+**Features:** #14 (counter-spend), #17 (auto-drop with grace period + UI), #32 (tech tree UI — stub: all 12 slots visible, TP spending works, no effects yet), #33 (auto-drop UI), #5 (maintenance fully enforced)
 
-**Note:** Research building (#8) already done in M3.
+**Note:** Research building (#8) already done in M3. TP rate is 0.2 TP/sec per level.
 
 **Stubbed:**
-- Tech tree exists but techs have no effect yet (just accumulate TP)
+- All 12 tech effects inactive — UI shows slots, costs, and TP balance; unlocking spends TP and marks the tech as owned, but nothing changes in gameplay yet (effects wired in M5)
 - No victory conditions yet
-- Garrison tech not yet functional
 
 **Done when:**
-- Defender can spend gold during battle to boost Power (+1/sec, capped at +3 or time remaining)
+- Defender can spend gold during battle to boost Power (+1/sec, total cap +3 or seconds remaining — whichever is lower)
 - Player with 20+ hexes and no Economy buildings hits negative income → 10s grace → forced drop
 - Auto-drop UI prompts player to choose which hex to shed
-- Research building generates TP visibly in HUD
-- Headless test: verify counter-spend at cap cannot exceed +3
+- Research building generates TP visibly in HUD at 0.2 TP/sec per level
+- Headless test: verify counter-spend cannot exceed +3 total
 
-**Design risk:** Counter-spend might feel unfair (defender always wins by outspending). The +3 cap and time-remaining limit should prevent this, but if battles always flip to defender → increase attack cost budget or reduce counter-spend effectiveness. Auto-drop grace period (10s) might be too short if income fluctuates from battles — may need to extend or add hysteresis.
+**Design risk:** Counter-spend might feel unfair (defender always wins by outspending). The +3 cap and time-remaining limit should prevent this; if battles always flip to defender → review cap or attack cost. Auto-drop grace period (10s) might be too short if income fluctuates from battles — may need to extend or add hysteresis.
 
 ---
 
-### M5 — Tech Tree + Victory Conditions (~1 week)
+### M5 — Tech Tree + Victory Conditions (~1.5 weeks)
 
-**Goal:** Complete game with win conditions. A full 30-minute match is playable end-to-end.
+**Goal:** Complete game with win conditions. A full 15-30 minute match is playable end-to-end.
 
-**Features:** #15 (Garrison), #16 (tech tree — all 4 techs functional), #18 (Conquest victory), #19 (Tech Dominance), #20 (Time limit), #21 (Capital capture), #32 (tech tree UI)
+**Features:** #15 (Garrison), #16 (all 12 techs functional), #18 (Conquest victory), #19 (Fortify action), #20 (Time limit), #21 (Capital capture)
 
 **Stubbed:**
 - No disconnect handling (both players must stay connected)
@@ -172,13 +173,25 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 - Minimal victory screen (text overlay)
 
 **Done when:**
-- All 4 techs unlock and apply their effects globally (Iron Grip = +1 Power everywhere, etc.)
-- Garrison adds +1 Power per adjacent owned hex during defense (cap +3, shared with counter-spend)
-- Game ends when: player holds 60% for 10s, OR Tech Level 4 + 35% for 10s, OR capital captured, OR 30 min elapsed
+- All 12 techs unlock and apply their effects globally
+  - Blitz: unclaimed claims cost 0g
+  - Vanguard: next attack within 12s costs 50g after a capture
+  - Iron Grip: all hexes +1 Power
+  - Siege Mastery: attacker battle timers ×0.6; tie → attacker wins
+  - Prosperity: each Gold building +1/sec
+  - Supply Lines: maintenance 0.9/1.8/2.7 per tier
+  - Compound Growth: Gold buildings ×1.25 output
+  - Garrison: adjacent owned hexes +1 Power in defense (cap: +2 from Garrison; +3 total with counter-spend)
+  - Fortify: 40g action grants instant-takeover immunity for 90s on one hex
+  - Dominion: conquest timer 10s → 6s
+  - Reclamation: recapture own hex for 50g
+  - Resilience: drop grace 20s, drop refund 70%
+- Game ends when: player holds 60% for 6-10s (based on Dominion), OR capital captured, OR 30 min elapsed
+- Tech tree UI (built in M4) now shows unlocked techs as active with visual distinction; all 12 effects apply
 - Victory screen shows winner and reason
-- Full 25-30 min game is completable between two human players
+- Full 15-30 min game is completable between two human players
 
-**Design risk:** Tech Dominance might be too easy or too hard to achieve. If Research investment consistently beats military → Tech costs need raising. If nobody ever reaches Tech 4 → costs are too high or Research income too slow. Capital snipe ending games too abruptly → may need capital to have minimum innate Power 2 or require 2 adjacent hexes to attack.
+**Design risk:** 12 techs is significantly more scope than original 4. Consider implementing the 6 cheap techs (≤40 TP) first and the 6 expensive techs second. Fortify introduces the first "active action from a tech" — may need new UI affordance. Siege Mastery's 40% timer reduction needs verification that the minimum 3s floor doesn't create degenerate battles.
 
 ---
 
@@ -229,7 +242,7 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 | M2 — Economy + Expansion | ~1 week | Week 2 | Expansion game |
 | M3 — Buildings + Combat | ~1.5 weeks | Week 3.5 | **First real game** |
 | M4 — Counter-Spend + Auto-Drop | ~1 week | Week 4.5 | Defensive play |
-| M5 — Tech + Victory | ~1 week | Week 5.5 | **Complete game** |
-| M6 — Polish + Networking | ~1 week | Week 6.5 | Robust game |
+| M5 — Tech Tree + Victory | ~1.5 weeks | Week 6 | **Complete game** |
+| M6 — Polish + Networking | ~1 week | Week 7 | Robust game |
 
 Critical path: M1 → M2 → M3 (each depends on the previous). M4/M5 could partially overlap if combat and tech are developed in parallel, but counter-spend needs the battle system from M3.
