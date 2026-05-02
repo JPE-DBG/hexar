@@ -12,6 +12,7 @@ import {
   BASE_INCOME_PER_SEC, GOLD_PER_LEVEL, GOLD_BONUS_MULTIPLIER,
   CAPITAL_POWER, RESEARCH_PER_LEVEL,
   COUNTER_SPEND_COST, COUNTER_SPEND_CAP,
+  GOLD_BUILD_COST, POWER_BUILD_COST, RESEARCH_BUILD_COST,
 } from './constants';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -87,15 +88,19 @@ function onSnapshot(msg: SnapshotMsg) {
     }
     autoDropPanel.update(player ?? null);
 
-    // Compute drop map: 1-3 lowest-income own non-capital non-battle hexes during crisis
+    // Compute drop map: all hexes at minimum (income, totalInvested) score
     dropMap = new Set<string>();
     if (player?.autoDropActive) {
       const droppable = [...state.hexes.values()]
         .filter(h => h.owner === myPlayerId && !h.capital &&
-                     !state!.battles.some(b => b.dq === h.q && b.dr === h.r))
-        .sort((a, b) => hexIncome(a) - hexIncome(b))
-        .slice(0, 3);
-      for (const h of droppable) dropMap.add(`${h.q},${h.r}`);
+                     !state!.battles.some(b => b.dq === h.q && b.dr === h.r));
+      if (droppable.length > 0) {
+        const minIncome = Math.min(...droppable.map(h => hexIncome(h)));
+        const incomeGroup = droppable.filter(h => hexIncome(h) === minIncome);
+        const minInvested = Math.min(...incomeGroup.map(h => totalInvested(h)));
+        const candidates = incomeGroup.filter(h => totalInvested(h) === minInvested);
+        for (const h of candidates) dropMap.add(`${h.q},${h.r}`);
+      }
     }
     renderer.setDropMap(dropMap);
 
@@ -121,6 +126,14 @@ function hexIncome(hex: HexDTO): number {
     return (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * hex.level) * GOLD_BONUS_MULTIPLIER;
   }
   return BASE_INCOME_PER_SEC;
+}
+
+function totalInvested(hex: HexDTO): number {
+  if (hex.building === 0 || hex.level === 0) return 0;
+  const base = hex.building === BUILDING_RESEARCH ? RESEARCH_BUILD_COST
+             : hex.building === BUILDING_GOLD     ? GOLD_BUILD_COST
+             :                                      POWER_BUILD_COST;
+  return base * (Math.pow(2, hex.level) - 1);
 }
 
 function bestAdjacentPower(gs: GameState, playerId: number, target: HexDTO): number {

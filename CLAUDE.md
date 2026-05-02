@@ -54,7 +54,7 @@ With 10 Economy buildings (L1) on 30 hexes:
 **Hex auto-drop rules:**
 - When net income goes negative, the player must shed hexes until income is positive
 - Player chooses which hex to drop (UI prompt, 10-second grace period)
-- If no choice made, the hex with the lowest income drops automatically
+- If no choice made, the hex with the lowest income drops automatically; among income ties, the hex with the least building investment drops first
 - On drop: player receives **50% refund of the building cost** on that hex (if any building present)
 - Dropped hex becomes unclaimed instantly (enemy can grab it for 10 gold)
 - Net income per hex +1/sec (before buildings/upgrades)

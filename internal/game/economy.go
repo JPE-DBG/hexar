@@ -94,6 +94,10 @@ func autoDropLowestHex(state *GameState, pid PlayerID) {
 		if ia != ib {
 			return ia < ib
 		}
+		ta, tb := TotalInvested(a.hs.Building, a.hs.Level), TotalInvested(b.hs.Building, b.hs.Level)
+		if ta != tb {
+			return ta < tb
+		}
 		if a.h.Q != b.h.Q {
 			return a.h.Q < b.h.Q
 		}
