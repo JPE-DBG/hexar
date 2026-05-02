@@ -12,6 +12,19 @@ On-demand skill for **qualitative** design iteration: finding broken interaction
 
 **Prerequisites:** None. Can be invoked anytime.
 
+## How Design Issues Surface in This Project
+
+Design issues in Hexar typically emerge from **playtesting, not upfront analysis**. They arrive as:
+- `BUG: [observed behavior] / [expected behavior]` — often contains an implicit design decision
+- Rename or relabel requests that reveal a conceptual mismatch ("Economy → Gold")
+- Formula corrections discovered after seeing the wrong number in the UI
+
+When a BUG report contains an embedded design decision (e.g., "i dont want to differentiate between placing building and upgrading"), treat it as both a code fix AND a design change: implement the fix, then update CLAUDE.md to reflect the new rule before moving on.
+
+Formal `/game-designer` invocations are for proactive analysis when the user wants to stress-test a mechanic before building it, not for responding to play-discovered issues.
+
+---
+
 ## Workflow
 
 ### 1. Load Current State (MANDATORY)

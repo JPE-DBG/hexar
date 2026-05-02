@@ -89,7 +89,8 @@ For each milestone:
 
 ## Rules
 
-- **Never cache milestones.** Generate fresh from current CLAUDE.md each invocation.
+- **MILESTONES.md is the source of truth.** Read it first. Update it rather than regenerating from scratch — milestones accumulate real history (scope changes, done dates, deferred features) that a fresh generation would lose.
 - **No milestone without a "done when."** If you can't define acceptance criteria, the milestone is too vague.
 - **Shortest path to playable.** The first playable checkpoint should be ≤ 3 milestones in.
 - **Mark risks honestly.** Every milestone should name what could go wrong.
+- **Scope expands in practice.** When a "stubbed" feature gets built early, update the milestone notes to reflect what actually happened rather than leaving it as "stubbed".
