@@ -4,6 +4,14 @@ import { GameState, HexDTO, BattleDTO } from '../state/state';
 
 const BUILDING_LABELS: Record<number, string> = { 1: 'E', 2: 'D', 3: 'R' };
 
+function darken(color: string, amount: number): string {
+  const n = parseInt(color.slice(1), 16);
+  const r = Math.max(0, (n >> 16) - Math.round(amount * 255));
+  const g = Math.max(0, ((n >> 8) & 0xff) - Math.round(amount * 255));
+  const b = Math.max(0, (n & 0xff) - Math.round(amount * 255));
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
 export class Renderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -38,8 +46,14 @@ export class Renderer {
     ctx.fillStyle = COLORS.background;
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+    // Pass 1: fills + grid borders (no highlighted rings — they'd be overwritten by adjacent hex fills)
     for (const [, hex] of state.hexes) {
-      this.drawHex(hex);
+      this.drawHexFill(hex);
+    }
+
+    // Pass 2: capital rings + selection rings on top of all fills
+    for (const [, hex] of state.hexes) {
+      this.drawHexRings(hex);
     }
 
     for (const battle of state.battles) {
@@ -47,12 +61,8 @@ export class Renderer {
     }
   }
 
-  private drawHex(hex: HexDTO) {
+  private hexPath(px: number, py: number) {
     const ctx = this.ctx;
-    const { x, y } = hexToPixel({ q: hex.q, r: hex.r });
-    const px = x + this.offsetX;
-    const py = y + this.offsetY;
-
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
       const angle = (Math.PI / 180) * (60 * i - 30);
@@ -62,21 +72,20 @@ export class Renderer {
       else ctx.lineTo(hx, hy);
     }
     ctx.closePath();
+  }
 
-    ctx.fillStyle = this.hexColor(hex);
+  private drawHexFill(hex: HexDTO) {
+    const ctx = this.ctx;
+    const { x, y } = hexToPixel({ q: hex.q, r: hex.r });
+    const px = x + this.offsetX;
+    const py = y + this.offsetY;
+
+    this.hexPath(px, py);
+    ctx.fillStyle = hex.capital ? darken(this.hexColor(hex), 0.25) : this.hexColor(hex);
     ctx.fill();
-
-    const isSelected = this.selectedHex && this.selectedHex.q === hex.q && this.selectedHex.r === hex.r;
-    ctx.strokeStyle = isSelected ? '#ffffff' : COLORS.grid;
-    ctx.lineWidth = isSelected ? 2.5 : 1;
+    ctx.strokeStyle = COLORS.grid;
+    ctx.lineWidth = 1;
     ctx.stroke();
-
-    if (hex.capital && hex.owner !== 0) {
-      ctx.beginPath();
-      ctx.arc(px, py, 4, 0, Math.PI * 2);
-      ctx.fillStyle = COLORS.capital;
-      ctx.fill();
-    }
 
     if (hex.building > 0) {
       const label = BUILDING_LABELS[hex.building] ?? '?';
@@ -84,8 +93,29 @@ export class Renderer {
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const textY = hex.capital ? py + 10 : py;
-      ctx.fillText(`${label}${hex.level}`, px, textY);
+      ctx.fillText(`${label}${hex.level}`, px, py);
+    }
+  }
+
+  private drawHexRings(hex: HexDTO) {
+    const ctx = this.ctx;
+    const { x, y } = hexToPixel({ q: hex.q, r: hex.r });
+    const px = x + this.offsetX;
+    const py = y + this.offsetY;
+
+    if (hex.capital && hex.owner !== 0) {
+      this.hexPath(px, py);
+      ctx.strokeStyle = COLORS.capital;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    const isSelected = this.selectedHex && this.selectedHex.q === hex.q && this.selectedHex.r === hex.r;
+    if (isSelected) {
+      this.hexPath(px, py);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
     }
   }
 
@@ -96,15 +126,7 @@ export class Renderer {
     const py = y + this.offsetY;
 
     const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI / 180) * (60 * i - 30);
-      const hx = px + HEX_SIZE * Math.cos(angle);
-      const hy = py + HEX_SIZE * Math.sin(angle);
-      if (i === 0) ctx.moveTo(hx, hy);
-      else ctx.lineTo(hx, hy);
-    }
-    ctx.closePath();
+    this.hexPath(px, py);
     ctx.strokeStyle = `rgba(255, 200, 0, ${pulse})`;
     ctx.lineWidth = 3;
     ctx.stroke();
