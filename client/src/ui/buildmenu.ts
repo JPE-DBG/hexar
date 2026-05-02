@@ -4,7 +4,6 @@ import {
   POWER_BUILD_COST, POWER_PER_LEVEL,
   RESEARCH_BUILD_COST, RESEARCH_PER_LEVEL,
   DEMOLISH_REFUND, ATTACK_COST, CAPITAL_POWER, BASE_INCOME_PER_SEC,
-  COUNTER_SPEND_COST, COUNTER_SPEND_CAP,
   BUILDING_GOLD, BUILDING_POWER, BUILDING_RESEARCH,
 } from '../constants';
 
@@ -12,7 +11,7 @@ export interface BuildMenuCallbacks {
   onUpgrade: (building?: 'gold' | 'power' | 'research') => void;
   onDemolish: () => void;
   onAttack: () => void;
-  onCounterSpend: () => void;
+  onDropHex: () => void;
 }
 
 const BUILD_COSTS: Record<number, number> = {
@@ -80,7 +79,7 @@ export class BuildMenu {
         case 'upgrade': this.callbacks.onUpgrade(); break;
         case 'demolish': this.callbacks.onDemolish(); break;
         case 'attack': this.callbacks.onAttack(); break;
-        case 'counter-spend': this.callbacks.onCounterSpend(); break;
+        case 'drop-hex': this.callbacks.onDropHex(); break;
       }
     });
   }
@@ -100,7 +99,6 @@ export class BuildMenu {
       hex.q, hex.r, hex.building, hex.level, isOwn, isEnemy,
       gold >= GOLD_BUILD_COST, gold >= RESEARCH_BUILD_COST, gold >= upgCost,
       canAttack, attackerPower, defPower,
-      battle?.counterBoost ?? -1,
       battle ? Math.floor(battle.timeLeft) : -1,
     ].join('|');
 
@@ -127,12 +125,10 @@ export class BuildMenu {
       html += `<span style="border-left:1px solid #555;height:20px;margin:0 8px;display:inline-block;vertical-align:middle"></span>`;
       html += this.makeBtn(`🗑${hasBuilding ? ` (+${refund}g)` : ''}`, hasBuilding, 'demolish');
 
-      if (battle) {
-        const timeCap = Math.floor(battle.timeLeft);
-        const cap = Math.min(COUNTER_SPEND_CAP, timeCap);
-        const canCS = gold >= COUNTER_SPEND_COST && battle.counterBoost < cap;
-        html += `<span style="border-left:1px solid #555;height:20px;margin:0 8px;display:inline-block;vertical-align:middle"></span>`;
-        html += this.makeBtn(`Counter [${battle.counterBoost}/${cap}] (${COUNTER_SPEND_COST}g)`, canCS, 'counter-spend');
+      // Sell hex: voluntary drop at any time (no battle, non-capital)
+      if (!hex.capital && !battle) {
+        const sellRefund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
+        html += this.makeBtn(`Sell hex${sellRefund > 0 ? ` (+${sellRefund}g)` : ''}`, true, 'drop-hex');
       }
     } else if (isEnemy) {
       html += this.makeBtn(`Attack (${ATTACK_COST}g)`, canAttack, 'attack');

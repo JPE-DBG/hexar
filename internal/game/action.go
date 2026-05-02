@@ -38,7 +38,6 @@ var (
 	ErrCounterSpendCap   = errors.New("counter-spend cap reached")
 	ErrInsufficientTP    = errors.New("insufficient tech points")
 	ErrTechAlreadyOwned  = errors.New("tech already owned")
-	ErrNotInAutoDrop     = errors.New("player not in auto-drop state")
 	ErrInvalidTechID     = errors.New("invalid tech ID")
 	ErrCannotDropCapital = errors.New("cannot drop capital hex")
 )
@@ -192,9 +191,6 @@ func ValidateDropHex(state *GameState, action Action) error {
 	player := state.Players[action.Player]
 	if player == nil {
 		return ErrPlayerNotFound
-	}
-	if !player.AutoDropActive {
-		return ErrNotInAutoDrop
 	}
 	if hasBattleOnHex(state, action.Target) {
 		return ErrBattleInProgress

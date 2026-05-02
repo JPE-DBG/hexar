@@ -18,12 +18,24 @@ export class Renderer {
   private offsetX = 0;
   private offsetY = 0;
   private selectedHex: { q: number; r: number } | null = null;
+  private state: GameState | null = null;
+  private dropMap = new Set<string>();
+  private myPlayerId = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    this.startLoop();
+  }
+
+  private startLoop() {
+    const loop = () => {
+      if (this.state) this.render(this.state);
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
   }
 
   private resize() {
@@ -41,17 +53,29 @@ export class Renderer {
     this.selectedHex = hex;
   }
 
+  setState(s: GameState) {
+    this.state = s;
+  }
+
+  setDropMap(keys: Set<string>) {
+    this.dropMap = keys;
+  }
+
+  setMyPlayerId(id: number) {
+    this.myPlayerId = id;
+  }
+
   render(state: GameState) {
     const ctx = this.ctx;
     ctx.fillStyle = COLORS.background;
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Pass 1: fills + grid borders (no highlighted rings — they'd be overwritten by adjacent hex fills)
+    // Pass 1: fills + grid borders
     for (const [, hex] of state.hexes) {
       this.drawHexFill(hex);
     }
 
-    // Pass 2: capital rings + selection rings on top of all fills
+    // Pass 2: rings on top of all fills
     for (const [, hex] of state.hexes) {
       this.drawHexRings(hex);
     }
@@ -117,6 +141,16 @@ export class Renderer {
       ctx.lineWidth = 2.5;
       ctx.stroke();
     }
+
+    // Red pulse for drop-map hexes (crisis auto-drop candidates)
+    const key = `${hex.q},${hex.r}`;
+    if (this.dropMap.has(key)) {
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 300);
+      this.hexPath(px, py);
+      ctx.strokeStyle = `rgba(255, 60, 60, ${pulse})`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
   }
 
   private drawBattle(battle: BattleDTO) {
@@ -125,17 +159,50 @@ export class Renderer {
     const px = x + this.offsetX;
     const py = y + this.offsetY;
 
-    const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
-    this.hexPath(px, py);
-    ctx.strokeStyle = `rgba(255, 200, 0, ${pulse})`;
-    ctx.lineWidth = 3;
-    ctx.stroke();
+    const cap = Math.min(3, Math.floor(battle.timeLeft));
+    const canBoost = battle.counterBoost < cap;
 
+    // Amber pulse only while counter-spend is still actionable; dim static ring when capped
+    if (canBoost) {
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+      this.hexPath(px, py);
+      ctx.strokeStyle = `rgba(255, 200, 0, ${pulse})`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    } else {
+      this.hexPath(px, py);
+      ctx.strokeStyle = 'rgba(255, 200, 0, 0.25)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Timer
     ctx.font = 'bold 11px monospace';
     ctx.fillStyle = '#ffd93d';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillText(`${battle.timeLeft.toFixed(1)}s`, px, py - 12);
+
+    // 3 boost dots: filled amber = used, outline amber = available, gray = time-capped
+    const dotR = 4, spacing = 11;
+    for (let i = 0; i < 3; i++) {
+      const dx = px + (i - 1) * spacing;
+      const dy = py + 16;
+      ctx.beginPath();
+      ctx.arc(dx, dy, dotR, 0, Math.PI * 2);
+      if (i < battle.counterBoost) {
+        ctx.fillStyle = '#ffd93d';
+        ctx.fill();
+      } else if (i < cap) {
+        ctx.strokeStyle = '#ffd93d';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
   }
 
   private hexColor(hex: HexDTO): string {

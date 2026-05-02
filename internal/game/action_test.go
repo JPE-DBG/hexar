@@ -207,6 +207,18 @@ func TestAutoDropForceDrop(t *testing.T) {
 	}
 }
 
+func TestVoluntaryDropNoAutoDropRequired(t *testing.T) {
+	state := NewGameState()
+	pid := PlayerID(1)
+	state.Players[pid] = &Player{ID: pid, Gold: 0, AutoDropActive: false}
+	target := Hex{Q: 0, R: 0}
+	state.Hexes[target] = &HexState{Owner: pid}
+	a := Action{Type: ActionDropHex, Player: pid, Target: target}
+	if err := ValidateDropHex(state, a); err != nil {
+		t.Fatalf("expected voluntary drop to succeed without AutoDropActive, got: %v", err)
+	}
+}
+
 func TestDropHexManualClearsFlag(t *testing.T) {
 	state := NewGameState()
 	pid := PlayerID(1)

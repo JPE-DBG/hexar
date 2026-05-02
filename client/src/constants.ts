@@ -24,6 +24,7 @@ export const RESEARCH_BUILD_COST = 80;
 export const RESEARCH_PER_LEVEL = 0.2;
 
 export const DEMOLISH_REFUND = 0.5;
+export const AUTO_DROP_REFUND = 0.5;
 
 export const MAINTENANCE_TIER1 = 1.0;
 export const MAINTENANCE_TIER2 = 2.0;

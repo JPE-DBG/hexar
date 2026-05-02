@@ -7,7 +7,12 @@ import { BuildMenu } from './ui/buildmenu';
 import { TechTreePanel } from './ui/techtree';
 import { AutoDropPanel } from './ui/autodrop';
 import { neighbors } from './hexmath';
-import { BUILDING_GOLD, BUILDING_POWER, BUILDING_RESEARCH, BASE_INCOME_PER_SEC, GOLD_PER_LEVEL, GOLD_BONUS_MULTIPLIER, CAPITAL_POWER, RESEARCH_PER_LEVEL } from './constants';
+import {
+  BUILDING_GOLD, BUILDING_POWER, BUILDING_RESEARCH,
+  BASE_INCOME_PER_SEC, GOLD_PER_LEVEL, GOLD_BONUS_MULTIPLIER,
+  CAPITAL_POWER, RESEARCH_PER_LEVEL,
+  COUNTER_SPEND_COST, COUNTER_SPEND_CAP,
+} from './constants';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const hud = document.getElementById('hud')!;
@@ -16,6 +21,7 @@ const renderer = new Renderer(canvas);
 let state: GameState | null = null;
 let myPlayerId = 0;
 let selectedHex: HexDTO | null = null;
+let dropMap = new Set<string>();
 
 const buildMenu = new BuildMenu(document.body, {
   onUpgrade: (building?) => {
@@ -32,9 +38,9 @@ const buildMenu = new BuildMenu(document.body, {
     if (!selectedHex) return;
     connection.send({ type: 'action', action: 'attack', q: selectedHex.q, r: selectedHex.r });
   },
-  onCounterSpend: () => {
+  onDropHex: () => {
     if (!selectedHex) return;
-    connection.send({ type: 'action', action: 'counter-spend', q: selectedHex.q, r: selectedHex.r });
+    connection.send({ type: 'action', action: 'drop-hex', q: selectedHex.q, r: selectedHex.r });
   },
 });
 
@@ -42,9 +48,7 @@ const techTreePanel = new TechTreePanel(document.body, (techId) => {
   connection.send({ type: 'action', action: 'unlock-tech', techId });
 });
 
-const autoDropPanel = new AutoDropPanel(document.body, (q, r) => {
-  connection.send({ type: 'action', action: 'drop-hex', q, r });
-});
+const autoDropPanel = new AutoDropPanel(document.body);
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 't' || e.key === 'T') {
@@ -58,7 +62,6 @@ window.addEventListener('keydown', (e) => {
 
 function onSnapshot(msg: SnapshotMsg) {
   state = applySnapshot(msg);
-  renderer.render(state);
 
   if (myPlayerId > 0) {
     let hexCount = 0;
@@ -82,7 +85,19 @@ function onSnapshot(msg: SnapshotMsg) {
     if (player) {
       techTreePanel.update(player);
     }
-    autoDropPanel.update(player ?? null, state.hexes, state.battles);
+    autoDropPanel.update(player ?? null);
+
+    // Compute drop map: 1-3 lowest-income own non-capital non-battle hexes during crisis
+    dropMap = new Set<string>();
+    if (player?.autoDropActive) {
+      const droppable = [...state.hexes.values()]
+        .filter(h => h.owner === myPlayerId && !h.capital &&
+                     !state!.battles.some(b => b.dq === h.q && b.dr === h.r))
+        .sort((a, b) => hexIncome(a) - hexIncome(b))
+        .slice(0, 3);
+      for (const h of droppable) dropMap.add(`${h.q},${h.r}`);
+    }
+    renderer.setDropMap(dropMap);
 
     if (selectedHex) {
       const key = `${selectedHex.q},${selectedHex.r}`;
@@ -97,6 +112,8 @@ function onSnapshot(msg: SnapshotMsg) {
       }
     }
   }
+
+  renderer.setState(state);
 }
 
 function hexIncome(hex: HexDTO): number {
@@ -125,6 +142,7 @@ const connection = new Connection(wsUrl, {
   onSnapshot,
   onWelcome: (msg) => {
     myPlayerId = msg.playerId;
+    renderer.setMyPlayerId(myPlayerId);
     console.log(`assigned player ${myPlayerId}`);
   },
 });
@@ -152,6 +170,24 @@ setupInput(
       return;
     }
 
+    // Priority 1: crisis drop (red pulsing hex) — emergency recovery
+    if (dropMap.has(key) && hex.owner === myPlayerId) {
+      connection.send({ type: 'action', action: 'drop-hex', q, r });
+      return;
+    }
+
+    // Priority 2: counter-spend (amber pulsing, still actionable)
+    const battle = state.battles.find(b => b.dq === q && b.dr === r) ?? null;
+    if (battle && hex.owner === myPlayerId) {
+      const cap = Math.min(COUNTER_SPEND_CAP, Math.floor(battle.timeLeft));
+      const player = state.players.get(String(myPlayerId));
+      if ((player?.gold ?? 0) >= COUNTER_SPEND_COST && battle.counterBoost < cap) {
+        connection.send({ type: 'action', action: 'counter-spend', q, r });
+        return;
+      }
+    }
+
+    // Priority 3: normal selection → show build menu
     selectedHex = hex;
     renderer.setSelected({ q, r });
 
@@ -160,7 +196,6 @@ setupInput(
     const isOwn = hex.owner === myPlayerId;
     const isEnemy = hex.owner !== 0 && hex.owner !== myPlayerId;
     const atkPwr = bestAdjacentPower(state, myPlayerId, hex);
-    const battle = state.battles.find(b => b.dq === hex.q && b.dr === hex.r) ?? null;
     buildMenu.updateWithActions(hex, gold, isOwn, isEnemy, atkPwr, battle);
   }
 );
