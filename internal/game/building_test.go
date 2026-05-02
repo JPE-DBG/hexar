@@ -19,8 +19,8 @@ func TestBuildEconomy(t *testing.T) {
 
 	ApplyBuild(state, Action{Type: ActionBuild, Player: pid, Target: hex, Building: BuildingEconomy})
 
-	if state.Players[pid].Gold != 120 {
-		t.Errorf("gold = %.1f, want 120 (200 - 80)", state.Players[pid].Gold)
+	if state.Players[pid].Gold != 140 {
+		t.Errorf("gold = %.1f, want 140 (200 - 60)", state.Players[pid].Gold)
 	}
 	if state.Hexes[hex].Building != BuildingEconomy {
 		t.Error("expected Economy building")
@@ -29,10 +29,10 @@ func TestBuildEconomy(t *testing.T) {
 		t.Errorf("level = %d, want 1", state.Hexes[hex].Level)
 	}
 
-	// Verify income: (2 + 1*0.5) * 1.5 = 3.75/sec
+	// Verify income: (2 + 1*0.6) * 1.5 = 3.9/sec
 	income := HexIncome(state.Hexes[hex])
-	if income != 3.75 {
-		t.Errorf("hex income = %.2f, want 3.75", income)
+	if math.Abs(income-3.9) > 0.001 {
+		t.Errorf("hex income = %.4f, want 3.9", income)
 	}
 }
 
@@ -59,9 +59,9 @@ func TestUpgradeCost(t *testing.T) {
 		level    int
 		want     float64
 	}{
-		{BuildingEconomy, 1, 160},
-		{BuildingEconomy, 2, 320},
-		{BuildingEconomy, 3, 640},
+		{BuildingEconomy, 1, 60},
+		{BuildingEconomy, 2, 120},
+		{BuildingEconomy, 3, 240},
 		{BuildingDefense, 1, 120},
 		{BuildingDefense, 2, 240},
 		{BuildingDefense, 3, 480},
@@ -99,12 +99,12 @@ func TestDemolishRefund(t *testing.T) {
 	pid := PlayerID(1)
 	state.Players[pid] = &Player{ID: pid, Gold: 0}
 	hex := Hex{Q: 0, R: 0}
-	// Economy building at level 2: TotalInvested = 80*(2^2-1) = 240, 50% refund = 120
+	// Economy building at level 2: TotalInvested = 60*2^(2-1) = 120, 50% refund = 60
 	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingEconomy, Level: 2}
 
 	ApplyDemolish(state, Action{Type: ActionDemolish, Player: pid, Target: hex})
 
-	expected := 120.0
+	expected := 60.0
 	if math.Abs(state.Players[pid].Gold-expected) > 0.01 {
 		t.Errorf("gold = %.2f, want %.2f", state.Players[pid].Gold, expected)
 	}
@@ -135,13 +135,13 @@ func TestEconomyBuildingIncome(t *testing.T) {
 	hex := Hex{Q: 0, R: 0}
 	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingEconomy, Level: 2}
 
-	// Per CLAUDE.md: (2 + 0.5*2) * 1.5 = 4.5/sec, maintenance 1/sec, net 3.5/sec
+	// Per CLAUDE.md: (2 + 0.6*2) * 1.5 = 4.8/sec, maintenance 1/sec, net 3.8/sec
 	for range 100 {
 		RunTick(state, TickDt, nil)
 	}
 
-	// 10 seconds * 3.5/sec = 35
-	expected := 35.0
+	// 10 seconds * 3.8/sec = 38
+	expected := 38.0
 	if math.Abs(state.Players[pid].Gold-expected) > 0.1 {
 		t.Errorf("gold = %.2f, want %.2f", state.Players[pid].Gold, expected)
 	}

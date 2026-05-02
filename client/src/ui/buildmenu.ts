@@ -7,15 +7,21 @@ export interface BuildMenuCallbacks {
   onAttack: () => void;
 }
 
-const BUILD_COSTS: Record<number, number> = { 1: 80, 2: 60, 3: 80 };
+const BUILD_COSTS: Record<number, number> = { 1: 60, 2: 60, 3: 80 };
 
 function upgradeCost(building: number, level: number): number {
   const base = BUILD_COSTS[building] ?? 80;
+  if (building === 1) { // Economy: base × 2^(level-1)
+    return base * Math.pow(2, level - 1);
+  }
   return base * Math.pow(2, level);
 }
 
 function demolishRefund(building: number, level: number): number {
   const base = BUILD_COSTS[building] ?? 80;
+  if (building === 1) { // Economy: TotalInvested = base × 2^(level-1), refund = 50%
+    return base * Math.pow(2, level - 1) * 0.5;
+  }
   return base * (Math.pow(2, level) - 1) * 0.5;
 }
 
@@ -64,7 +70,7 @@ export class BuildMenu {
     const canAttack = !hasBattle && gold >= 100 && attackerPower > defPower;
     const key = [
       hex.q, hex.r, hex.building, hex.level, isOwn, isEnemy,
-      gold >= 80, gold >= 60, gold >= upgCost,
+      gold >= 60, gold >= 60, gold >= upgCost,
       canAttack, attackerPower, defPower, hasBattle,
     ].join('|');
 
@@ -84,7 +90,7 @@ export class BuildMenu {
       if (hex.building === 1) {
         html += this.makeBtn(`Upgrade (${upgCost}g)`, gold >= upgCost, 'upgrade');
       } else {
-        html += this.makeBtn('Economy (80g)', !hasBuilding && gold >= 80, 'build-economy');
+        html += this.makeBtn('Economy (60g)', !hasBuilding && gold >= 60, 'build-economy');
       }
 
       // Slot 2: Defense → Upgrade when defense built, greyed when economy built

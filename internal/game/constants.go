@@ -14,12 +14,12 @@ const (
 	ClaimCost  = 10.0
 	AttackCost = 100.0
 
-	EconomyBuildCost  = 80.0
+	EconomyBuildCost  = 60.0
 	DefenseBuildCost  = 60.0
 	ResearchBuildCost = 80.0
 
 	EconomyBonusMultiplier = 1.5
-	EconomyPerLevel        = 0.5
+	EconomyPerLevel        = 0.6
 	ResearchPerLevel       = 0.1
 	DefensePerLevel        = 1
 

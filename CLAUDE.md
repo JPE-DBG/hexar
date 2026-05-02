@@ -47,8 +47,8 @@ Hexar is a fast-paced, real-time multiplayer hex strategy game inspired by Antiy
 30 hexes:  maintenance 60/sec vs income 60/sec  → net  0/sec  (needs Economy buildings)
 31 hexes:  maintenance 63/sec vs income 62/sec  → net  -1/sec (auto-drop triggers!)
 
-With 10 Economy buildings on 30 hexes:
-  income = 10 × 3/sec + 20 × 2/sec = 70/sec → net +10/sec (sustainable)
+With 10 Economy buildings (L1) on 30 hexes:
+  income = 10 × 3.9/sec + 20 × 2/sec = 79/sec → net +19/sec (sustainable)
 ```
 
 **Hex auto-drop rules:**
@@ -78,10 +78,10 @@ Each hex can have **one building** of three types. Building can be demolished (r
 
 #### Economy Building
 - **Effect:** +50% resources/sec from that hex (stacks additively with tech bonuses)
-- **Build cost:** 80 gold
-- **Upgrade cost (Exponential):** L1=160, L2=320, L3=640, L4=1280 (formula: BuildCost × 2^level, level starts at 1)
-- **Reward (Compounding):** +0.5 resources/sec per level, multiplied by the +50% bonus
-- **Formula:** `(base + 0.5 × level) × 1.5` → Level 1: 3.75/sec, Level 5: (2 + 2.5) × 1.5 = 6.75/sec
+- **Build cost:** 60 gold
+- **Upgrade cost:** L1=60, L2=120, L3=240, L4=480 (formula: `BuildCost × 2^(level-1)`, level starts at 1)
+- **Reward (Compounding):** +0.6 resources/sec per level, multiplied by the +50% bonus
+- **Formula:** `(base + 0.6 × level) × 1.5` → Level 1: 3.9/sec, Level 5: (2 + 3.0) × 1.5 = 7.5/sec
 - **Max level:** Unlimited (incremental)
 
 #### Defense Building
@@ -183,9 +183,9 @@ T=15-18s:  3 hexes, +3/sec net → Claim hex 4 (3 sec)
 T=18-20s:  4 hexes, +4/sec net → Claim hex 5 (2 sec)
 T=~2 min:  ~10 hexes claimed, land-grab phase slows as map fills
 
-T=2 min:   Save 80 gold → Build Economy on hex 1 (~8 sec at +10/sec)
-           Income: hex 1 = 3/sec, rest = 2/sec each → Total: 21/sec gross
-           Maintenance: 10/sec → Net +11/sec
+T=2 min:   Save 60 gold → Build Economy on hex 1 (~6 sec at +10/sec)
+           Income: hex 1 = 3.9/sec, rest = 2/sec each → Total: 21.9/sec gross
+           Maintenance: 10/sec → Net +11.9/sec
 
 T=2.5 min: Save 60 gold → Build Defense on border hex (~5 sec at +11/sec)
            Spend 30 → Upgrade Defense L1. Power = 2 on that hex.
@@ -237,13 +237,16 @@ T=5 min+:  Border warfare begins in earnest
 
 ## Balance Rules & Constraints
 
-### Exponential Upgrade Costs (Prevents Snowballing)
-- All three buildings use exponential cost scaling: `BuildCost × 2^level` (level starts at 1 after placing)
-- Economy/Research (BuildCost=80): L1=160, L2=320, L3=640, L4=1280
-- Defense (BuildCost=60): L1=120, L2=240, L3=480, L4=960
-- **Linear rewards:** Each level provides constant gain (+0.5 resources/sec, +0.1 TP/sec, or +1 Power)
-- **Effect:** Early upgrades are meaningful but affordable. Late upgrades cost exponentially more, capping runaway growth
-- **Example:** Defense Level 5 total invested = 60 × (2^5 - 1) = 1860 gold for Power 5. Demolish refund = BuildCost × (2^level - 1) × 0.5
+### Upgrade Costs (Economy differs from Defense/Research)
+- **Economy:** build cost 60g, upgrade formula `60 × 2^(level-1)` → L1=60, L2=120, L3=240, L4=480
+- **Defense (BuildCost=60):** upgrade formula `60 × 2^level` → L1=120, L2=240, L3=480, L4=960
+- **Research (BuildCost=80):** upgrade formula `80 × 2^level` → L1=160, L2=320, L3=640, L4=1280
+- **Economy rewards:** +0.6/sec per level × 1.5 multiplier = +0.9/sec net gain per level
+- **Defense/Research rewards:** +1 Power per level; +0.1 TP/sec per level (constant)
+- **Demolish refund:** 50% of total invested
+  - Economy L at level n: TotalInvested = `60 × 2^(n-1)`, refund = `30 × 2^(n-1)`
+  - Defense/Research: TotalInvested = `BuildCost × (2^n - 1)`, refund = `BuildCost × (2^n - 1) × 0.5`
+- **Effect:** Economy upgrades are cheap early (60g each for L1, L2) but grow exponentially. Defense L1 still costs 120g — investing in attack power requires meaningful commitment.
 
 ### Maintenance System (Prevents Extreme Expansion)
 - Each hex costs 1 maintenance/sec to hold
@@ -301,11 +304,11 @@ T=5 min+:  Border warfare begins in earnest
 - Prevents "grinding" low-power battles between evenly matched players
 - Limited to enemy hexes only; unclaimed hexes always taken instantly
 
-### Exponential Upgrade Costs with Linear Rewards
-- **Cost:** Doubles each level (40, 80, 160, 320, 640...)
-- **Reward:** Constant per level (+0.5 resources/sec or +0.1 TP/sec)
-- **Effect:** Early power spikes are cheap and quick. Late-game upgrades cost exponentially more, capping power growth
-- **Why:** Prevents snowballing by making the path to dominance prohibitively expensive. No player can spam upgrades to 10+ levels without massive time investment
+### Exponential Upgrade Costs with Constant Rewards
+- **Economy cost:** Cheap start (60g build + 60g L1→L2), doubles from there. L4 costs 480g.
+- **Reward per level:** +0.9/sec net income gain (constant — each upgrade equally valuable)
+- **Defense/Research cost:** Still use `BuildCost × 2^level` (L1=120/160g)
+- **Effect:** Economy investment is accessible early game; exponential scaling caps extreme high-level chains. Defense requires deliberate gold commitment at every level.
 
 ---
 

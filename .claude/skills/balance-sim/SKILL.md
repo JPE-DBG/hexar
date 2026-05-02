@@ -109,11 +109,15 @@ Given Power values, enumerate all possible outcomes including counter-spend.
 Economy:
   Base income: 2/sec per hex
   Maintenance: 1/sec (hexes 1-10), 2/sec (11-20), 3/sec (21+)
-  Economy building: +50% bonus, formula = (base + 0.5 × level) × 1.5
-  Upgrade costs: BuildCost × 2^level (level starts at 1 after placing)
-    Economy/Research (BuildCost=80): L1=160, L2=320, L3=640...
-    Defense (BuildCost=60): L1=120, L2=240, L3=480...
-  Demolish refund: BuildCost × (2^level - 1) × 0.5
+  Net per hex: T1=+1/sec, T2=0/sec, T3=-1/sec (without Economy)
+  Economy building: +50% bonus, formula = (base + 0.6 × level) × 1.5
+    Build cost: 60g; L1=3.9/sec, L2=4.8/sec, L3=5.7/sec; delta +0.9/sec per level
+    Net in T3: L1=+0.90, L2=+1.80, L3=+2.70 (all positive — tier 3 expansion viable)
+  Economy upgrade costs: 60 × 2^(level-1) → L1=60, L2=120, L3=240, L4=480
+  Economy demolish refund: 60 × 2^(level-1) × 0.5 → L1=30, L2=60, L3=120
+  Defense upgrade costs: 60 × 2^level → L1=120, L2=240, L3=480, L4=960
+  Research upgrade costs: 80 × 2^level → L1=160, L2=320, L3=640, L4=1280
+  Defense/Research demolish refund: BuildCost × (2^level - 1) × 0.5
 
 Combat:
   Unclaimed hex: 10 gold, instant

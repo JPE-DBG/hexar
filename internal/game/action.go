@@ -30,6 +30,7 @@ var (
 	ErrNotEnemy          = errors.New("target is not enemy hex")
 	ErrInsufficientPower = errors.New("insufficient power to attack")
 	ErrBattleInProgress  = errors.New("battle already in progress on hex")
+	ErrPlayerNotFound    = errors.New("player not found")
 )
 
 func ProcessActions(state *GameState, actions []Action) {
@@ -71,6 +72,9 @@ func ValidateClaim(state *GameState, action Action) error {
 		return ErrNotAdjacent
 	}
 	player := state.Players[action.Player]
+	if player == nil {
+		return ErrPlayerNotFound
+	}
 	if player.Gold < ClaimCost {
 		return ErrInsufficientGold
 	}

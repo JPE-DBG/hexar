@@ -14,13 +14,17 @@ func BuildCost(building BuildingType) float64 {
 }
 
 func UpgradeCost(building BuildingType, currentLevel int) float64 {
-	base := BuildCost(building)
-	return base * math.Pow(2, float64(currentLevel))
+	if building == BuildingEconomy {
+		return EconomyBuildCost * math.Pow(2, float64(currentLevel-1))
+	}
+	return BuildCost(building) * math.Pow(2, float64(currentLevel))
 }
 
 func TotalInvested(building BuildingType, level int) float64 {
-	base := BuildCost(building)
-	return base * (math.Pow(2, float64(level)) - 1)
+	if building == BuildingEconomy {
+		return EconomyBuildCost * math.Pow(2, float64(level-1))
+	}
+	return BuildCost(building) * (math.Pow(2, float64(level)) - 1)
 }
 
 func ValidateBuild(state *GameState, action Action) error {
@@ -38,6 +42,9 @@ func ValidateBuild(state *GameState, action Action) error {
 		return ErrHasBuilding
 	}
 	cost := BuildCost(action.Building)
+	if state.Players[action.Player] == nil {
+		return ErrPlayerNotFound
+	}
 	if state.Players[action.Player].Gold < cost {
 		return ErrInsufficientGold
 	}
@@ -63,6 +70,9 @@ func ValidateUpgrade(state *GameState, action Action) error {
 		return ErrNoBuilding
 	}
 	cost := UpgradeCost(hs.Building, hs.Level)
+	if state.Players[action.Player] == nil {
+		return ErrPlayerNotFound
+	}
 	if state.Players[action.Player].Gold < cost {
 		return ErrInsufficientGold
 	}

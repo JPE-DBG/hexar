@@ -18,6 +18,9 @@ func ValidateAttack(state *GameState, action Action) error {
 		return ErrInsufficientPower
 	}
 
+	if state.Players[action.Player] == nil {
+		return ErrPlayerNotFound
+	}
 	if state.Players[action.Player].Gold < AttackCost {
 		return ErrInsufficientGold
 	}
