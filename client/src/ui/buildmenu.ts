@@ -8,7 +8,17 @@ export interface BuildMenuCallbacks {
 
 const BUILD_COSTS: Record<number, number> = { 1: 60, 2: 60, 3: 80 };
 const BUILDING_NAMES: Record<number, string> = { 1: 'Gold', 2: 'Power', 3: 'Research' };
-const BUILDING_DELTA: Record<number, string> = { 1: '+0.9/s', 2: '+1 Pwr', 3: '+0.1 TP/s' };
+
+function upgradeDelta(building: number, currentLevel: number): string {
+  if (building === 1) {
+    // Gold: delta = income(nextLevel) - income(currentLevel)
+    const next = (2.0 + 0.6 * (currentLevel + 1)) * 1.5;
+    const curr = currentLevel === 0 ? 2.0 : (2.0 + 0.6 * currentLevel) * 1.5;
+    return `+${(next - curr).toFixed(1)}/s`;
+  }
+  if (building === 2) return '+1 Pwr';
+  return '+0.1 TP/s';
+}
 
 function upgradeCost(building: number, level: number): number {
   const base = BUILD_COSTS[building] ?? 80;
@@ -24,7 +34,7 @@ function upgradeLabel(building: number, currentLevel: number): string {
   const name = BUILDING_NAMES[building] ?? '?';
   const targetLevel = currentLevel + 1;
   const cost = upgradeCost(building, currentLevel);
-  const delta = BUILDING_DELTA[building] ?? '';
+  const delta = upgradeDelta(building, currentLevel);
   return `${name} ${targetLevel} (${cost}g) ${delta}`;
 }
 
