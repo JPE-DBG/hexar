@@ -110,7 +110,10 @@ Economy:
   Base income: 2/sec per hex
   Maintenance: 1/sec (hexes 1-10), 2/sec (11-20), 3/sec (21+)
   Economy building: +50% bonus, formula = (base + 0.5 × level) × 1.5
-  Upgrade costs (all buildings): doubles each level (L1=40, L2=80, L3=160...)
+  Upgrade costs: BuildCost × 2^level (level starts at 1 after placing)
+    Economy/Research (BuildCost=80): L1=160, L2=320, L3=640...
+    Defense (BuildCost=60): L1=120, L2=240, L3=480...
+  Demolish refund: BuildCost × (2^level - 1) × 0.5
 
 Combat:
   Unclaimed hex: 10 gold, instant

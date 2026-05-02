@@ -68,7 +68,7 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 ## Milestone Plan
 
-### M1 — Tick Loop + Rendering Pipeline (~1 week)
+### M1 — Tick Loop + Rendering Pipeline ✅ DONE (~1 week)
 
 **Goal:** Prove the full pipeline works: Go server ticks at 100ms, state reaches browser, Canvas draws hexes in real time.
 
@@ -89,7 +89,7 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 ---
 
-### M2 — Economy + Expansion (~1 week)
+### M2 — Economy + Expansion ✅ DONE (~1 week)
 
 **Goal:** Validate the core economic loop — does claiming hexes and earning gold feel right at CLAUDE.md's numbers?
 
@@ -111,7 +111,7 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 ---
 
-### M3 — Buildings + Combat (~1.5 weeks)
+### M3 — Buildings + Combat ✅ DONE (~1.5 weeks)
 
 **Goal:** First real gameplay — players build, fight, and territory changes hands. This is the first **playable** milestone.
 
