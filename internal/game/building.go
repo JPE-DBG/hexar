@@ -24,6 +24,9 @@ func TotalInvested(building BuildingType, level int) float64 {
 }
 
 func ValidateBuild(state *GameState, action Action) error {
+	if action.Building == BuildingNone {
+		return ErrNoBuilding
+	}
 	hs, ok := state.Hexes[action.Target]
 	if !ok {
 		return ErrHexNotFound

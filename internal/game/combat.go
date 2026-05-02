@@ -31,7 +31,7 @@ func ApplyAttack(state *GameState, action Action) {
 	defenderPower := hs.Power()
 	diff := attackerPower - defenderPower
 
-	if diff > 3 {
+	if diff > InstantTakeoverMinDiff {
 		transferHex(state, action.Target, action.Player)
 	} else {
 		duration := 5.0 + float64(attackerPower+defenderPower)/2.0
@@ -62,11 +62,11 @@ func RunBattles(state *GameState, dt float64) {
 func resolveBattle(state *GameState, b *Battle) {
 	attackerHex := state.Hexes[b.AttackerHex]
 	defenderHex := state.Hexes[b.DefenderHex]
+	if attackerHex == nil || defenderHex == nil {
+		return
+	}
 
-	aPower := attackerHex.Power()
-	dPower := defenderHex.Power()
-
-	if aPower > dPower {
+	if attackerHex.Power() > defenderHex.Power() {
 		transferHex(state, b.DefenderHex, b.Attacker)
 	}
 }

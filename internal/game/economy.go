@@ -1,9 +1,5 @@
 package game
 
-func CalcIncome(hexCount int) float64 {
-	return float64(hexCount) * BaseIncomePerSec
-}
-
 func HexIncome(hs *HexState) float64 {
 	if hs.Building == BuildingEconomy {
 		return (BaseIncomePerSec + EconomyPerLevel*float64(hs.Level)) * EconomyBonusMultiplier
