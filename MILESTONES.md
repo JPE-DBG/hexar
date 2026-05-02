@@ -115,16 +115,17 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 **Goal:** First real gameplay — players build, fight, and territory changes hands. This is the first **playable** milestone.
 
-**Features:** #6 (Economy building), #7 (Defense building), #9 (demolish), #10 (exponential costs), #11 (attack enemy hex), #12 (battle timer), #13 (instant takeover), #29 (HUD), #30 (build menu), #31 (battle timer UI)
+**Features:** #6 (Gold building), #7 (Power building), #8 (Research building), #9 (demolish), #10 (exponential costs), #11 (attack enemy hex), #12 (battle timer), #13 (instant takeover), #29 (HUD), #30 (build menu), #31 (battle timer UI)
+
+**Notes (actual vs planned):** Research building (#8) was added during this milestone rather than deferred. All three building types (Gold/Power/Research) are fully functional with correct cost formulas and UI labels. Significant polish iteration: Economy→Gold/Defense→Power rename, delta label fix (L1 shows +1.9/s not +0.9/s), constants extracted from magic numbers.
 
 **Stubbed:**
-- No Research/TP/tech tree (combat is Power-only)
 - No counter-spend (defender is passive)
 - No auto-drop (just track negative income in logs)
 - No victory conditions (play until bored)
 
 **Done when:**
-- Player can build Economy/Defense, see income increase / Power increase
+- Player can build Gold/Power/Research, see income increase / Power increase / TP increase
 - Player attacks adjacent enemy hex, battle timer counts down, hex flips on win
 - Power diff > 3 = instant takeover (no timer)
 - Power diff ≤ 0 = attack rejected (no gold spent)
@@ -135,11 +136,13 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 ---
 
-### M4 — Counter-Spend + Auto-Drop + Research (~1 week)
+### M4 — Counter-Spend + Auto-Drop + Research 🔜 NEXT (~1 week)
 
 **Goal:** Complete the defensive gameplay loop and economic pressure system. Games now have real tension and economic collapse risk.
 
-**Features:** #8 (Research building), #14 (counter-spend), #17 (auto-drop with grace period + UI), #33 (auto-drop UI), #5 (maintenance fully enforced)
+**Features:** #14 (counter-spend), #17 (auto-drop with grace period + UI), #33 (auto-drop UI), #5 (maintenance fully enforced)
+
+**Note:** Research building (#8) already done in M3.
 
 **Stubbed:**
 - Tech tree exists but techs have no effect yet (just accumulate TP)

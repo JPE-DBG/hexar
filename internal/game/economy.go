@@ -1,8 +1,8 @@
 package game
 
 func HexIncome(hs *HexState) float64 {
-	if hs.Building == BuildingEconomy {
-		return (BaseIncomePerSec + EconomyPerLevel*float64(hs.Level)) * EconomyBonusMultiplier
+	if hs.Building == BuildingGold {
+		return (BaseIncomePerSec + GoldPerLevel*float64(hs.Level)) * GoldBonusMultiplier
 	}
 	return BaseIncomePerSec
 }

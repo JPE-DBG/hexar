@@ -2,7 +2,7 @@ import { hexToPixel } from '../hexmath';
 import { HEX_SIZE, COLORS } from '../constants';
 import { GameState, HexDTO, BattleDTO } from '../state/state';
 
-const BUILDING_LABELS: Record<number, string> = { 1: 'E', 2: 'D', 3: 'R' };
+const BUILDING_LABELS: Record<number, string> = { 1: 'G', 2: 'P', 3: 'R' };
 
 function darken(color: string, amount: number): string {
   const n = parseInt(color.slice(1), 16);

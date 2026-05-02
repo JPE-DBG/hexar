@@ -5,6 +5,7 @@ import { setupInput } from './input/input';
 import { updateHUD, calcMaintenance } from './ui/hud';
 import { BuildMenu } from './ui/buildmenu';
 import { neighbors } from './hexmath';
+import { BUILDING_GOLD, BUILDING_POWER, BASE_INCOME_PER_SEC, GOLD_PER_LEVEL, GOLD_BONUS_MULTIPLIER, CAPITAL_POWER } from './constants';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const hud = document.getElementById('hud')!;
@@ -15,13 +16,11 @@ let myPlayerId = 0;
 let selectedHex: HexDTO | null = null;
 
 const buildMenu = new BuildMenu(document.body, {
-  onBuild: (building) => {
+  onUpgrade: (building?) => {
     if (!selectedHex) return;
-    connection.send({ type: 'action', action: 'build', q: selectedHex.q, r: selectedHex.r, building });
-  },
-  onUpgrade: () => {
-    if (!selectedHex) return;
-    connection.send({ type: 'action', action: 'upgrade', q: selectedHex.q, r: selectedHex.r });
+    const msg: Record<string, unknown> = { type: 'action', action: 'upgrade', q: selectedHex.q, r: selectedHex.r };
+    if (building) msg.building = building;
+    connection.send(msg);
   },
   onDemolish: () => {
     if (!selectedHex) return;
@@ -67,10 +66,10 @@ function onSnapshot(msg: SnapshotMsg) {
 }
 
 function hexIncome(hex: HexDTO): number {
-  if (hex.building === 1) {
-    return (2.0 + 0.5 * hex.level) * 1.5;
+  if (hex.building === BUILDING_GOLD) {
+    return (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * hex.level) * GOLD_BONUS_MULTIPLIER;
   }
-  return 2.0;
+  return BASE_INCOME_PER_SEC;
 }
 
 function bestAdjacentPower(gs: GameState, playerId: number, target: HexDTO): number {
@@ -80,8 +79,8 @@ function bestAdjacentPower(gs: GameState, playerId: number, target: HexDTO): num
     const hs = gs.hexes.get(key);
     if (!hs || hs.owner !== playerId) continue;
     let p = 0;
-    if (hs.capital) p = 1;
-    if (hs.building === 2) p += hs.level;
+    if (hs.capital) p = CAPITAL_POWER;
+    if (hs.building === BUILDING_POWER) p += hs.level;
     if (p > best) best = p;
   }
   return best;

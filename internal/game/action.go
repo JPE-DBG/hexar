@@ -6,7 +6,6 @@ type ActionType int
 
 const (
 	ActionClaim ActionType = iota
-	ActionBuild
 	ActionUpgrade
 	ActionDemolish
 	ActionAttack
@@ -25,11 +24,11 @@ var (
 	ErrNotAdjacent       = errors.New("no adjacent owned hex")
 	ErrInsufficientGold  = errors.New("insufficient gold")
 	ErrNotOwner          = errors.New("hex not owned by player")
-	ErrHasBuilding       = errors.New("hex already has a building")
 	ErrNoBuilding        = errors.New("hex has no building")
 	ErrNotEnemy          = errors.New("target is not enemy hex")
 	ErrInsufficientPower = errors.New("insufficient power to attack")
 	ErrBattleInProgress  = errors.New("battle already in progress on hex")
+	ErrPlayerNotFound    = errors.New("player not found")
 )
 
 func ProcessActions(state *GameState, actions []Action) {
@@ -38,10 +37,6 @@ func ProcessActions(state *GameState, actions []Action) {
 		case ActionClaim:
 			if ValidateClaim(state, a) == nil {
 				ApplyClaim(state, a)
-			}
-		case ActionBuild:
-			if ValidateBuild(state, a) == nil {
-				ApplyBuild(state, a)
 			}
 		case ActionUpgrade:
 			if ValidateUpgrade(state, a) == nil {
@@ -71,6 +66,9 @@ func ValidateClaim(state *GameState, action Action) error {
 		return ErrNotAdjacent
 	}
 	player := state.Players[action.Player]
+	if player == nil {
+		return ErrPlayerNotFound
+	}
 	if player.Gold < ClaimCost {
 		return ErrInsufficientGold
 	}
