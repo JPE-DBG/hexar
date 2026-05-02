@@ -13,8 +13,8 @@ Generated from CLAUDE.md. 6 milestones, ~6.5 weeks solo developer.
 | 3 | Claiming unclaimed hexes (10g, instant) | core-loop | Yes |
 | 4 | Gold income (2/sec base per hex) | core-loop | Yes |
 | 5 | Stepped maintenance (1/2/3 tiers) | balance | Yes |
-| 6 | Economy building (+50%, upgrades) | core-loop | Yes |
-| 7 | Defense building (+Power, upgrades) | core-loop | Yes |
+| 6 | Gold building (+50% income, upgrades) | core-loop | Yes |
+| 7 | Power building (+Power per level, upgrades) | core-loop | Yes |
 | 8 | Research building (+TP at 0.2 TP/sec per level, upgrades) | core-loop | Yes |
 | 9 | Building demolish (50% refund) | core-loop | Yes |
 | 10 | Exponential upgrade costs | balance | Yes |
@@ -52,13 +52,15 @@ Generated from CLAUDE.md. 6 milestones, ~6.5 weeks solo developer.
 
 ```
 Hex grid math (#1) ← everything else
-Tick loop (#22) ← economy (#4,5), battles (#12), victory (#18-21), delta (#24)
+Tick loop (#22) ← economy (#4,5), battles (#12), victory (#18, #20, #21), delta (#24)
 Hex ownership (#2) ← claiming (#3), buildings (#6-9), combat (#11-14)
 Gold income (#4) ← buildings (#6-9), combat (#11), counter-spend (#14)
 Stepped maintenance (#5) ← auto-drop (#17)
-Defense building (#7) ← combat (#11-13), counter-spend (#14)
+Power building (#7) ← combat (#11-13), counter-spend (#14)
 Research building (#8) ← tech tree (#16)
-Tech tree (#16) ← Garrison (#15), Fortify action (#19)
+Tech tree (#16) ← all tech effects (#15 and others within #16)
+Garrison (#15) ← tech tree (#16)  [Garrison effect active only after player unlocks Garrison tech]
+Fortify action (#19) ← tech tree (#16)  [action available only after player unlocks Fortify tech]
 Combat (#11-13) ← victory: conquest (#18), capital capture (#21)
 WebSocket (#23) ← delta sync (#24), snapshot (#25), disconnect (#34)
 Canvas render (#27) ← click detection (#28), all UI (#29-33)
@@ -140,12 +142,12 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 **Goal:** Complete the defensive gameplay loop and economic pressure system. Games now have real tension and economic collapse risk.
 
-**Features:** #14 (counter-spend), #17 (auto-drop with grace period + UI), #33 (auto-drop UI), #5 (maintenance fully enforced)
+**Features:** #14 (counter-spend), #17 (auto-drop with grace period + UI), #32 (tech tree UI — stub: all 12 slots visible, TP spending works, no effects yet), #33 (auto-drop UI), #5 (maintenance fully enforced)
 
 **Note:** Research building (#8) already done in M3. TP rate is 0.2 TP/sec per level.
 
 **Stubbed:**
-- Tech tree accumulates TP and shows balance in HUD, but all 12 techs have no effect yet
+- All 12 tech effects inactive — UI shows slots, costs, and TP balance; unlocking spends TP and marks the tech as owned, but nothing changes in gameplay yet (effects wired in M5)
 - No victory conditions yet
 
 **Done when:**
@@ -163,7 +165,7 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 **Goal:** Complete game with win conditions. A full 15-30 minute match is playable end-to-end.
 
-**Features:** #15 (Garrison), #16 (all 12 techs functional), #18 (Conquest victory), #19 (Fortify action), #20 (Time limit), #21 (Capital capture), #32 (tech tree UI)
+**Features:** #15 (Garrison), #16 (all 12 techs functional), #18 (Conquest victory), #19 (Fortify action), #20 (Time limit), #21 (Capital capture)
 
 **Stubbed:**
 - No disconnect handling (both players must stay connected)
@@ -176,16 +178,16 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
   - Vanguard: next attack within 12s costs 50g after a capture
   - Iron Grip: all hexes +1 Power
   - Siege Mastery: attacker battle timers ×0.6; tie → attacker wins
-  - Prosperity: each Economy building +1/sec
+  - Prosperity: each Gold building +1/sec
   - Supply Lines: maintenance 0.9/1.8/2.7 per tier
-  - Compound Growth: Economy buildings ×1.25 output
+  - Compound Growth: Gold buildings ×1.25 output
   - Garrison: adjacent owned hexes +1 Power in defense (cap: +2 from Garrison; +3 total with counter-spend)
   - Fortify: 40g action grants instant-takeover immunity for 90s on one hex
   - Dominion: conquest timer 10s → 6s
   - Reclamation: recapture own hex for 50g
   - Resilience: drop grace 20s, drop refund 70%
 - Game ends when: player holds 60% for 6-10s (based on Dominion), OR capital captured, OR 30 min elapsed
-- Tech tree UI shows all 12 techs, TP cost, and current TP balance
+- Tech tree UI (built in M4) now shows unlocked techs as active with visual distinction; all 12 effects apply
 - Victory screen shows winner and reason
 - Full 15-30 min game is completable between two human players
 

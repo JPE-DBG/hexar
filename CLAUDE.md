@@ -153,7 +153,7 @@ During the battle countdown, defender can spend resources to boost Defense Power
 
 ## Tech Tree
 
-Research buildings generate Tech Points at **0.2 TP/sec per Research level**. Spend TP to unlock any tech in any order — no prerequisites. **Total tree: ~470 TP across 12 techs. No single game unlocks everything**, so every game has a distinct tech build.
+Research buildings generate Tech Points at **0.2 TP/sec per Research level**. Spend TP to unlock any tech in any order — no prerequisites. **Total tree: 470 TP across 12 techs. No single game unlocks everything**, so every game has a distinct tech build.
 
 | Tech | Cost | Effect | Archetype |
 |------|------|--------|-----------|
@@ -240,14 +240,14 @@ T=5 min+:  Border warfare begins in earnest
 ## Balance Rules & Constraints
 
 ### Upgrade Costs (Unified formula: `BuildCost × 2^currentLevel`)
-- **Economy (BuildCost=60):** L1=60, L2=120, L3=240, L4=480
-- **Defense (BuildCost=60):** L1=60, L2=120, L3=240, L4=480 (same curve as Economy)
+- **Gold (BuildCost=60):** L1=60, L2=120, L3=240, L4=480
+- **Power (BuildCost=60):** L1=60, L2=120, L3=240, L4=480 (same curve as Gold)
 - **Research (BuildCost=80):** L1=80, L2=160, L3=320, L4=640
 - There is no separate "build" action — upgrading empty hex to L1 costs `BuildCost × 2^0 = BuildCost`
-- **Economy rewards:** +0.6/sec per level × 1.5 multiplier = +0.9/sec net gain per level
-- **Defense/Research rewards:** +1 Power per level; +0.1 TP/sec per level (constant)
+- **Gold building rewards:** +0.6/sec per level × 1.5 multiplier = +0.9/sec net gain per level
+- **Power/Research rewards:** +1 Power per level; +0.2 TP/sec per level (constant)
 - **Demolish refund:** 50% of total invested; for all buildings: TotalInvested = `BuildCost × (2^level - 1)`, refund = `BuildCost × (2^level - 1) × 0.5`
-  - Economy L1: TotalInvested=60, refund=30; L2: TotalInvested=180, refund=90; L3: TotalInvested=420, refund=210
+  - Gold L1: TotalInvested=60, refund=30; L2: TotalInvested=180, refund=90; L3: TotalInvested=420, refund=210
 
 ### Maintenance System (Prevents Extreme Expansion)
 - Each hex costs 1 maintenance/sec to hold
@@ -258,7 +258,7 @@ T=5 min+:  Border warfare begins in earnest
 ### Tech Research Investment (Enhances Conquest)
 - Research buildings generate 0.2 TP/sec per level — doubled from initial design to make single-building investment meaningful
 - With 2-3 Research buildings, players unlock 6-10 techs in a 20-min game
-- Tech investment competes with Economy/Power building investment — no "free" tech path
+- Tech investment competes with Gold/Power building investment — no "free" tech path
 - All 12 techs support conquest; no separate tech-based win condition
 
 ### Early Game Parity
