@@ -1,27 +1,21 @@
 import { HexDTO } from '../state/state';
 
 export interface BuildMenuCallbacks {
-  onBuild: (building: 'economy' | 'defense') => void;
-  onUpgrade: () => void;
+  onUpgrade: (building?: 'economy' | 'defense' | 'research') => void;
   onDemolish: () => void;
   onAttack: () => void;
 }
 
 const BUILD_COSTS: Record<number, number> = { 1: 60, 2: 60, 3: 80 };
+const BUILDING_NAMES: Record<number, string> = { 1: 'Economy', 2: 'Defense', 3: 'Research' };
 
 function upgradeCost(building: number, level: number): number {
   const base = BUILD_COSTS[building] ?? 80;
-  if (building === 1) { // Economy: base × 2^(level-1)
-    return base * Math.pow(2, level - 1);
-  }
   return base * Math.pow(2, level);
 }
 
 function demolishRefund(building: number, level: number): number {
   const base = BUILD_COSTS[building] ?? 80;
-  if (building === 1) { // Economy: TotalInvested = base × 2^(level-1), refund = 50%
-    return base * Math.pow(2, level - 1) * 0.5;
-  }
   return base * (Math.pow(2, level) - 1) * 0.5;
 }
 
@@ -49,8 +43,9 @@ export class BuildMenu {
       e.preventDefault();
       const action = btn.getAttribute('data-action');
       switch (action) {
-        case 'build-economy': this.callbacks.onBuild('economy'); break;
-        case 'build-defense': this.callbacks.onBuild('defense'); break;
+        case 'upgrade-economy': this.callbacks.onUpgrade('economy'); break;
+        case 'upgrade-defense': this.callbacks.onUpgrade('defense'); break;
+        case 'upgrade-research': this.callbacks.onUpgrade('research'); break;
         case 'upgrade': this.callbacks.onUpgrade(); break;
         case 'demolish': this.callbacks.onDemolish(); break;
         case 'attack': this.callbacks.onAttack(); break;
@@ -70,7 +65,7 @@ export class BuildMenu {
     const canAttack = !hasBattle && gold >= 100 && attackerPower > defPower;
     const key = [
       hex.q, hex.r, hex.building, hex.level, isOwn, isEnemy,
-      gold >= 60, gold >= 60, gold >= upgCost,
+      gold >= 60, gold >= 80, gold >= upgCost,
       canAttack, attackerPower, defPower, hasBattle,
     ].join('|');
 
@@ -86,21 +81,18 @@ export class BuildMenu {
       const hasBuilding = hex.building !== 0;
       const refund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
 
-      // Slot 1: Economy → Upgrade when economy built, greyed when defense built
-      if (hex.building === 1) {
-        html += this.makeBtn(`Upgrade (${upgCost}g)`, gold >= upgCost, 'upgrade');
+      if (!hasBuilding) {
+        // Empty hex: offer all three building types as first upgrade
+        html += this.makeBtn(`Economy (60g)`, gold >= 60, 'upgrade-economy');
+        html += this.makeBtn(`Defense (60g)`, gold >= 60, 'upgrade-defense');
+        html += this.makeBtn(`Research (80g)`, gold >= 80, 'upgrade-research');
       } else {
-        html += this.makeBtn('Economy (60g)', !hasBuilding && gold >= 60, 'build-economy');
+        // Occupied hex: upgrade existing building
+        const name = BUILDING_NAMES[hex.building] ?? '?';
+        html += this.makeBtn(`${name} L${hex.level}→${hex.level + 1} (${upgCost}g)`, gold >= upgCost, 'upgrade');
       }
 
-      // Slot 2: Defense → Upgrade when defense built, greyed when economy built
-      if (hex.building === 2) {
-        html += this.makeBtn(`Upgrade (${upgCost}g)`, gold >= upgCost, 'upgrade');
-      } else {
-        html += this.makeBtn('Defense (60g)', !hasBuilding && gold >= 60, 'build-defense');
-      }
-
-      // Separator + Demolish (always present, greyed when no building)
+      // Separator + Demolish
       html += `<span style="border-left:1px solid #555;height:20px;margin:0 8px;display:inline-block;vertical-align:middle"></span>`;
       html += this.makeBtn(`🗑${hasBuilding ? ` (+${refund}g)` : ''}`, hasBuilding, 'demolish');
     } else if (isEnemy) {

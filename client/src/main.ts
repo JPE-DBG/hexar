@@ -15,13 +15,11 @@ let myPlayerId = 0;
 let selectedHex: HexDTO | null = null;
 
 const buildMenu = new BuildMenu(document.body, {
-  onBuild: (building) => {
+  onUpgrade: (building?) => {
     if (!selectedHex) return;
-    connection.send({ type: 'action', action: 'build', q: selectedHex.q, r: selectedHex.r, building });
-  },
-  onUpgrade: () => {
-    if (!selectedHex) return;
-    connection.send({ type: 'action', action: 'upgrade', q: selectedHex.q, r: selectedHex.r });
+    const msg: Record<string, unknown> = { type: 'action', action: 'upgrade', q: selectedHex.q, r: selectedHex.r };
+    if (building) msg.building = building;
+    connection.send(msg);
   },
   onDemolish: () => {
     if (!selectedHex) return;
@@ -68,7 +66,7 @@ function onSnapshot(msg: SnapshotMsg) {
 
 function hexIncome(hex: HexDTO): number {
   if (hex.building === 1) {
-    return (2.0 + 0.5 * hex.level) * 1.5;
+    return (2.0 + 0.6 * hex.level) * 1.5;
   }
   return 2.0;
 }

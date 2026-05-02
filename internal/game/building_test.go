@@ -5,19 +5,19 @@ import (
 	"testing"
 )
 
-func TestBuildEconomy(t *testing.T) {
+func TestUpgradeFromEmptyEconomy(t *testing.T) {
 	state := NewGameState()
 	pid := PlayerID(1)
 	state.Players[pid] = &Player{ID: pid, Gold: 200}
 	hex := Hex{Q: 0, R: 0}
 	state.Hexes[hex] = &HexState{Owner: pid}
 
-	err := ValidateBuild(state, Action{Type: ActionBuild, Player: pid, Target: hex, Building: BuildingEconomy})
+	err := ValidateUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex, Building: BuildingEconomy})
 	if err != nil {
-		t.Fatalf("expected valid build, got: %v", err)
+		t.Fatalf("expected valid upgrade, got: %v", err)
 	}
 
-	ApplyBuild(state, Action{Type: ActionBuild, Player: pid, Target: hex, Building: BuildingEconomy})
+	ApplyUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex, Building: BuildingEconomy})
 
 	if state.Players[pid].Gold != 140 {
 		t.Errorf("gold = %.1f, want 140 (200 - 60)", state.Players[pid].Gold)
@@ -36,14 +36,14 @@ func TestBuildEconomy(t *testing.T) {
 	}
 }
 
-func TestBuildDefense(t *testing.T) {
+func TestUpgradeFromEmptyDefense(t *testing.T) {
 	state := NewGameState()
 	pid := PlayerID(1)
 	state.Players[pid] = &Player{ID: pid, Gold: 200}
 	hex := Hex{Q: 0, R: 0}
 	state.Hexes[hex] = &HexState{Owner: pid}
 
-	ApplyBuild(state, Action{Type: ActionBuild, Player: pid, Target: hex, Building: BuildingDefense})
+	ApplyUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex, Building: BuildingDefense})
 
 	if state.Hexes[hex].Level != 1 {
 		t.Errorf("level = %d, want 1", state.Hexes[hex].Level)
@@ -59,12 +59,19 @@ func TestUpgradeCost(t *testing.T) {
 		level    int
 		want     float64
 	}{
-		{BuildingEconomy, 1, 60},
-		{BuildingEconomy, 2, 120},
-		{BuildingEconomy, 3, 240},
+		// Economy: 60 × 2^level
+		{BuildingEconomy, 0, 60},
+		{BuildingEconomy, 1, 120},
+		{BuildingEconomy, 2, 240},
+		{BuildingEconomy, 3, 480},
+		// Defense: 60 × 2^level
+		{BuildingDefense, 0, 60},
 		{BuildingDefense, 1, 120},
 		{BuildingDefense, 2, 240},
-		{BuildingDefense, 3, 480},
+		// Research: 80 × 2^level
+		{BuildingResearch, 0, 80},
+		{BuildingResearch, 1, 160},
+		{BuildingResearch, 2, 320},
 	}
 	for _, tt := range tests {
 		got := UpgradeCost(tt.building, tt.level)
@@ -99,12 +106,12 @@ func TestDemolishRefund(t *testing.T) {
 	pid := PlayerID(1)
 	state.Players[pid] = &Player{ID: pid, Gold: 0}
 	hex := Hex{Q: 0, R: 0}
-	// Economy building at level 2: TotalInvested = 60*2^(2-1) = 120, 50% refund = 60
+	// Economy L2: TotalInvested = 60*(2^2-1) = 180, 50% refund = 90
 	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingEconomy, Level: 2}
 
 	ApplyDemolish(state, Action{Type: ActionDemolish, Player: pid, Target: hex})
 
-	expected := 60.0
+	expected := 90.0
 	if math.Abs(state.Players[pid].Gold-expected) > 0.01 {
 		t.Errorf("gold = %.2f, want %.2f", state.Players[pid].Gold, expected)
 	}
@@ -113,16 +120,16 @@ func TestDemolishRefund(t *testing.T) {
 	}
 }
 
-func TestBuildOnOccupiedHex(t *testing.T) {
+func TestUpgradeEmptyHexRequiresBuilding(t *testing.T) {
 	state := NewGameState()
 	pid := PlayerID(1)
 	state.Players[pid] = &Player{ID: pid, Gold: 200}
 	hex := Hex{Q: 0, R: 0}
-	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingDefense}
+	state.Hexes[hex] = &HexState{Owner: pid}
 
-	err := ValidateBuild(state, Action{Type: ActionBuild, Player: pid, Target: hex, Building: BuildingEconomy})
-	if err != ErrHasBuilding {
-		t.Errorf("expected ErrHasBuilding, got: %v", err)
+	err := ValidateUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex, Building: BuildingNone})
+	if err != ErrNoBuilding {
+		t.Errorf("expected ErrNoBuilding for empty hex without building type, got: %v", err)
 	}
 }
 

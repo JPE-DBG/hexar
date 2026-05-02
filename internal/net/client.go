@@ -81,11 +81,9 @@ func (c *Client) ReadPump(ctx context.Context) {
 		switch raw.Action {
 		case "claim":
 			action = game.Action{Type: game.ActionClaim, Player: c.playerID, Target: target}
-		case "build":
-			bt := parseBuildingType(raw.Building)
-			action = game.Action{Type: game.ActionBuild, Player: c.playerID, Target: target, Building: bt}
 		case "upgrade":
-			action = game.Action{Type: game.ActionUpgrade, Player: c.playerID, Target: target}
+			bt := parseBuildingType(raw.Building)
+			action = game.Action{Type: game.ActionUpgrade, Player: c.playerID, Target: target, Building: bt}
 		case "demolish":
 			action = game.Action{Type: game.ActionDemolish, Player: c.playerID, Target: target}
 		case "attack":
@@ -104,6 +102,8 @@ func parseBuildingType(s string) game.BuildingType {
 		return game.BuildingEconomy
 	case "defense":
 		return game.BuildingDefense
+	case "research":
+		return game.BuildingResearch
 	default:
 		return game.BuildingNone
 	}

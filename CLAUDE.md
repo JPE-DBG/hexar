@@ -74,26 +74,23 @@ Example: Economy building (+50%) + Production Boom (+30%):
 
 ### Buildings (One per Hex)
 
-Each hex can have **one building** of three types. Building can be demolished (refund 50%) and replaced.
+Each hex can have **one building** of three types. There is no separate "build" action — upgrading an empty hex to L1 is the first upgrade step. Building can be demolished (refund 50%) and replaced.
 
 #### Economy Building
 - **Effect:** +50% resources/sec from that hex (stacks additively with tech bonuses)
-- **Build cost:** 60 gold
-- **Upgrade cost:** L1=60, L2=120, L3=240, L4=480 (formula: `BuildCost × 2^(level-1)`, level starts at 1)
+- **Upgrade cost:** L1=60, L2=120, L3=240, L4=480 (formula: `BuildCost × 2^level`, where level is current level before upgrade)
 - **Reward (Compounding):** +0.6 resources/sec per level, multiplied by the +50% bonus
 - **Formula:** `(base + 0.6 × level) × 1.5` → Level 1: 3.9/sec, Level 5: (2 + 3.0) × 1.5 = 7.5/sec
 - **Max level:** Unlimited (incremental)
 
 #### Defense Building
 - **Effect:** +1 Power per level (Power = level, so L1=1, L2=2, etc.)
-- **Build cost:** 60 gold
-- **Upgrade cost (Exponential):** L1=120, L2=240, L3=480, L4=960 (formula: BuildCost × 2^level)
+- **Upgrade cost:** L1=60, L2=120, L3=240, L4=480 (formula: `BuildCost × 2^level`)
 - **Max level:** Unlimited (incremental)
 
 #### Research Building
 - **Effect:** +0.1 TP/sec per level (fuel for tech tree)
-- **Build cost:** 80 gold (reduced from 120)
-- **Upgrade cost (Exponential):** L1=160, L2=320, L3=640, L4=1280 (formula: BuildCost × 2^level)
+- **Upgrade cost:** L1=80, L2=160, L3=320, L4=640 (formula: `BuildCost × 2^level`, BuildCost=80)
 - **Reward (Linear):** +0.1 TP/sec per level (constant gain)
 - **Max level:** Unlimited (incremental)
 
@@ -183,7 +180,7 @@ T=15-18s:  3 hexes, +3/sec net → Claim hex 4 (3 sec)
 T=18-20s:  4 hexes, +4/sec net → Claim hex 5 (2 sec)
 T=~2 min:  ~10 hexes claimed, land-grab phase slows as map fills
 
-T=2 min:   Save 60 gold → Build Economy on hex 1 (~6 sec at +10/sec)
+T=2 min:   Save 60 gold → Upgrade hex 1 to Economy L1 (~6 sec at +10/sec)
            Income: hex 1 = 3.9/sec, rest = 2/sec each → Total: 21.9/sec gross
            Maintenance: 10/sec → Net +11.9/sec
 
@@ -237,16 +234,15 @@ T=5 min+:  Border warfare begins in earnest
 
 ## Balance Rules & Constraints
 
-### Upgrade Costs (Economy differs from Defense/Research)
-- **Economy:** build cost 60g, upgrade formula `60 × 2^(level-1)` → L1=60, L2=120, L3=240, L4=480
-- **Defense (BuildCost=60):** upgrade formula `60 × 2^level` → L1=120, L2=240, L3=480, L4=960
-- **Research (BuildCost=80):** upgrade formula `80 × 2^level` → L1=160, L2=320, L3=640, L4=1280
+### Upgrade Costs (Unified formula: `BuildCost × 2^currentLevel`)
+- **Economy (BuildCost=60):** L1=60, L2=120, L3=240, L4=480
+- **Defense (BuildCost=60):** L1=60, L2=120, L3=240, L4=480 (same curve as Economy)
+- **Research (BuildCost=80):** L1=80, L2=160, L3=320, L4=640
+- There is no separate "build" action — upgrading empty hex to L1 costs `BuildCost × 2^0 = BuildCost`
 - **Economy rewards:** +0.6/sec per level × 1.5 multiplier = +0.9/sec net gain per level
 - **Defense/Research rewards:** +1 Power per level; +0.1 TP/sec per level (constant)
-- **Demolish refund:** 50% of total invested
-  - Economy L at level n: TotalInvested = `60 × 2^(n-1)`, refund = `30 × 2^(n-1)`
-  - Defense/Research: TotalInvested = `BuildCost × (2^n - 1)`, refund = `BuildCost × (2^n - 1) × 0.5`
-- **Effect:** Economy upgrades are cheap early (60g each for L1, L2) but grow exponentially. Defense L1 still costs 120g — investing in attack power requires meaningful commitment.
+- **Demolish refund:** 50% of total invested; for all buildings: TotalInvested = `BuildCost × (2^level - 1)`, refund = `BuildCost × (2^level - 1) × 0.5`
+  - Economy L1: TotalInvested=60, refund=30; L2: TotalInvested=180, refund=90; L3: TotalInvested=420, refund=210
 
 ### Maintenance System (Prevents Extreme Expansion)
 - Each hex costs 1 maintenance/sec to hold
