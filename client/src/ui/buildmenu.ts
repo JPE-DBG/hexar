@@ -1,13 +1,14 @@
 import { HexDTO } from '../state/state';
 
 export interface BuildMenuCallbacks {
-  onUpgrade: (building?: 'economy' | 'defense' | 'research') => void;
+  onUpgrade: (building?: 'gold' | 'power' | 'research') => void;
   onDemolish: () => void;
   onAttack: () => void;
 }
 
 const BUILD_COSTS: Record<number, number> = { 1: 60, 2: 60, 3: 80 };
-const BUILDING_NAMES: Record<number, string> = { 1: 'Economy', 2: 'Defense', 3: 'Research' };
+const BUILDING_NAMES: Record<number, string> = { 1: 'Gold', 2: 'Power', 3: 'Research' };
+const BUILDING_DELTA: Record<number, string> = { 1: '+0.9/s', 2: '+1 Pwr', 3: '+0.1 TP/s' };
 
 function upgradeCost(building: number, level: number): number {
   const base = BUILD_COSTS[building] ?? 80;
@@ -17,6 +18,14 @@ function upgradeCost(building: number, level: number): number {
 function demolishRefund(building: number, level: number): number {
   const base = BUILD_COSTS[building] ?? 80;
   return base * (Math.pow(2, level) - 1) * 0.5;
+}
+
+function upgradeLabel(building: number, currentLevel: number): string {
+  const name = BUILDING_NAMES[building] ?? '?';
+  const targetLevel = currentLevel + 1;
+  const cost = upgradeCost(building, currentLevel);
+  const delta = BUILDING_DELTA[building] ?? '';
+  return `${name} ${targetLevel} (${cost}g) ${delta}`;
 }
 
 export class BuildMenu {
@@ -43,8 +52,8 @@ export class BuildMenu {
       e.preventDefault();
       const action = btn.getAttribute('data-action');
       switch (action) {
-        case 'upgrade-economy': this.callbacks.onUpgrade('economy'); break;
-        case 'upgrade-defense': this.callbacks.onUpgrade('defense'); break;
+        case 'upgrade-gold': this.callbacks.onUpgrade('gold'); break;
+        case 'upgrade-power': this.callbacks.onUpgrade('power'); break;
         case 'upgrade-research': this.callbacks.onUpgrade('research'); break;
         case 'upgrade': this.callbacks.onUpgrade(); break;
         case 'demolish': this.callbacks.onDemolish(); break;
@@ -82,17 +91,13 @@ export class BuildMenu {
       const refund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
 
       if (!hasBuilding) {
-        // Empty hex: offer all three building types as first upgrade
-        html += this.makeBtn(`Economy (60g)`, gold >= 60, 'upgrade-economy');
-        html += this.makeBtn(`Defense (60g)`, gold >= 60, 'upgrade-defense');
-        html += this.makeBtn(`Research (80g)`, gold >= 80, 'upgrade-research');
+        html += this.makeBtn(upgradeLabel(1, 0), gold >= 60, 'upgrade-gold');
+        html += this.makeBtn(upgradeLabel(2, 0), gold >= 60, 'upgrade-power');
+        html += this.makeBtn(upgradeLabel(3, 0), gold >= 80, 'upgrade-research');
       } else {
-        // Occupied hex: upgrade existing building
-        const name = BUILDING_NAMES[hex.building] ?? '?';
-        html += this.makeBtn(`${name} L${hex.level}→${hex.level + 1} (${upgCost}g)`, gold >= upgCost, 'upgrade');
+        html += this.makeBtn(upgradeLabel(hex.building, hex.level), gold >= upgCost, 'upgrade');
       }
 
-      // Separator + Demolish
       html += `<span style="border-left:1px solid #555;height:20px;margin:0 8px;display:inline-block;vertical-align:middle"></span>`;
       html += this.makeBtn(`🗑${hasBuilding ? ` (+${refund}g)` : ''}`, hasBuilding, 'demolish');
     } else if (isEnemy) {

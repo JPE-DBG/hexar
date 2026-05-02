@@ -13,7 +13,7 @@ func TestAttackInstantTakeover(t *testing.T) {
 
 	// Attacker hex with Defense level 5 = Power 5
 	attHex := Hex{Q: 0, R: 0}
-	state.Hexes[attHex] = &HexState{Owner: p1, Building: BuildingDefense, Level: 5}
+	state.Hexes[attHex] = &HexState{Owner: p1, Building: BuildingPower, Level: 5}
 
 	// Defender hex with no building = Power 0, adjacent to attacker
 	defHex := Hex{Q: 1, R: 0}
@@ -45,7 +45,7 @@ func TestAttackStartsBattle(t *testing.T) {
 
 	// Attacker: Defense level 2 = Power 2
 	attHex := Hex{Q: 0, R: 0}
-	state.Hexes[attHex] = &HexState{Owner: p1, Building: BuildingDefense, Level: 2}
+	state.Hexes[attHex] = &HexState{Owner: p1, Building: BuildingPower, Level: 2}
 
 	// Defender: Capital = Power 1
 	defHex := Hex{Q: 1, R: 0}
@@ -75,7 +75,7 @@ func TestBattleResolution(t *testing.T) {
 
 	attHex := Hex{Q: 0, R: 0}
 	defHex := Hex{Q: 1, R: 0}
-	state.Hexes[attHex] = &HexState{Owner: p1, Building: BuildingDefense, Level: 2} // Power 2
+	state.Hexes[attHex] = &HexState{Owner: p1, Building: BuildingPower, Level: 2} // Power 2
 	state.Hexes[defHex] = &HexState{Owner: p2, Capital: true}                       // Power 1
 
 	state.Battles = []Battle{{
@@ -106,7 +106,7 @@ func TestBattleDefenderWins(t *testing.T) {
 	attHex := Hex{Q: 0, R: 0}
 	defHex := Hex{Q: 1, R: 0}
 	state.Hexes[attHex] = &HexState{Owner: p1, Capital: true}                       // Power 1
-	state.Hexes[defHex] = &HexState{Owner: p2, Building: BuildingDefense, Level: 2} // Power 2
+	state.Hexes[defHex] = &HexState{Owner: p2, Building: BuildingPower, Level: 2} // Power 2
 
 	state.Battles = []Battle{{
 		AttackerHex: attHex,
@@ -133,7 +133,7 @@ func TestAttackInsufficientPower(t *testing.T) {
 	attHex := Hex{Q: 0, R: 0}
 	defHex := Hex{Q: 1, R: 0}
 	state.Hexes[attHex] = &HexState{Owner: p1, Capital: true}                       // Power 1
-	state.Hexes[defHex] = &HexState{Owner: p2, Building: BuildingDefense, Level: 1} // Power 1
+	state.Hexes[defHex] = &HexState{Owner: p2, Building: BuildingPower, Level: 1} // Power 1
 
 	// Power 1 vs 1: not strictly greater
 	err := ValidateAttack(state, Action{Type: ActionAttack, Player: p1, Target: defHex})
@@ -151,7 +151,7 @@ func TestAttackCost(t *testing.T) {
 
 	attHex := Hex{Q: 0, R: 0}
 	defHex := Hex{Q: 1, R: 0}
-	state.Hexes[attHex] = &HexState{Owner: p1, Building: BuildingDefense, Level: 5} // Power 5
+	state.Hexes[attHex] = &HexState{Owner: p1, Building: BuildingPower, Level: 5} // Power 5
 	state.Hexes[defHex] = &HexState{Owner: p2}                                      // Power 0
 
 	ApplyAttack(state, Action{Type: ActionAttack, Player: p1, Target: defHex})

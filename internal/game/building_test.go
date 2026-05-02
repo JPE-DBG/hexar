@@ -12,17 +12,17 @@ func TestUpgradeFromEmptyEconomy(t *testing.T) {
 	hex := Hex{Q: 0, R: 0}
 	state.Hexes[hex] = &HexState{Owner: pid}
 
-	err := ValidateUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex, Building: BuildingEconomy})
+	err := ValidateUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex, Building: BuildingGold})
 	if err != nil {
 		t.Fatalf("expected valid upgrade, got: %v", err)
 	}
 
-	ApplyUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex, Building: BuildingEconomy})
+	ApplyUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex, Building: BuildingGold})
 
 	if state.Players[pid].Gold != 140 {
 		t.Errorf("gold = %.1f, want 140 (200 - 60)", state.Players[pid].Gold)
 	}
-	if state.Hexes[hex].Building != BuildingEconomy {
+	if state.Hexes[hex].Building != BuildingGold {
 		t.Error("expected Economy building")
 	}
 	if state.Hexes[hex].Level != 1 {
@@ -43,7 +43,7 @@ func TestUpgradeFromEmptyDefense(t *testing.T) {
 	hex := Hex{Q: 0, R: 0}
 	state.Hexes[hex] = &HexState{Owner: pid}
 
-	ApplyUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex, Building: BuildingDefense})
+	ApplyUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex, Building: BuildingPower})
 
 	if state.Hexes[hex].Level != 1 {
 		t.Errorf("level = %d, want 1", state.Hexes[hex].Level)
@@ -60,14 +60,14 @@ func TestUpgradeCost(t *testing.T) {
 		want     float64
 	}{
 		// Economy: 60 × 2^level
-		{BuildingEconomy, 0, 60},
-		{BuildingEconomy, 1, 120},
-		{BuildingEconomy, 2, 240},
-		{BuildingEconomy, 3, 480},
+		{BuildingGold, 0, 60},
+		{BuildingGold, 1, 120},
+		{BuildingGold, 2, 240},
+		{BuildingGold, 3, 480},
 		// Defense: 60 × 2^level
-		{BuildingDefense, 0, 60},
-		{BuildingDefense, 1, 120},
-		{BuildingDefense, 2, 240},
+		{BuildingPower, 0, 60},
+		{BuildingPower, 1, 120},
+		{BuildingPower, 2, 240},
 		// Research: 80 × 2^level
 		{BuildingResearch, 0, 80},
 		{BuildingResearch, 1, 160},
@@ -86,7 +86,7 @@ func TestUpgradeIncreasesLevel(t *testing.T) {
 	pid := PlayerID(1)
 	state.Players[pid] = &Player{ID: pid, Gold: 500}
 	hex := Hex{Q: 0, R: 0}
-	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingDefense, Level: 1}
+	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingPower, Level: 1}
 
 	ApplyUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex})
 
@@ -107,7 +107,7 @@ func TestDemolishRefund(t *testing.T) {
 	state.Players[pid] = &Player{ID: pid, Gold: 0}
 	hex := Hex{Q: 0, R: 0}
 	// Economy L2: TotalInvested = 60*(2^2-1) = 180, 50% refund = 90
-	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingEconomy, Level: 2}
+	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingGold, Level: 2}
 
 	ApplyDemolish(state, Action{Type: ActionDemolish, Player: pid, Target: hex})
 
@@ -140,7 +140,7 @@ func TestEconomyBuildingIncome(t *testing.T) {
 
 	// 1 hex with Economy building at level 2
 	hex := Hex{Q: 0, R: 0}
-	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingEconomy, Level: 2}
+	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingGold, Level: 2}
 
 	// Per CLAUDE.md: (2 + 0.6*2) * 1.5 = 4.8/sec, maintenance 1/sec, net 3.8/sec
 	for range 100 {

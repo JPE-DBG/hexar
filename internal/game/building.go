@@ -4,10 +4,10 @@ import "math"
 
 func buildCost(building BuildingType) float64 {
 	switch building {
-	case BuildingEconomy:
-		return EconomyBuildCost
-	case BuildingDefense:
-		return DefenseBuildCost
+	case BuildingGold:
+		return GoldBuildCost
+	case BuildingPower:
+		return PowerBuildCost
 	case BuildingResearch:
 		return ResearchBuildCost
 	default:

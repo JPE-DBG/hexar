@@ -8,8 +8,8 @@ type BuildingType int
 
 const (
 	BuildingNone     BuildingType = 0
-	BuildingEconomy  BuildingType = 1
-	BuildingDefense  BuildingType = 2
+	BuildingGold     BuildingType = 1
+	BuildingPower    BuildingType = 2
 	BuildingResearch BuildingType = 3
 )
 
@@ -25,7 +25,7 @@ func (h *HexState) Power() int {
 	if h.Capital {
 		p = 1
 	}
-	if h.Building == BuildingDefense {
+	if h.Building == BuildingPower {
 		p += h.Level
 	}
 	return p

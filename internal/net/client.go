@@ -98,10 +98,10 @@ func (c *Client) ReadPump(ctx context.Context) {
 
 func parseBuildingType(s string) game.BuildingType {
 	switch s {
-	case "economy":
-		return game.BuildingEconomy
-	case "defense":
-		return game.BuildingDefense
+	case "gold":
+		return game.BuildingGold
+	case "power":
+		return game.BuildingPower
 	case "research":
 		return game.BuildingResearch
 	default:
