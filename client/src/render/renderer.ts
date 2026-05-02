@@ -126,15 +126,7 @@ export class Renderer {
     const py = y + this.offsetY;
 
     const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI / 180) * (60 * i - 30);
-      const hx = px + HEX_SIZE * Math.cos(angle);
-      const hy = py + HEX_SIZE * Math.sin(angle);
-      if (i === 0) ctx.moveTo(hx, hy);
-      else ctx.lineTo(hx, hy);
-    }
-    ctx.closePath();
+    this.hexPath(px, py);
     ctx.strokeStyle = `rgba(255, 200, 0, ${pulse})`;
     ctx.lineWidth = 3;
     ctx.stroke();
