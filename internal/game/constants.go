@@ -18,10 +18,6 @@ const (
 	DefenseBuildCost  = 60.0
 	ResearchBuildCost = 80.0
 
-	EconomyBaseUpgradeCost  = 40.0
-	DefenseBaseUpgradeCost  = 30.0
-	ResearchBaseUpgradeCost = 40.0
-
 	EconomyBonusMultiplier = 1.5
 	EconomyPerLevel        = 0.5
 	ResearchPerLevel       = 0.1
@@ -32,7 +28,7 @@ const (
 	CounterSpendCostPerSec = 50.0
 	CounterSpendCap        = 3
 
-	InstantTakeoverDiff = 4 // power diff > 3 means instant
+	InstantTakeoverMinDiff = 3 // power diff must exceed this for instant takeover
 
 	ConquestThreshold    = 0.60
 	ConquestHoldTime     = 10.0

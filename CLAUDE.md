@@ -79,21 +79,21 @@ Each hex can have **one building** of three types. Building can be demolished (r
 #### Economy Building
 - **Effect:** +50% resources/sec from that hex (stacks additively with tech bonuses)
 - **Build cost:** 80 gold
-- **Upgrade cost (Exponential):** L1=40, L2=80, L3=160, L4=320, L5=640 (doubles each level)
+- **Upgrade cost (Exponential):** L1=160, L2=320, L3=640, L4=1280 (formula: BuildCost × 2^level, level starts at 1)
 - **Reward (Compounding):** +0.5 resources/sec per level, multiplied by the +50% bonus
-- **Formula:** `(base + 0.5 × level) × 1.5` → Level 5: (2 + 2.5) × 1.5 = 6.75/sec
+- **Formula:** `(base + 0.5 × level) × 1.5` → Level 1: 3.75/sec, Level 5: (2 + 2.5) × 1.5 = 6.75/sec
 - **Max level:** Unlimited (incremental)
 
 #### Defense Building
-- **Effect:** +1 Power per level (affects combat)
+- **Effect:** +1 Power per level (Power = level, so L1=1, L2=2, etc.)
 - **Build cost:** 60 gold
-- **Upgrade cost (Exponential):** L1=30, L2=60, L3=120, L4=240, L5=480 (doubles each level)
+- **Upgrade cost (Exponential):** L1=120, L2=240, L3=480, L4=960 (formula: BuildCost × 2^level)
 - **Max level:** Unlimited (incremental)
 
 #### Research Building
 - **Effect:** +0.1 TP/sec per level (fuel for tech tree)
 - **Build cost:** 80 gold (reduced from 120)
-- **Upgrade cost (Exponential):** L1=40, L2=80, L3=160, L4=320, L5=640 (doubles each level)
+- **Upgrade cost (Exponential):** L1=160, L2=320, L3=640, L4=1280 (formula: BuildCost × 2^level)
 - **Reward (Linear):** +0.1 TP/sec per level (constant gain)
 - **Max level:** Unlimited (incremental)
 
@@ -238,12 +238,12 @@ T=5 min+:  Border warfare begins in earnest
 ## Balance Rules & Constraints
 
 ### Exponential Upgrade Costs (Prevents Snowballing)
-- All three buildings use exponential cost scaling (doubles each level)
-- Economy/Research: L1=40, L2=80, L3=160, L4=320, L5=640
-- Defense: L1=30, L2=60, L3=120, L4=240, L5=480 (slightly cheaper, same curve)
+- All three buildings use exponential cost scaling: `BuildCost × 2^level` (level starts at 1 after placing)
+- Economy/Research (BuildCost=80): L1=160, L2=320, L3=640, L4=1280
+- Defense (BuildCost=60): L1=120, L2=240, L3=480, L4=960
 - **Linear rewards:** Each level provides constant gain (+0.5 resources/sec, +0.1 TP/sec, or +1 Power)
-- **Effect:** Early upgrades are cheap (quick power spikes). Late upgrades cost exponentially more, capping runaway growth
-- **Example:** Defense Level 5 costs 60 + 30+60+120+240+480 = 990 gold total for Power 5. Previously (linear) it cost only 210 gold — a fortress was trivially cheap.
+- **Effect:** Early upgrades are meaningful but affordable. Late upgrades cost exponentially more, capping runaway growth
+- **Example:** Defense Level 5 total invested = 60 × (2^5 - 1) = 1860 gold for Power 5. Demolish refund = BuildCost × (2^level - 1) × 0.5
 
 ### Maintenance System (Prevents Extreme Expansion)
 - Each hex costs 1 maintenance/sec to hold

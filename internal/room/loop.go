@@ -23,8 +23,8 @@ func (r *Room) Run() {
 	}
 }
 
-func (r *Room) drainActions() []game.ClaimAction {
-	var pending []game.ClaimAction
+func (r *Room) drainActions() []game.Action {
+	var pending []game.Action
 	for {
 		select {
 		case a := <-r.actions:

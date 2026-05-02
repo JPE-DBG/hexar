@@ -1,7 +1,10 @@
 package game
 
-func CalcIncome(hexCount int) float64 {
-	return float64(hexCount) * BaseIncomePerSec
+func HexIncome(hs *HexState) float64 {
+	if hs.Building == BuildingEconomy {
+		return (BaseIncomePerSec + EconomyPerLevel*float64(hs.Level)) * EconomyBonusMultiplier
+	}
+	return BaseIncomePerSec
 }
 
 func CalcMaintenance(hexCount int) float64 {
@@ -12,17 +15,19 @@ func CalcMaintenance(hexCount int) float64 {
 }
 
 func RunEconomy(state *GameState, dt float64) {
-	hexCounts := make(map[PlayerID]int)
+	playerIncome := make(map[PlayerID]float64)
+	playerHexCount := make(map[PlayerID]int)
+
 	for _, hs := range state.Hexes {
 		if hs.Owner != NoPlayer {
-			hexCounts[hs.Owner]++
+			playerHexCount[hs.Owner]++
+			playerIncome[hs.Owner] += HexIncome(hs)
 		}
 	}
 
 	for pid, player := range state.Players {
-		count := hexCounts[pid]
-		income := CalcIncome(count)
-		maintenance := CalcMaintenance(count)
+		income := playerIncome[pid]
+		maintenance := CalcMaintenance(playerHexCount[pid])
 		player.Gold += (income - maintenance) * dt
 		if player.Gold < 0 {
 			player.Gold = 0
