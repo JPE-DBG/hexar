@@ -1,4 +1,11 @@
 import { HexDTO } from '../state/state';
+import {
+  GOLD_BUILD_COST, GOLD_PER_LEVEL, GOLD_BONUS_MULTIPLIER,
+  POWER_BUILD_COST, POWER_PER_LEVEL,
+  RESEARCH_BUILD_COST, RESEARCH_PER_LEVEL,
+  DEMOLISH_REFUND, ATTACK_COST, CAPITAL_POWER, BASE_INCOME_PER_SEC,
+  BUILDING_GOLD, BUILDING_POWER, BUILDING_RESEARCH,
+} from '../constants';
 
 export interface BuildMenuCallbacks {
   onUpgrade: (building?: 'gold' | 'power' | 'research') => void;
@@ -6,28 +13,31 @@ export interface BuildMenuCallbacks {
   onAttack: () => void;
 }
 
-const BUILD_COSTS: Record<number, number> = { 1: 60, 2: 60, 3: 80 };
-const BUILDING_NAMES: Record<number, string> = { 1: 'Gold', 2: 'Power', 3: 'Research' };
+const BUILD_COSTS: Record<number, number> = {
+  [BUILDING_GOLD]: GOLD_BUILD_COST,
+  [BUILDING_POWER]: POWER_BUILD_COST,
+  [BUILDING_RESEARCH]: RESEARCH_BUILD_COST,
+};
+const BUILDING_NAMES: Record<number, string> = { [BUILDING_GOLD]: 'Gold', [BUILDING_POWER]: 'Power', [BUILDING_RESEARCH]: 'Research' };
 
 function upgradeDelta(building: number, currentLevel: number): string {
-  if (building === 1) {
-    // Gold: delta = income(nextLevel) - income(currentLevel)
-    const next = (2.0 + 0.6 * (currentLevel + 1)) * 1.5;
-    const curr = currentLevel === 0 ? 2.0 : (2.0 + 0.6 * currentLevel) * 1.5;
+  if (building === BUILDING_GOLD) {
+    const next = (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * (currentLevel + 1)) * GOLD_BONUS_MULTIPLIER;
+    const curr = currentLevel === 0 ? BASE_INCOME_PER_SEC : (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * currentLevel) * GOLD_BONUS_MULTIPLIER;
     return `+${(next - curr).toFixed(1)}/s`;
   }
-  if (building === 2) return '+1 Pwr';
-  return '+0.1 TP/s';
+  if (building === BUILDING_POWER) return `+${POWER_PER_LEVEL} Pwr`;
+  return `+${RESEARCH_PER_LEVEL} TP/s`;
 }
 
 function upgradeCost(building: number, level: number): number {
-  const base = BUILD_COSTS[building] ?? 80;
+  const base = BUILD_COSTS[building] ?? RESEARCH_BUILD_COST;
   return base * Math.pow(2, level);
 }
 
 function demolishRefund(building: number, level: number): number {
-  const base = BUILD_COSTS[building] ?? 80;
-  return base * (Math.pow(2, level) - 1) * 0.5;
+  const base = BUILD_COSTS[building] ?? RESEARCH_BUILD_COST;
+  return base * (Math.pow(2, level) - 1) * DEMOLISH_REFUND;
 }
 
 function upgradeLabel(building: number, currentLevel: number): string {
@@ -81,10 +91,10 @@ export class BuildMenu {
 
     const defPower = this.calcPower(hex);
     const upgCost = upgradeCost(hex.building, hex.level);
-    const canAttack = !hasBattle && gold >= 100 && attackerPower > defPower;
+    const canAttack = !hasBattle && gold >= ATTACK_COST && attackerPower > defPower;
     const key = [
       hex.q, hex.r, hex.building, hex.level, isOwn, isEnemy,
-      gold >= 60, gold >= 80, gold >= upgCost,
+      gold >= GOLD_BUILD_COST, gold >= RESEARCH_BUILD_COST, gold >= upgCost,
       canAttack, attackerPower, defPower, hasBattle,
     ].join('|');
 
@@ -101,9 +111,9 @@ export class BuildMenu {
       const refund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
 
       if (!hasBuilding) {
-        html += this.makeBtn(upgradeLabel(1, 0), gold >= 60, 'upgrade-gold');
-        html += this.makeBtn(upgradeLabel(2, 0), gold >= 60, 'upgrade-power');
-        html += this.makeBtn(upgradeLabel(3, 0), gold >= 80, 'upgrade-research');
+        html += this.makeBtn(upgradeLabel(BUILDING_GOLD, 0), gold >= GOLD_BUILD_COST, 'upgrade-gold');
+        html += this.makeBtn(upgradeLabel(BUILDING_POWER, 0), gold >= POWER_BUILD_COST, 'upgrade-power');
+        html += this.makeBtn(upgradeLabel(BUILDING_RESEARCH, 0), gold >= RESEARCH_BUILD_COST, 'upgrade-research');
       } else {
         html += this.makeBtn(upgradeLabel(hex.building, hex.level), gold >= upgCost, 'upgrade');
       }
@@ -111,7 +121,7 @@ export class BuildMenu {
       html += `<span style="border-left:1px solid #555;height:20px;margin:0 8px;display:inline-block;vertical-align:middle"></span>`;
       html += this.makeBtn(`🗑${hasBuilding ? ` (+${refund}g)` : ''}`, hasBuilding, 'demolish');
     } else if (isEnemy) {
-      html += this.makeBtn('Attack (100g)', canAttack, 'attack');
+      html += this.makeBtn(`Attack (${ATTACK_COST}g)`, canAttack, 'attack');
       if (hasBattle) {
         html += `<span style="color:#fa0;margin-left:4px">Battle in progress</span>`;
       } else if (attackerPower <= defPower) {
@@ -132,8 +142,8 @@ export class BuildMenu {
 
   private calcPower(hex: HexDTO): number {
     let p = 0;
-    if (hex.capital) p = 1;
-    if (hex.building === 2) p += hex.level;
+    if (hex.capital) p = CAPITAL_POWER;
+    if (hex.building === BUILDING_POWER) p += hex.level;
     return p;
   }
 
