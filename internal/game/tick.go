@@ -7,5 +7,6 @@ func RunTick(state *GameState, dt float64, actions []Action) {
 	ProcessActions(state, actions)
 	RunEconomy(state, dt)
 	RunBattles(state, dt)
+	RunAutoDropPhase(state, dt)
 	state.Elapsed += dt
 }

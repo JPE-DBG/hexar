@@ -34,28 +34,28 @@ func (h *HexState) Power() int {
 type TechID int
 
 const (
-	TechIronGrip TechID = iota
-	TechProductionBoom
-	TechEfficientConquest
+	TechBlitz TechID = iota
+	TechFortify
+	TechProsperity
+	TechReclamation
+	TechVanguard
 	TechGarrison
-	TechCount
+	TechSupplyLines
+	TechDominion
+	TechResilience
+	TechIronGrip
+	TechCompoundGrowth
+	TechSiegeMastery
+	TechCount // = 12
 )
 
 type Player struct {
-	ID   PlayerID        `json:"id"`
-	Gold float64         `json:"gold"`
-	TP   float64         `json:"tp"`
-	Tech [TechCount]bool `json:"tech"`
-}
-
-func (p *Player) TechLevel() int {
-	count := 0
-	for _, unlocked := range p.Tech {
-		if unlocked {
-			count++
-		}
-	}
-	return count
+	ID             PlayerID        `json:"id"`
+	Gold           float64         `json:"gold"`
+	TP             float64         `json:"tp"`
+	Tech           [TechCount]bool `json:"tech"`
+	AutoDropGrace  float64         `json:"autoDropGrace"`
+	AutoDropActive bool            `json:"autoDropActive"`
 }
 
 type Battle struct {
@@ -64,6 +64,7 @@ type Battle struct {
 	Attacker    PlayerID `json:"attacker"`
 	Defender    PlayerID `json:"defender"`
 	TimeLeft    float64  `json:"timeLeft"`
+	CounterBoost int     `json:"counterBoost"`
 }
 
 type GameState struct {

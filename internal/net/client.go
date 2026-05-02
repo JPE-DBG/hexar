@@ -67,6 +67,7 @@ func (c *Client) ReadPump(ctx context.Context) {
 			Q        int    `json:"q"`
 			R        int    `json:"r"`
 			Building string `json:"building"`
+			TechID   int    `json:"techId"`
 		}
 		if json.Unmarshal(data, &raw) != nil {
 			continue
@@ -88,6 +89,12 @@ func (c *Client) ReadPump(ctx context.Context) {
 			action = game.Action{Type: game.ActionDemolish, Player: c.playerID, Target: target}
 		case "attack":
 			action = game.Action{Type: game.ActionAttack, Player: c.playerID, Target: target}
+		case "counter-spend":
+			action = game.Action{Type: game.ActionCounterSpend, Player: c.playerID, Target: target}
+		case "unlock-tech":
+			action = game.Action{Type: game.ActionUnlockTech, Player: c.playerID, TechID: game.TechID(raw.TechID)}
+		case "drop-hex":
+			action = game.Action{Type: game.ActionDropHex, Player: c.playerID, Target: target}
 		default:
 			continue
 		}

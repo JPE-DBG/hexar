@@ -9,6 +9,9 @@ const (
 	ActionUpgrade
 	ActionDemolish
 	ActionAttack
+	ActionCounterSpend
+	ActionUnlockTech
+	ActionDropHex
 )
 
 type Action struct {
@@ -16,6 +19,7 @@ type Action struct {
 	Player   PlayerID
 	Target   Hex
 	Building BuildingType
+	TechID   TechID
 }
 
 var (
@@ -29,6 +33,14 @@ var (
 	ErrInsufficientPower = errors.New("insufficient power to attack")
 	ErrBattleInProgress  = errors.New("battle already in progress on hex")
 	ErrPlayerNotFound    = errors.New("player not found")
+	ErrNotDefender       = errors.New("player is not the defender")
+	ErrNoBattleOnHex     = errors.New("no active battle on hex")
+	ErrCounterSpendCap   = errors.New("counter-spend cap reached")
+	ErrInsufficientTP    = errors.New("insufficient tech points")
+	ErrTechAlreadyOwned  = errors.New("tech already owned")
+	ErrNotInAutoDrop     = errors.New("player not in auto-drop state")
+	ErrInvalidTechID     = errors.New("invalid tech ID")
+	ErrCannotDropCapital = errors.New("cannot drop capital hex")
 )
 
 func ProcessActions(state *GameState, actions []Action) {
@@ -49,6 +61,18 @@ func ProcessActions(state *GameState, actions []Action) {
 		case ActionAttack:
 			if ValidateAttack(state, a) == nil {
 				ApplyAttack(state, a)
+			}
+		case ActionCounterSpend:
+			if ValidateCounterSpend(state, a) == nil {
+				ApplyCounterSpend(state, a)
+			}
+		case ActionUnlockTech:
+			if ValidateUnlockTech(state, a) == nil {
+				ApplyUnlockTech(state, a)
+			}
+		case ActionDropHex:
+			if ValidateDropHex(state, a) == nil {
+				ApplyDropHex(state, a)
 			}
 		}
 	}
@@ -91,4 +115,103 @@ func hasAdjacentOwned(state *GameState, player PlayerID, target Hex) bool {
 		}
 	}
 	return false
+}
+
+func findBattleByDefenderHex(state *GameState, target Hex) *Battle {
+	for i := range state.Battles {
+		if state.Battles[i].DefenderHex == target {
+			return &state.Battles[i]
+		}
+	}
+	return nil
+}
+
+func ValidateCounterSpend(state *GameState, action Action) error {
+	b := findBattleByDefenderHex(state, action.Target)
+	if b == nil {
+		return ErrNoBattleOnHex
+	}
+	if b.Defender != action.Player {
+		return ErrNotDefender
+	}
+	player := state.Players[action.Player]
+	if player == nil {
+		return ErrPlayerNotFound
+	}
+	if player.Gold < CounterSpendCostPerSec {
+		return ErrInsufficientGold
+	}
+	timeCap := int(b.TimeLeft) // floor: 1.7 → 1, 0.9 → 0
+	effectiveCap := min(CounterSpendCap, timeCap)
+	if b.CounterBoost >= effectiveCap {
+		return ErrCounterSpendCap
+	}
+	return nil
+}
+
+func ApplyCounterSpend(state *GameState, action Action) {
+	b := findBattleByDefenderHex(state, action.Target)
+	state.Players[action.Player].Gold -= CounterSpendCostPerSec
+	b.CounterBoost++
+}
+
+func ValidateUnlockTech(state *GameState, action Action) error {
+	if action.TechID < 0 || action.TechID >= TechCount {
+		return ErrInvalidTechID
+	}
+	player := state.Players[action.Player]
+	if player == nil {
+		return ErrPlayerNotFound
+	}
+	if player.Tech[action.TechID] {
+		return ErrTechAlreadyOwned
+	}
+	if player.TP < TechCost(action.TechID) {
+		return ErrInsufficientTP
+	}
+	return nil
+}
+
+func ApplyUnlockTech(state *GameState, action Action) {
+	player := state.Players[action.Player]
+	player.TP -= TechCost(action.TechID)
+	player.Tech[action.TechID] = true
+}
+
+func ValidateDropHex(state *GameState, action Action) error {
+	hs, ok := state.Hexes[action.Target]
+	if !ok {
+		return ErrHexNotFound
+	}
+	if hs.Owner != action.Player {
+		return ErrNotOwner
+	}
+	if hs.Capital {
+		return ErrCannotDropCapital
+	}
+	player := state.Players[action.Player]
+	if player == nil {
+		return ErrPlayerNotFound
+	}
+	if !player.AutoDropActive {
+		return ErrNotInAutoDrop
+	}
+	if hasBattleOnHex(state, action.Target) {
+		return ErrBattleInProgress
+	}
+	return nil
+}
+
+func ApplyDropHex(state *GameState, action Action) {
+	hs := state.Hexes[action.Target]
+	player := state.Players[action.Player]
+	if hs.Building != BuildingNone {
+		refund := TotalInvested(hs.Building, hs.Level) * AutoDropRefund
+		player.Gold += refund
+	}
+	hs.Owner = NoPlayer
+	hs.Building = BuildingNone
+	hs.Level = 0
+	hs.Capital = false
+	player.AutoDropActive = false
 }

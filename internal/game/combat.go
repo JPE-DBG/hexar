@@ -69,7 +69,7 @@ func resolveBattle(state *GameState, b *Battle) {
 		return
 	}
 
-	if attackerHex.Power() > defenderHex.Power() {
+	if attackerHex.Power() > defenderHex.Power()+b.CounterBoost {
 		transferHex(state, b.DefenderHex, b.Attacker)
 	}
 }
