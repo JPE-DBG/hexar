@@ -17,11 +17,11 @@ func TestCounterSpendCap(t *testing.T) {
 	state.Hexes[defHex] = &HexState{Owner: p2}
 
 	state.Battles = []Battle{{
-		AttackerHex: attHex,
-		DefenderHex: defHex,
-		Attacker:    p1,
-		Defender:    p2,
-		TimeLeft:    7.0,
+		AttackerHex:  attHex,
+		DefenderHex:  defHex,
+		Attacker:     p1,
+		Defender:     p2,
+		TimeLeft:     7.0,
 		CounterBoost: 2,
 	}}
 
