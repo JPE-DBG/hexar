@@ -11,12 +11,19 @@ export function updateHUD(
   gold: number,
   hexCount: number,
   income: number,
-  maintenance: number
+  maintenance: number,
+  tp: number,
+  tpRate: number
 ) {
   const net = income - maintenance;
-  const sign = net >= 0 ? '+' : '';
+  const netSign = net >= 0 ? '+' : '';
+  const tpSign = tpRate >= 0 ? '+' : '';
   const color = PLAYER_COLORS[playerId] ?? '#e0e0e0';
-  el.innerHTML = `<span style="color:${color}">Player ${playerId}</span> | Gold: ${gold.toFixed(0)} (${sign}${net.toFixed(1)}/s) | Hexes: ${hexCount}`;
+  el.innerHTML =
+    `<span style="color:${color}">Player ${playerId}</span>` +
+    ` | Gold: ${gold.toFixed(0)} (${netSign}${net.toFixed(1)}/s)` +
+    ` | TP: ${tp.toFixed(0)} (${tpSign}${tpRate.toFixed(2)}/s)` +
+    ` | Hexes: ${hexCount}`;
 }
 
 export function calcIncome(hexCount: number): number {

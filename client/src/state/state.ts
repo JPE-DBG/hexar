@@ -11,6 +11,9 @@ export interface PlayerDTO {
   id: number;
   gold: number;
   tp: number;
+  tech: boolean[];
+  autoDropActive: boolean;
+  autoDropGrace: number;
 }
 
 export interface BattleDTO {
@@ -21,6 +24,7 @@ export interface BattleDTO {
   timeLeft: number;
   attacker: number;
   defender: number;
+  counterBoost: number;
 }
 
 export interface SnapshotMsg {

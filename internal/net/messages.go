@@ -43,19 +43,23 @@ type HexDTO struct {
 }
 
 type PlayerDTO struct {
-	ID   int     `json:"id"`
-	Gold float64 `json:"gold"`
-	TP   float64 `json:"tp"`
+	ID             int     `json:"id"`
+	Gold           float64 `json:"gold"`
+	TP             float64 `json:"tp"`
+	Tech           []bool  `json:"tech"`
+	AutoDropActive bool    `json:"autoDropActive"`
+	AutoDropGrace  float64 `json:"autoDropGrace"`
 }
 
 type BattleDTO struct {
-	AQ       int     `json:"aq"`
-	AR       int     `json:"ar"`
-	DQ       int     `json:"dq"`
-	DR       int     `json:"dr"`
-	TimeLeft float64 `json:"timeLeft"`
-	Attacker int     `json:"attacker"`
-	Defender int     `json:"defender"`
+	AQ           int     `json:"aq"`
+	AR           int     `json:"ar"`
+	DQ           int     `json:"dq"`
+	DR           int     `json:"dr"`
+	TimeLeft     float64 `json:"timeLeft"`
+	Attacker     int     `json:"attacker"`
+	Defender     int     `json:"defender"`
+	CounterBoost int     `json:"counterBoost"`
 }
 
 func BuildSnapshot(state *game.GameState) *SnapshotMsg {
@@ -81,22 +85,28 @@ func BuildSnapshot(state *game.GameState) *SnapshotMsg {
 
 	for pid, p := range state.Players {
 		key := playerKey(pid)
+		tech := make([]bool, game.TechCount)
+		copy(tech, p.Tech[:])
 		msg.Players[key] = &PlayerDTO{
-			ID:   int(p.ID),
-			Gold: p.Gold,
-			TP:   p.TP,
+			ID:             int(p.ID),
+			Gold:           p.Gold,
+			TP:             p.TP,
+			Tech:           tech,
+			AutoDropActive: p.AutoDropActive,
+			AutoDropGrace:  p.AutoDropGrace,
 		}
 	}
 
 	for _, b := range state.Battles {
 		msg.Battles = append(msg.Battles, &BattleDTO{
-			AQ:       b.AttackerHex.Q,
-			AR:       b.AttackerHex.R,
-			DQ:       b.DefenderHex.Q,
-			DR:       b.DefenderHex.R,
-			TimeLeft: b.TimeLeft,
-			Attacker: int(b.Attacker),
-			Defender: int(b.Defender),
+			AQ:           b.AttackerHex.Q,
+			AR:           b.AttackerHex.R,
+			DQ:           b.DefenderHex.Q,
+			DR:           b.DefenderHex.R,
+			TimeLeft:     b.TimeLeft,
+			Attacker:     int(b.Attacker),
+			Defender:     int(b.Defender),
+			CounterBoost: b.CounterBoost,
 		})
 	}
 

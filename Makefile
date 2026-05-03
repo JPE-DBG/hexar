@@ -1,4 +1,4 @@
-.PHONY: server client dev build clean
+.PHONY: server client dev build clean count
 
 # Run Go server (serves on :8080)
 server:
@@ -21,3 +21,6 @@ build:
 # Clean build artifacts
 clean:
 	rm -rf client/dist client/node_modules/.vite
+
+count:
+	git ls-files | grep -P ".*(go|ts)" | xargs wc -l
