@@ -20,7 +20,6 @@ export class Renderer {
   private selectedHex: { q: number; r: number } | null = null;
   private state: GameState | null = null;
   private dropMap = new Set<string>();
-  private myPlayerId = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -59,10 +58,6 @@ export class Renderer {
 
   setDropMap(keys: Set<string>) {
     this.dropMap = keys;
-  }
-
-  setMyPlayerId(id: number) {
-    this.myPlayerId = id;
   }
 
   render(state: GameState) {

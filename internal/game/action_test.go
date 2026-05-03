@@ -219,6 +219,36 @@ func TestVoluntaryDropNoAutoDropRequired(t *testing.T) {
 	}
 }
 
+func TestAutoDropInvestmentTiebreaker(t *testing.T) {
+	state := NewGameState()
+	pid := PlayerID(1)
+	state.Players[pid] = &Player{ID: pid}
+
+	// Empty hex (invested=0) and Power L1 hex (invested=60) both earn 2.0/sec
+	emptyHex := Hex{Q: 0, R: 0}
+	powerHex := Hex{Q: 1, R: 0}
+	state.Hexes[emptyHex] = &HexState{Owner: pid}
+	state.Hexes[powerHex] = &HexState{Owner: pid, Building: BuildingPower, Level: 1}
+
+	// 31 total hexes: net income negative (forces auto-drop)
+	for i := 2; i <= 30; i++ {
+		state.Hexes[Hex{Q: i, R: 0}] = &HexState{Owner: pid}
+	}
+
+	// Run until auto-drop fires (101 ticks: 1 to trigger grace, 100 to exhaust it)
+	for range 101 {
+		RunTick(state, TickDt, nil)
+	}
+
+	// Empty hex should be dropped (lower investment), Power L1 should survive
+	if state.Hexes[emptyHex].Owner == pid {
+		t.Error("expected empty hex to be dropped (lower investment than Power L1)")
+	}
+	if state.Hexes[powerHex].Owner != pid {
+		t.Error("expected Power L1 hex to survive (higher investment than empty hex)")
+	}
+}
+
 func TestDropHexManualClearsFlag(t *testing.T) {
 	state := NewGameState()
 	pid := PlayerID(1)

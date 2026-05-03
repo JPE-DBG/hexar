@@ -155,7 +155,6 @@ const connection = new Connection(wsUrl, {
   onSnapshot,
   onWelcome: (msg) => {
     myPlayerId = msg.playerId;
-    renderer.setMyPlayerId(myPlayerId);
     console.log(`assigned player ${myPlayerId}`);
   },
 });

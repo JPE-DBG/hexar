@@ -16,18 +16,25 @@ func CalcMaintenance(hexCount int) float64 {
 	return float64(tier1)*MaintenanceTier1 + float64(tier2)*MaintenanceTier2 + float64(tier3)*MaintenanceTier3
 }
 
+func calcIncomeStats(state *GameState) (income map[PlayerID]float64, hexCount map[PlayerID]int) {
+	income = make(map[PlayerID]float64)
+	hexCount = make(map[PlayerID]int)
+	for _, hs := range state.Hexes {
+		if hs.Owner != NoPlayer {
+			hexCount[hs.Owner]++
+			income[hs.Owner] += HexIncome(hs)
+		}
+	}
+	return
+}
+
 func RunEconomy(state *GameState, dt float64) {
-	playerIncome   := make(map[PlayerID]float64)
-	playerHexCount := make(map[PlayerID]int)
+	playerIncome, playerHexCount := calcIncomeStats(state)
 	playerTPIncome := make(map[PlayerID]float64)
 
 	for _, hs := range state.Hexes {
-		if hs.Owner != NoPlayer {
-			playerHexCount[hs.Owner]++
-			playerIncome[hs.Owner] += HexIncome(hs)
-			if hs.Building == BuildingResearch {
-				playerTPIncome[hs.Owner] += ResearchPerLevel * float64(hs.Level)
-			}
+		if hs.Owner != NoPlayer && hs.Building == BuildingResearch {
+			playerTPIncome[hs.Owner] += ResearchPerLevel * float64(hs.Level)
 		}
 	}
 
@@ -43,15 +50,7 @@ func RunEconomy(state *GameState, dt float64) {
 }
 
 func RunAutoDropPhase(state *GameState, dt float64) {
-	playerIncome   := make(map[PlayerID]float64)
-	playerHexCount := make(map[PlayerID]int)
-
-	for _, hs := range state.Hexes {
-		if hs.Owner != NoPlayer {
-			playerHexCount[hs.Owner]++
-			playerIncome[hs.Owner] += HexIncome(hs)
-		}
-	}
+	playerIncome, playerHexCount := calcIncomeStats(state)
 
 	for pid, player := range state.Players {
 		net := playerIncome[pid] - CalcMaintenance(playerHexCount[pid])
@@ -115,5 +114,4 @@ func autoDropLowestHex(state *GameState, pid PlayerID) {
 	hs.Building = BuildingNone
 	hs.Level = 0
 	hs.Capital = false
-	player.AutoDropActive = false
 }
