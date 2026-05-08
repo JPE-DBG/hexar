@@ -161,7 +161,7 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 ---
 
-### M5 — Tech Tree + Victory Conditions 🔜 NEXT (~1.5 weeks)
+### M5 — Tech Tree + Victory Conditions ✅ COMPLETE
 
 **Goal:** Complete game with win conditions. A full 15-30 minute match is playable end-to-end.
 
@@ -191,6 +191,15 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 - Victory screen shows winner and reason
 - Full 15-30 min game is completable between two human players
 
+**Power display conventions (decided during M5 playtesting):**
+- Hex canvas labels show **effective combat power**, not raw building level for Power buildings
+  - Power L1 + Iron Grip → label shows "P2" (effective), not "P1" (level)
+  - Capital + Power L1 + Iron Grip → label shows "P3" (1 innate + 1 level + 1 IG)
+- Non-Power owned hexes show a small yellow power badge if power > 0 (capital innate, Iron Grip)
+- Garrison is **excluded from static power display** — it's a defense-battle-only bonus, shown as `"+N def"` note in build menu
+- **Garrison attack threshold:** UI blocks attacks where attacker can't win due to Garrison (i.e. `attackerPower ≤ defPower + garrisonBonus`). Hint shows "Need Pwr > N" where N includes Garrison bonus. Server allows the attack (only validates base power); UI prevents committing 100g to a guaranteed-loss battle.
+- Fortify timer rendered as **shrinking lime border segments** (clockwise from top), no text overlay
+
 **Design risk:** 12 techs is significantly more scope than original 4. Consider implementing the 6 cheap techs (≤40 TP) first and the 6 expensive techs second. Fortify introduces the first "active action from a tech" — may need new UI affordance. Siege Mastery's 40% timer reduction needs verification that the minimum 3s floor doesn't create degenerate battles.
 
 ---
@@ -219,6 +228,13 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 ## Post-MVP (deferred)
 
+- **Tech Tree Benefit Display (UX Enhancement):** Show quantitative benefits in tech tree UI before unlocking
+  - Dynamic calculation based on current game state
+  - Example displays: "Prosperity: +3.0 gold/s total (3 Economy buildings)", "Supply Lines: -2.0 gold/s maintenance (current: 15 hexes)", "Iron Grip: All 12 owned hexes +1 Power"
+  - Helps players evaluate tech ROI before spending TP
+  - Implementation: Add benefit calculator function to techtree.ts, pass GameState to update(), display benefit below static description
+  - Estimated effort: 2-3 hours
+  - Rationale for deferral: Static tech descriptions are sufficient for MVP gameplay; quantitative feedback is nice-to-have polish
 - Procedural map generation (replace hardcoded map)
 - 3-4 player mode
 - Alliances / diplomacy

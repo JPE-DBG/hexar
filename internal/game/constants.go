@@ -31,9 +31,6 @@ const (
 
 	InstantTakeoverMinDiff = 3 // power diff must exceed this for instant takeover
 
-	ConquestThreshold = 0.60
-	ConquestHoldTime  = 10.0
-
 	AutoDropGracePeriod = 10.0
 
 	GameDuration = 30 * 60 // seconds
@@ -44,10 +41,29 @@ const (
 	TechCostReclamation    = 25.0
 	TechCostVanguard       = 30.0
 	TechCostGarrison       = 30.0
+	TechCostWarChest       = 30.0
 	TechCostSupplyLines    = 40.0
-	TechCostDominion       = 40.0
 	TechCostResilience     = 45.0
 	TechCostIronGrip       = 55.0
 	TechCostCompoundGrowth = 65.0
 	TechCostSiegeMastery   = 75.0
+
+	VanguardWindow     = 12.0
+	VanguardAttackCost = 50.0
+	ReclamationCost    = 50.0
+	WarChestRefund     = 30.0
+	FortifyCost        = 40.0
+	FortifyDuration    = 90.0
+	GarrisonMaxBoost   = 2
+
+	SiegeMasteryMult   = 0.6
+	SiegeMasteryMinDur = 3.0
+
+	ProsperityBonus          = 1.0
+	CompoundGrowthMultiplier = 1.25
+	SupplyLinesTier1         = 0.9
+	SupplyLinesTier2         = 1.8
+	SupplyLinesTier3         = 2.7
+	ResilienceGracePeriod    = 20.0
+	ResilienceDropRefund     = 0.7
 )

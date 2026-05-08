@@ -1,5 +1,5 @@
 import { hexToPixel } from '../hexmath';
-import { HEX_SIZE, COLORS } from '../constants';
+import { HEX_SIZE, COLORS, BUILDING_POWER, CAPITAL_POWER, FORTIFY_DURATION } from '../constants';
 import { GameState, HexDTO, BattleDTO } from '../state/state';
 
 const BUILDING_LABELS: Record<number, string> = { 1: 'G', 2: 'P', 3: 'R' };
@@ -112,7 +112,32 @@ export class Renderer {
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`${label}${hex.level}`, px, py);
+
+      if (hex.building === BUILDING_POWER && hex.owner > 0 && this.state) {
+        // Show effective power: capital innate + building level + Iron Grip
+        const ownerPlayer = this.state.players.get(String(hex.owner));
+        const capitalBonus = hex.capital ? CAPITAL_POWER : 0;
+        const effectivePower = capitalBonus + hex.level + (ownerPlayer?.tech?.[9] ? 1 : 0);
+        ctx.fillText(`${label}${effectivePower}`, px, py);
+      } else {
+        ctx.fillText(`${label}${hex.level}`, px, py);
+      }
+    }
+
+    // Small yellow power badge for non-Power owned hexes that have power > 0
+    // (capital innate power, or Iron Grip on economy/research/empty hexes)
+    if (hex.owner > 0 && hex.building !== BUILDING_POWER && this.state) {
+      const ownerPlayer = this.state.players.get(String(hex.owner));
+      let powerBadge = 0;
+      if (hex.capital) powerBadge = CAPITAL_POWER;
+      if (ownerPlayer?.tech?.[9]) powerBadge++; // TechIronGrip = 9
+      if (powerBadge > 0) {
+        ctx.font = 'bold 9px monospace';
+        ctx.fillStyle = '#ffdd44';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(`${powerBadge}`, px, py + HEX_SIZE * 0.45);
+      }
     }
   }
 
@@ -146,6 +171,52 @@ export class Renderer {
       ctx.lineWidth = 3;
       ctx.stroke();
     }
+
+    // Fortify timer: shrinking lime border segments (clockwise from top)
+    // Dimmed when a battle is active on this hex — battle takes visual priority
+    if (hex.fortifyTimer > 0) {
+      const hasBattle = this.state?.battles.some(b => b.dq === hex.q && b.dr === hex.r) ?? false;
+      this.drawFortifySegments(px, py, hex.fortifyTimer / FORTIFY_DURATION, hasBattle);
+    }
+  }
+
+  private drawFortifySegments(px: number, py: number, fraction: number, dimmed = false) {
+    if (fraction <= 0) return;
+    const ctx = this.ctx;
+
+    // 6 corners: angle = (60*i - 30)° for i=0..5
+    // i=0: -30° upper-right, i=5: 270° top
+    const corners: { x: number; y: number }[] = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 180) * (60 * i - 30);
+      corners.push({ x: px + HEX_SIZE * Math.cos(angle), y: py + HEX_SIZE * Math.sin(angle) });
+    }
+
+    // Clockwise from top (i=5): 5→0→1→2→3→4
+    const cwOrder = [5, 0, 1, 2, 3, 4];
+    const totalSides = fraction * 6;
+    const fullSides = Math.floor(totalSides);
+    const partial = totalSides - fullSides;
+
+    ctx.strokeStyle = '#c8ff70'; // Bright lime — readable on both P1 teal and P2 red
+    ctx.lineWidth = dimmed ? 1.5 : 3;
+    ctx.lineCap = 'round';
+    if (dimmed) ctx.globalAlpha = 0.4;
+
+    for (let i = 0; i <= fullSides && i < 6; i++) {
+      const from = corners[cwOrder[i]];
+      const to = corners[cwOrder[(i + 1) % 6]];
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      if (i < fullSides) {
+        ctx.lineTo(to.x, to.y);
+      } else if (partial > 0) {
+        ctx.lineTo(from.x + (to.x - from.x) * partial, from.y + (to.y - from.y) * partial);
+      }
+      ctx.stroke();
+    }
+
+    if (dimmed) ctx.globalAlpha = 1.0;
   }
 
   private drawBattle(battle: BattleDTO) {

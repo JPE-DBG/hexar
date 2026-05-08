@@ -9,11 +9,35 @@ func HexIncome(hs *HexState) float64 {
 	return BaseIncomePerSec
 }
 
+func hexIncomeForPlayer(hs *HexState, player *Player) float64 {
+	if hs.Building != BuildingGold {
+		return BaseIncomePerSec
+	}
+	income := (BaseIncomePerSec + GoldPerLevel*float64(hs.Level)) * GoldBonusMultiplier
+	if player.Tech[TechCompoundGrowth] {
+		income *= CompoundGrowthMultiplier
+	}
+	if player.Tech[TechProsperity] {
+		income += ProsperityBonus
+	}
+	return income
+}
+
 func CalcMaintenance(hexCount int) float64 {
 	tier1 := min(hexCount, MaintenanceTier1Cap)
 	tier2 := min(max(hexCount-MaintenanceTier1Cap, 0), MaintenanceTier2Cap-MaintenanceTier1Cap)
 	tier3 := max(hexCount-MaintenanceTier2Cap, 0)
 	return float64(tier1)*MaintenanceTier1 + float64(tier2)*MaintenanceTier2 + float64(tier3)*MaintenanceTier3
+}
+
+func calcMaintenanceForPlayer(hexCount int, player *Player) float64 {
+	if !player.Tech[TechSupplyLines] {
+		return CalcMaintenance(hexCount)
+	}
+	tier1 := min(hexCount, MaintenanceTier1Cap)
+	tier2 := min(max(hexCount-MaintenanceTier1Cap, 0), MaintenanceTier2Cap-MaintenanceTier1Cap)
+	tier3 := max(hexCount-MaintenanceTier2Cap, 0)
+	return float64(tier1)*SupplyLinesTier1 + float64(tier2)*SupplyLinesTier2 + float64(tier3)*SupplyLinesTier3
 }
 
 func calcIncomeStats(state *GameState) (income map[PlayerID]float64, hexCount map[PlayerID]int) {
@@ -22,7 +46,7 @@ func calcIncomeStats(state *GameState) (income map[PlayerID]float64, hexCount ma
 	for _, hs := range state.Hexes {
 		if hs.Owner != NoPlayer {
 			hexCount[hs.Owner]++
-			income[hs.Owner] += HexIncome(hs)
+			income[hs.Owner] += hexIncomeForPlayer(hs, state.Players[hs.Owner])
 		}
 	}
 	return
@@ -40,7 +64,7 @@ func RunEconomy(state *GameState, dt float64) {
 
 	for pid, player := range state.Players {
 		income := playerIncome[pid]
-		maintenance := CalcMaintenance(playerHexCount[pid])
+		maintenance := calcMaintenanceForPlayer(playerHexCount[pid], player)
 		player.Gold += (income - maintenance) * dt
 		if player.Gold < 0 {
 			player.Gold = 0
@@ -53,11 +77,15 @@ func RunAutoDropPhase(state *GameState, dt float64) {
 	playerIncome, playerHexCount := calcIncomeStats(state)
 
 	for pid, player := range state.Players {
-		net := playerIncome[pid] - CalcMaintenance(playerHexCount[pid])
+		net := playerIncome[pid] - calcMaintenanceForPlayer(playerHexCount[pid], player)
+		gracePeriod := AutoDropGracePeriod
+		if player.Tech[TechResilience] {
+			gracePeriod = ResilienceGracePeriod
+		}
 		if net < 0 {
 			if !player.AutoDropActive {
 				player.AutoDropActive = true
-				player.AutoDropGrace = AutoDropGracePeriod
+				player.AutoDropGrace = gracePeriod
 			} else {
 				player.AutoDropGrace -= dt
 				if player.AutoDropGrace < TickDt {
@@ -108,7 +136,11 @@ func autoDropLowestHex(state *GameState, pid PlayerID) {
 	player := state.Players[pid]
 
 	if hs.Building != BuildingNone {
-		player.Gold += TotalInvested(hs.Building, hs.Level) * AutoDropRefund
+		refund := AutoDropRefund
+		if player.Tech[TechResilience] {
+			refund = ResilienceDropRefund
+		}
+		player.Gold += TotalInvested(hs.Building, hs.Level) * refund
 	}
 	hs.Owner = NoPlayer
 	hs.Building = BuildingNone

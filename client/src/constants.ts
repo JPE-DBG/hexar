@@ -39,6 +39,19 @@ export const CAPITAL_POWER = 1;
 export const COUNTER_SPEND_COST = 50;
 export const COUNTER_SPEND_CAP = 3;
 
+export const RECLAMATION_ATTACK_COST = 50;
+export const VANGUARD_ATTACK_COST = 50;
+export const FORTIFY_COST = 40;
+export const FORTIFY_DURATION = 90;
+
+// Tech bonus constants (mirrors internal/game/constants.go)
+export const PROSPERITY_BONUS = 1.0;
+export const COMPOUND_GROWTH_MULTIPLIER = 1.25;
+export const SUPPLY_LINES_TIER1 = 0.9;
+export const SUPPLY_LINES_TIER2 = 1.8;
+export const SUPPLY_LINES_TIER3 = 2.7;
+export const GARRISON_MAX_BOOST = 2;
+
 export const BUILDING_GOLD = 1;
 export const BUILDING_POWER = 2;
 export const BUILDING_RESEARCH = 3;
@@ -59,7 +72,7 @@ export const TECH_DEFS: TechDef[] = [
   { id: 4,  name: 'Vanguard',       cost: 30, description: 'After capture, next attack within 12s costs 50g',    archetype: 'Aggressor'   },
   { id: 5,  name: 'Garrison',       cost: 30, description: 'Adjacent owned hexes +1 Power in defense (cap +2)',  archetype: 'Defender'    },
   { id: 6,  name: 'Supply Lines',   cost: 40, description: 'Maintenance ×0.9/1.8/2.7 per tier',                  archetype: 'Builder'     },
-  { id: 7,  name: 'Dominion',       cost: 40, description: 'Conquest victory timer 10s → 6s',                    archetype: 'Territorial' },
+  { id: 7,  name: 'War Chest',    cost: 30, description: 'Capture an enemy hex, recover 30g',              archetype: 'Territorial' },
   { id: 8,  name: 'Resilience',     cost: 45, description: 'Auto-drop grace 10s → 20s; drop refund 70%',         archetype: 'Defender'    },
   { id: 9,  name: 'Iron Grip',      cost: 55, description: 'All owned hexes permanently +1 Power',               archetype: 'Aggressor'   },
   { id: 10, name: 'Compound Growth',cost: 65, description: 'Economy buildings ×1.25',                            archetype: 'Builder'     },

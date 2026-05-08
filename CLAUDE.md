@@ -104,6 +104,7 @@ Each hex can have **one building** of three types. There is no separate "build" 
 - **Unclaimed hex cost:** 10 gold (instant takeover, no battle)
 - **Enemy hex cost:** 100 gold (triggers battle)
 - **Requirement vs enemy:** Attacker Power > Defender Power (strictly greater, ≤ fails with no cost)
+- **Garrison threshold:** If defender has Garrison tech, the effective attack threshold is `Defender Power + Garrison bonus`. The UI blocks attacks that cannot win even at battle start — the hint shows "Need Pwr > N" where N includes the Garrison bonus. (Server validates only base power; the UI prevents committing 100g to a guaranteed-loss battle.)
 
 ### Battle Resolution
 
@@ -161,7 +162,7 @@ Research buildings generate Tech Points at **0.2 TP/sec per Research level**. Sp
 | Fortify | 20 TP | New action: spend 40g to prevent instant-takeover on one hex for 90 seconds | Defender |
 | Prosperity | 25 TP | Each Economy (Gold) building generates +1/sec additional income | Builder |
 | Reclamation | 25 TP | Recapturing a hex you previously owned costs 50g instead of 100g | Territorial |
-| Vanguard | 30 TP | After capturing an enemy hex, next attack within 12 seconds costs 50g instead of 100g | Aggressor |
+| Vanguard | 30 TP | After capturing an enemy hex, attacks within 12 seconds cost 50g (timer refreshes on each capture) | Aggressor |
 | Garrison | 30 TP | During battle, each adjacent owned hex adds +1 Power to defense (cap: +2 from Garrison; total defensive cap remains +3, shared with counter-spend) | Defender |
 | Supply Lines | 40 TP | Maintenance costs reduced: 0.9/sec (hexes 1-10), 1.8/sec (hexes 11-20), 2.7/sec (hexes 21+) | Builder |
 | War Chest | 30 TP | When you capture an enemy hex, recover 30g | Territorial |
@@ -181,6 +182,20 @@ Research buildings generate Tech Points at **0.2 TP/sec per Research level**. Sp
 - **Fortress Defender:** Garrison → Fortify → Iron Grip → Resilience — make attacking you too expensive
 - **Siege Striker:** Iron Grip → Siege Mastery → Vanguard — fast decisive battles with Power baseline across all hexes
 - **Territorial:** Reclamation → Vanguard → War Chest — fluid borders, sustain attack chains through gold recovery
+
+**Tech Stacking Rules:**
+- **Attack Cost Discounts Stack:** Reclamation (-50g) and Vanguard (-50g) stack additively when both conditions are met
+  - Base attack cost: 100g
+  - With Reclamation only: 50g (recapturing your own hex)
+  - With Vanguard only: 50g (within 12s of previous capture)
+  - **With both:** 0g (free attack when reclaiming your own hex during Vanguard window)
+  - Example: You capture hex A, lose it to enemy, immediately reclaim it within 12s → 0g cost
+  - This rewards aggressive territorial play and creates high-value moments during Vanguard windows
+- **Prosperity + Compound Growth Stack:** Applied in sequence (base × 1.25 multiplier, then +1.0 flat bonus)
+  - Economy L1 with both techs: (2 + 0.6) × 1.5 × 1.25 + 1.0 = 5.875 gold/sec
+- **Iron Grip + Garrison Stack:** Iron Grip adds +1 to all owned hexes; Garrison adds up to +2 during defense battles
+  - Defender with both: base power + Iron Grip +1 + Garrison +2 (max) = +3 total possible bonus
+  - **Display distinction:** Iron Grip is static (always-on) → included in hex label and power total. Garrison is dynamic (defense-only, depends on adjacency) → shown as separate `"+N def"` note in build menu, excluded from the static power number on the hex.
 
 ---
 
@@ -345,6 +360,7 @@ T=5 min+:  Border warfare begins in earnest
 - [ ] **Counter-spend cap:** Is +3 power cap balanced? Create interesting battles?
 - [ ] **Map size:** Does 70-hex map hit 30-min target? Adjust if needed.
 - [ ] **Tech build diversity:** Which techs do players prioritize? Do all archetypes (Aggressor, Builder, Defender, Territorial) appear in practice?
+- [ ] **Vanguard stacking:** Timer refreshes on each capture, allowing chain attacks at 50g each. Does this create unstoppable snowball, or is it balanced by Power requirements?
 
 ### Mechanical Unknowns
 
@@ -355,6 +371,7 @@ T=5 min+:  Border warfare begins in earnest
 
 ### Future Mechanics (Post-MVP)
 
+- [ ] **Tech Tree Benefit Display:** Show quantitative benefits in tech tree UI (e.g., "Prosperity: +3.0 gold/s total (3 Economy buildings)", "Supply Lines: -2.0 gold/s maintenance (current: 15 hexes)"). Helps players evaluate tech value before unlocking. Deferred as non-critical UX enhancement — current static descriptions are sufficient for MVP.
 - [ ] Alliances (2v2 mode with shared resources)
 - [ ] Diplomacy (trade, temporary truces)
 - [ ] Special hex types (mountains, water, resources)
@@ -368,6 +385,29 @@ T=5 min+:  Border warfare begins in earnest
 ### Scope
 - **Start with 1v1** — Easier to balance before adding 3-4 player variants
 - **UI priority:** Show hex Power prominently, battle timer clearly, resource flow transparent
+
+**Power display conventions (implemented in M5):**
+- Hex canvas labels show **effective static power** (base + Iron Grip), not raw building level
+  - Power building L1 with Iron Grip → label "P2" (effective), not "P1" (building level)
+  - Capital + Power L1 + Iron Grip → "P3" (1 capital innate + 1 level + 1 IG)
+  - Non-Power owned hexes (economy, research, empty) show a small yellow power badge if power > 0 (capital innate power or Iron Grip)
+- **Garrison excluded from hex label** — it's a defense-battle-only bonus, shown as `"+N def"` note in build menu
+- **Fortify timer** rendered as shrinking lime border segments (clockwise from top), 90s → 0s
+
+**Timer visualization conventions:**
+- **Hex timers** (timer state lives on a specific hex): rendered as shrinking colored border segments, clockwise from the top point, full ring at max duration → empty at 0. Fortify is the reference implementation. All future hex-level timers must follow this pattern.
+  - Color must be readable on both player hex colors (teal P1, red P2); lime `#c8ff70` is the established choice for Fortify
+- **Player timers** (timer state lives on a player, not tied to a hex): shown in the HUD as a text indicator
+  - Example: Vanguard (12s) → `"⚡Vanguard X.Xs"` in HUD — it is a player timer, not a hex timer, so it does not use border segments
+- **Battle timers**: separate established pattern — amber pulsing ring + countdown text + boost dots (not changed to border segments)
+
+**Timer stacking (multiple timers on same hex):** Battle timer always renders at full brightness (urgent, action-required). Passive hex timers (Fortify) dim to 40% opacity and lineWidth 1.5 while a battle is active on that hex.
+
+| Timer | Type | Visual | When stacked with battle |
+|---|---|---|---|
+| Fortify (90s) | Hex timer | Lime `#c8ff70` border segments, clockwise | Dimmed 40% opacity, lineWidth 1.5 |
+| Battle duration (6-15s) | Battle timer | Amber pulsing ring + countdown text + boost dots | Always full brightness (priority) |
+| Vanguard (12s) | Player timer | HUD text `⚡Vanguard X.Xs` | n/a |
 
 ### Tech Stack (Decided)
 

@@ -95,6 +95,8 @@ func (c *Client) ReadPump(ctx context.Context) {
 			action = game.Action{Type: game.ActionUnlockTech, Player: c.playerID, TechID: game.TechID(raw.TechID)}
 		case "drop-hex":
 			action = game.Action{Type: game.ActionDropHex, Player: c.playerID, Target: target}
+		case "fortify":
+			action = game.Action{Type: game.ActionFortify, Player: c.playerID, Target: target}
 		default:
 			continue
 		}

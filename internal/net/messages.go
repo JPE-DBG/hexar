@@ -31,15 +31,19 @@ type SnapshotMsg struct {
 	Players map[string]*PlayerDTO `json:"players"`
 	Battles []*BattleDTO          `json:"battles"`
 	Elapsed float64               `json:"elapsed"`
+	Over    bool                  `json:"over"`
+	Winner  int                   `json:"winner"`
 }
 
 type HexDTO struct {
-	Q        int  `json:"q"`
-	R        int  `json:"r"`
-	Owner    int  `json:"owner"`
-	Building int  `json:"building"`
-	Level    int  `json:"level"`
-	Capital  bool `json:"capital"`
+	Q             int     `json:"q"`
+	R             int     `json:"r"`
+	Owner         int     `json:"owner"`
+	Building      int     `json:"building"`
+	Level         int     `json:"level"`
+	Capital       bool    `json:"capital"`
+	FortifyTimer  float64 `json:"fortifyTimer"`
+	PreviousOwner int     `json:"previousOwner"`
 }
 
 type PlayerDTO struct {
@@ -49,6 +53,7 @@ type PlayerDTO struct {
 	Tech           []bool  `json:"tech"`
 	AutoDropActive bool    `json:"autoDropActive"`
 	AutoDropGrace  float64 `json:"autoDropGrace"`
+	VanguardTimer  float64 `json:"vanguardTimer"`
 }
 
 type BattleDTO struct {
@@ -69,17 +74,21 @@ func BuildSnapshot(state *game.GameState) *SnapshotMsg {
 		Players: make(map[string]*PlayerDTO, len(state.Players)),
 		Battles: make([]*BattleDTO, 0, len(state.Battles)),
 		Elapsed: state.Elapsed,
+		Over:    state.Over,
+		Winner:  int(state.Winner),
 	}
 
 	for hex, hs := range state.Hexes {
 		key := hexKey(hex)
 		msg.Hexes[key] = &HexDTO{
-			Q:        hex.Q,
-			R:        hex.R,
-			Owner:    int(hs.Owner),
-			Building: int(hs.Building),
-			Level:    hs.Level,
-			Capital:  hs.Capital,
+			Q:             hex.Q,
+			R:             hex.R,
+			Owner:         int(hs.Owner),
+			Building:      int(hs.Building),
+			Level:         hs.Level,
+			Capital:       hs.Capital,
+			FortifyTimer:  hs.FortifyTimer,
+			PreviousOwner: int(hs.PreviousOwner),
 		}
 	}
 
@@ -94,6 +103,7 @@ func BuildSnapshot(state *game.GameState) *SnapshotMsg {
 			Tech:           tech,
 			AutoDropActive: p.AutoDropActive,
 			AutoDropGrace:  p.AutoDropGrace,
+			VanguardTimer:  p.VanguardTimer,
 		}
 	}
 

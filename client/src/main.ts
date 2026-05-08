@@ -1,5 +1,5 @@
 import { Connection } from './net/connection';
-import { applySnapshot, GameState, SnapshotMsg, HexDTO } from './state/state';
+import { applySnapshot, GameState, SnapshotMsg, HexDTO, PlayerDTO } from './state/state';
 import { Renderer } from './render/renderer';
 import { setupInput } from './input/input';
 import { updateHUD, calcMaintenance } from './ui/hud';
@@ -13,6 +13,7 @@ import {
   CAPITAL_POWER, RESEARCH_PER_LEVEL,
   COUNTER_SPEND_COST, COUNTER_SPEND_CAP,
   GOLD_BUILD_COST, POWER_BUILD_COST, RESEARCH_BUILD_COST,
+  PROSPERITY_BONUS, COMPOUND_GROWTH_MULTIPLIER,
 } from './constants';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -43,6 +44,10 @@ const buildMenu = new BuildMenu(document.body, {
     if (!selectedHex) return;
     connection.send({ type: 'action', action: 'drop-hex', q: selectedHex.q, r: selectedHex.r });
   },
+  onFortify: () => {
+    if (!selectedHex) return;
+    connection.send({ type: 'action', action: 'fortify', q: selectedHex.q, r: selectedHex.r });
+  },
 });
 
 const techTreePanel = new TechTreePanel(document.body, (techId) => {
@@ -61,27 +66,48 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+let victoryOverlay: HTMLElement | null = null;
+
+function showVictory(isWinner: boolean) {
+  if (victoryOverlay) return;
+  victoryOverlay = document.createElement('div');
+  victoryOverlay.style.cssText = `
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.75);z-index:200;font-family:monospace;
+  `;
+  const msg = isWinner ? 'You win!' : 'You lose!';
+  const color = isWinner ? '#4ecdc4' : '#ff6b6b';
+  victoryOverlay.innerHTML = `<div style="font-size:48px;font-weight:bold;color:${color}">${msg}</div>
+    <div style="color:#aaa;margin-top:8px;font-size:16px">Capital captured</div>`;
+  document.body.appendChild(victoryOverlay);
+}
+
 function onSnapshot(msg: SnapshotMsg) {
   state = applySnapshot(msg);
+
+  if (state.over && myPlayerId > 0) {
+    showVictory(state.winner === myPlayerId);
+  }
 
   if (myPlayerId > 0) {
     let hexCount = 0;
     let income = 0;
     let tpRate = 0;
+    const player = state.players.get(String(myPlayerId));
     for (const [, hex] of state.hexes) {
       if (hex.owner === myPlayerId) {
         hexCount++;
-        income += hexIncome(hex);
+        income += hexIncome(hex, player);
         if (hex.building === BUILDING_RESEARCH) {
           tpRate += RESEARCH_PER_LEVEL * hex.level;
         }
       }
     }
-    const maintenance = calcMaintenance(hexCount);
-    const player = state.players.get(String(myPlayerId));
+    const maintenance = calcMaintenance(hexCount, player);
     const gold = player?.gold ?? 0;
     const tp = player?.tp ?? 0;
-    updateHUD(hud, myPlayerId, gold, hexCount, income, maintenance, tp, tpRate);
+    updateHUD(hud, myPlayerId, gold, hexCount, income, maintenance, tp, tpRate, player?.vanguardTimer ?? 0);
 
     if (player) {
       techTreePanel.update(player);
@@ -95,8 +121,8 @@ function onSnapshot(msg: SnapshotMsg) {
         .filter(h => h.owner === myPlayerId && !h.capital &&
                      !state!.battles.some(b => b.dq === h.q && b.dr === h.r));
       if (droppable.length > 0) {
-        const minIncome = Math.min(...droppable.map(h => hexIncome(h)));
-        const incomeGroup = droppable.filter(h => hexIncome(h) === minIncome);
+        const minIncome = Math.min(...droppable.map(h => hexIncome(h, player)));
+        const incomeGroup = droppable.filter(h => hexIncome(h, player) === minIncome);
         const minInvested = Math.min(...incomeGroup.map(h => totalInvested(h)));
         const candidates = incomeGroup.filter(h => totalInvested(h) === minInvested);
         for (const h of candidates) dropMap.add(`${h.q},${h.r}`);
@@ -111,9 +137,9 @@ function onSnapshot(msg: SnapshotMsg) {
         selectedHex = current;
         const isOwn = current.owner === myPlayerId;
         const isEnemy = current.owner !== 0 && current.owner !== myPlayerId;
-        const atkPwr = bestAdjacentPower(state, myPlayerId, current);
+        const atkPwr = bestAdjacentPower(state, myPlayerId, current, player);
         const battle = state.battles.find(b => b.dq === current.q && b.dr === current.r) ?? null;
-        buildMenu.updateWithActions(current, gold, isOwn, isEnemy, atkPwr, battle);
+        buildMenu.updateWithActions(current, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
       }
     }
   }
@@ -121,11 +147,18 @@ function onSnapshot(msg: SnapshotMsg) {
   renderer.setState(state);
 }
 
-function hexIncome(hex: HexDTO): number {
-  if (hex.building === BUILDING_GOLD) {
-    return (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * hex.level) * GOLD_BONUS_MULTIPLIER;
+function hexIncome(hex: HexDTO, player?: PlayerDTO | null): number {
+  if (hex.building !== BUILDING_GOLD) {
+    return BASE_INCOME_PER_SEC;
   }
-  return BASE_INCOME_PER_SEC;
+  let income = (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * hex.level) * GOLD_BONUS_MULTIPLIER;
+  if (player?.tech?.[10]) { // TechCompoundGrowth = 10
+    income *= COMPOUND_GROWTH_MULTIPLIER;
+  }
+  if (player?.tech?.[2]) { // TechProsperity = 2
+    income += PROSPERITY_BONUS;
+  }
+  return income;
 }
 
 function totalInvested(hex: HexDTO): number {
@@ -136,7 +169,7 @@ function totalInvested(hex: HexDTO): number {
   return base * (Math.pow(2, hex.level) - 1);
 }
 
-function bestAdjacentPower(gs: GameState, playerId: number, target: HexDTO): number {
+function bestAdjacentPower(gs: GameState, playerId: number, target: HexDTO, player?: PlayerDTO | null): number {
   let best = 0;
   for (const n of neighbors({ q: target.q, r: target.r })) {
     const key = `${n.q},${n.r}`;
@@ -145,6 +178,7 @@ function bestAdjacentPower(gs: GameState, playerId: number, target: HexDTO): num
     let p = 0;
     if (hs.capital) p = CAPITAL_POWER;
     if (hs.building === BUILDING_POWER) p += hs.level;
+    if (player?.tech?.[9]) p++; // TechIronGrip = 9
     if (p > best) best = p;
   }
   return best;
@@ -207,7 +241,7 @@ setupInput(
     const gold = player?.gold ?? 0;
     const isOwn = hex.owner === myPlayerId;
     const isEnemy = hex.owner !== 0 && hex.owner !== myPlayerId;
-    const atkPwr = bestAdjacentPower(state, myPlayerId, hex);
-    buildMenu.updateWithActions(hex, gold, isOwn, isEnemy, atkPwr, battle);
+    const atkPwr = bestAdjacentPower(state, myPlayerId, hex, player);
+    buildMenu.updateWithActions(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
   }
 );

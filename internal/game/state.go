@@ -14,10 +14,12 @@ const (
 )
 
 type HexState struct {
-	Owner    PlayerID     `json:"owner"`
-	Building BuildingType `json:"building"`
-	Level    int          `json:"level"`
-	Capital  bool         `json:"capital"`
+	Owner         PlayerID     `json:"owner"`
+	Building      BuildingType `json:"building"`
+	Level         int          `json:"level"`
+	Capital       bool         `json:"capital"`
+	PreviousOwner PlayerID     `json:"previousOwner"`
+	FortifyTimer  float64      `json:"fortifyTimer"`
 }
 
 func (h *HexState) Power() int {
@@ -41,7 +43,7 @@ const (
 	TechVanguard
 	TechGarrison
 	TechSupplyLines
-	TechDominion
+	TechWarChest
 	TechResilience
 	TechIronGrip
 	TechCompoundGrowth
@@ -56,6 +58,7 @@ type Player struct {
 	Tech           [TechCount]bool `json:"tech"`
 	AutoDropGrace  float64         `json:"autoDropGrace"`
 	AutoDropActive bool            `json:"autoDropActive"`
+	VanguardTimer  float64         `json:"vanguardTimer"`
 }
 
 type Battle struct {
