@@ -182,6 +182,19 @@ Research buildings generate Tech Points at **0.2 TP/sec per Research level**. Sp
 - **Siege Striker:** Iron Grip → Siege Mastery → Vanguard — fast decisive battles with Power baseline across all hexes
 - **Territorial:** Reclamation → Vanguard → War Chest — fluid borders, sustain attack chains through gold recovery
 
+**Tech Stacking Rules:**
+- **Attack Cost Discounts Stack:** Reclamation (-50g) and Vanguard (-50g) stack additively when both conditions are met
+  - Base attack cost: 100g
+  - With Reclamation only: 50g (recapturing your own hex)
+  - With Vanguard only: 50g (within 12s of previous capture)
+  - **With both:** 0g (free attack when reclaiming your own hex during Vanguard window)
+  - Example: You capture hex A, lose it to enemy, immediately reclaim it within 12s → 0g cost
+  - This rewards aggressive territorial play and creates high-value moments during Vanguard windows
+- **Prosperity + Compound Growth Stack:** Applied in sequence (base × 1.25 multiplier, then +1.0 flat bonus)
+  - Economy L1 with both techs: (2 + 0.6) × 1.5 × 1.25 + 1.0 = 5.875 gold/sec
+- **Iron Grip + Garrison Stack:** Iron Grip adds +1 to all owned hexes; Garrison adds up to +2 during defense battles
+  - Defender with both: base power + Iron Grip +1 + Garrison +2 (max) = +3 total possible bonus
+
 ---
 
 ## Economy Example (Early Game)
@@ -356,6 +369,7 @@ T=5 min+:  Border warfare begins in earnest
 
 ### Future Mechanics (Post-MVP)
 
+- [ ] **Tech Tree Benefit Display:** Show quantitative benefits in tech tree UI (e.g., "Prosperity: +3.0 gold/s total (3 Economy buildings)", "Supply Lines: -2.0 gold/s maintenance (current: 15 hexes)"). Helps players evaluate tech value before unlocking. Deferred as non-critical UX enhancement — current static descriptions are sufficient for MVP.
 - [ ] Alliances (2v2 mode with shared resources)
 - [ ] Diplomacy (trade, temporary truces)
 - [ ] Special hex types (mountains, water, resources)

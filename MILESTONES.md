@@ -219,6 +219,13 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 ## Post-MVP (deferred)
 
+- **Tech Tree Benefit Display (UX Enhancement):** Show quantitative benefits in tech tree UI before unlocking
+  - Dynamic calculation based on current game state
+  - Example displays: "Prosperity: +3.0 gold/s total (3 Economy buildings)", "Supply Lines: -2.0 gold/s maintenance (current: 15 hexes)", "Iron Grip: All 12 owned hexes +1 Power"
+  - Helps players evaluate tech ROI before spending TP
+  - Implementation: Add benefit calculator function to techtree.ts, pass GameState to update(), display benefit below static description
+  - Estimated effort: 2-3 hours
+  - Rationale for deferral: Static tech descriptions are sufficient for MVP gameplay; quantitative feedback is nice-to-have polish
 - Procedural map generation (replace hardcoded map)
 - 3-4 player mode
 - Alliances / diplomacy

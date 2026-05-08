@@ -53,6 +53,7 @@ type PlayerDTO struct {
 	Tech           []bool  `json:"tech"`
 	AutoDropActive bool    `json:"autoDropActive"`
 	AutoDropGrace  float64 `json:"autoDropGrace"`
+	VanguardTimer  float64 `json:"vanguardTimer"`
 }
 
 type BattleDTO struct {
@@ -102,6 +103,7 @@ func BuildSnapshot(state *game.GameState) *SnapshotMsg {
 			Tech:           tech,
 			AutoDropActive: p.AutoDropActive,
 			AutoDropGrace:  p.AutoDropGrace,
+			VanguardTimer:  p.VanguardTimer,
 		}
 	}
 

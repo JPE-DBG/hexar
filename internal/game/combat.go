@@ -21,13 +21,25 @@ func effectiveAttackCost(state *GameState, attacker PlayerID, target Hex) float6
 	if hs == nil {
 		return AttackCost
 	}
+
+	cost := AttackCost
+
+	// Reclamation: -50g if previously owned by attacker
 	if player.Tech[TechReclamation] && hs.PreviousOwner == attacker {
-		return ReclamationCost
+		cost -= ReclamationCost
 	}
+
+	// Vanguard: -50g if timer active (within 12s of last capture)
 	if player.Tech[TechVanguard] && player.VanguardTimer > 0 {
-		return VanguardAttackCost
+		cost -= VanguardAttackCost
 	}
-	return AttackCost
+
+	// Both techs stack: 100 - 50 - 50 = 0 (free attack when reclaiming during Vanguard)
+	if cost < 0 {
+		cost = 0
+	}
+
+	return cost
 }
 
 func garrisonBoostForDefender(state *GameState, defender PlayerID, defenderHex Hex) int {

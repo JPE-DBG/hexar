@@ -16,6 +16,7 @@ export interface PlayerDTO {
   tech: boolean[];
   autoDropActive: boolean;
   autoDropGrace: number;
+  vanguardTimer: number;
 }
 
 export interface BattleDTO {

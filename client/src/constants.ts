@@ -43,6 +43,14 @@ export const RECLAMATION_ATTACK_COST = 50;
 export const VANGUARD_ATTACK_COST = 50;
 export const FORTIFY_COST = 40;
 
+// Tech bonus constants (mirrors internal/game/constants.go)
+export const PROSPERITY_BONUS = 1.0;
+export const COMPOUND_GROWTH_MULTIPLIER = 1.25;
+export const SUPPLY_LINES_TIER1 = 0.9;
+export const SUPPLY_LINES_TIER2 = 1.8;
+export const SUPPLY_LINES_TIER3 = 2.7;
+export const GARRISON_MAX_BOOST = 2;
+
 export const BUILDING_GOLD = 1;
 export const BUILDING_POWER = 2;
 export const BUILDING_RESEARCH = 3;

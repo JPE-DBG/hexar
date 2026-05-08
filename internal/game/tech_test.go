@@ -162,6 +162,36 @@ func TestVanguardExpired(t *testing.T) {
 	}
 }
 
+func TestReclamationVanguardStacking(t *testing.T) {
+	state := NewGameState()
+	p1, p2 := PlayerID(1), PlayerID(2)
+	state.Players[p1] = &Player{ID: p1, Gold: 1000, VanguardTimer: 5.0} // Active Vanguard
+	state.Players[p1].Tech[TechReclamation] = true
+	state.Players[p1].Tech[TechVanguard] = true
+	state.Players[p2] = &Player{ID: p2, Gold: 500}
+
+	adjHex := Hex{Q: -1, R: 0}
+	targetHex := Hex{Q: 0, R: 0}
+	state.Hexes[adjHex] = &HexState{Owner: p1, Building: BuildingPower, Level: 3}
+	state.Hexes[targetHex] = &HexState{Owner: p2, PreviousOwner: p1} // Was owned by p1
+
+	// Attack cost should be 0 (both discounts apply)
+	cost := effectiveAttackCost(state, p1, targetHex)
+	if cost != 0 {
+		t.Errorf("Expected cost 0 with both Reclamation + Vanguard, got %.1f", cost)
+	}
+
+	// Apply attack, verify gold deduction
+	a := Action{Type: ActionAttack, Player: p1, Target: targetHex}
+	if err := ValidateAttack(state, a); err != nil {
+		t.Fatalf("attack should validate: %v", err)
+	}
+	ApplyAttack(state, a)
+	if state.Players[p1].Gold != 1000 {
+		t.Errorf("Expected 1000 gold (0g attack), got %.1f", state.Players[p1].Gold)
+	}
+}
+
 func TestWarChest(t *testing.T) {
 	state := NewGameState()
 	p1, p2 := PlayerID(1), PlayerID(2)

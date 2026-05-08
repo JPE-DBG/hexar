@@ -153,6 +153,13 @@ export class Renderer {
       ctx.strokeStyle = 'rgba(100, 180, 255, 0.8)';
       ctx.lineWidth = 2;
       ctx.stroke();
+
+      // Fortify timer countdown
+      ctx.font = 'bold 11px monospace';
+      ctx.fillStyle = '#64b4ff'; // Blue to match fortify ring
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(`${hex.fortifyTimer.toFixed(1)}s`, px, py - 12);
     }
   }
 
