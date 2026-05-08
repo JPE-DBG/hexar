@@ -364,9 +364,9 @@ T=5 min+:  Border warfare begins in earnest
 
 ### Mechanical Unknowns
 
-- [ ] **Player starting position:** Do all players start equidistant? Random corners? (Recommend: opposite corners for 1v1)
-- [ ] **Building demolish refund:** Is 50% refund fair or should it be 100%?
-- [ ] **Multiple battles:** Can hex be attacked by multiple enemies simultaneously? (Recommend: one attacker at a time, queue battles)
+- [x] **Player starting position:** Opposite corners for 1v1 (decided)
+- [x] **Building demolish refund:** 50% (implemented and playtested)
+- [x] **Multiple battles:** One attacker at a time — second attack on same hex rejected (implemented)
 - [ ] **Choke point deadlock:** Narrow maps allow a single high-Power hex to block all expansion indefinitely. Map generation must avoid single-hex corridors, or a flanking/bypass mechanic is needed.
 
 ### Future Mechanics (Post-MVP)
@@ -387,7 +387,7 @@ T=5 min+:  Border warfare begins in earnest
 - **UI priority:** Show hex Power prominently, battle timer clearly, resource flow transparent
 
 **Power display conventions (implemented in M5):**
-- Hex canvas labels show **effective static power** (base + Iron Grip), not raw building level
+- Hex canvas labels show **effective combat power** (base + Iron Grip), not raw building level
   - Power building L1 with Iron Grip → label "P2" (effective), not "P1" (building level)
   - Capital + Power L1 + Iron Grip → "P3" (1 capital innate + 1 level + 1 IG)
   - Non-Power owned hexes (economy, research, empty) show a small yellow power badge if power > 0 (capital innate power or Iron Grip)

@@ -74,6 +74,9 @@ func ValidateAttack(state *GameState, action Action) error {
 
 	attackerPower := bestAdjacentPower(state, action.Player, action.Target)
 	defenderPower := hexEffectivePower(state, hs.Owner, action.Target)
+	// Garrison is NOT validated here — it only activates during resolveBattle.
+	// The UI prevents committing 100g to a guaranteed-loss battle by including
+	// the Garrison bonus in its own threshold check (effectiveDefPower = defPower + garrisonBonus).
 	if attackerPower <= defenderPower {
 		return ErrInsufficientPower
 	}
