@@ -109,13 +109,11 @@ Given Power values, enumerate all possible outcomes including counter-spend.
 Economy:
   Base income: 2/sec per hex
   Maintenance: 1/sec (hexes 1-10), 2/sec (11-20), 3/sec (21+)
-  Net per hex: T1=+1/sec, T2=0/sec, T3=-1/sec (without Economy)
+  Net per hex: T1=+1/sec, T2=0/sec, T3=-1/sec (without Economy building)
   Economy building: +50% bonus, formula = (base + 0.6 × level) × 1.5
     L1=3.9/sec, L2=4.8/sec, L3=5.7/sec; delta +0.9/sec per level
-    Net in T3: L1=+0.90, L2=+1.80, L3=+2.70 (all positive — tier 3 expansion viable)
   Upgrade formula (all buildings): BuildCost × 2^currentLevel
   Economy upgrade costs (BuildCost=60): L1=60, L2=120, L3=240, L4=480
-  Economy demolish refund: 60 × (2^level - 1) × 0.5 → L1=30, L2=90, L3=210
   Defense upgrade costs (BuildCost=60): L1=60, L2=120, L3=240, L4=480
   Research upgrade costs (BuildCost=80): L1=80, L2=160, L3=320, L4=640
   All demolish refund: BuildCost × (2^level - 1) × 0.5
@@ -126,17 +124,27 @@ Combat:
   Enemy hex: 100 gold, battle
   Battle duration: 5 + (Attacker Power + Defender Power) / 2 seconds
   Counter-spend: 50 gold/sec, cap = min(+3, seconds_remaining)
+  Garrison shares counter-spend cap (+2 max from Garrison, +3 total)
   Instant takeover: Power diff > 3
 
-Tech:
-  Research: +0.1 TP/sec per level
-  Iron Grip: 50 TP | Production Boom: 40 TP | Efficient Conquest: 35 TP | Garrison: 60 TP
-  Total for all 4 techs: 185 TP
+Tech (12 total, 460 TP to unlock all — no game unlocks everything):
+  Research buildings: +0.2 TP/sec per level
+  Blitz: 20 TP | Fortify: 20 TP | Prosperity: 25 TP | Reclamation: 25 TP
+  Vanguard: 30 TP | Garrison: 30 TP | War Chest: 30 TP | Supply Lines: 40 TP
+  Resilience: 45 TP | Iron Grip: 55 TP | Compound Growth: 65 TP | Siege Mastery: 75 TP
+  Tech bonuses:
+    Prosperity: +1.0/sec per Economy building (flat, after Compound Growth multiplier)
+    Compound Growth: Economy output ×1.25 (before Prosperity flat bonus)
+    Supply Lines: maintenance 0.9/1.8/2.7 per tier (vs 1.0/2.0/3.0)
+    Iron Grip: all owned hexes +1 Power (static, always-on)
+    Garrison: adjacent owned hexes +1 Power in defense, cap +2 (defense-battle only)
+    Reclamation: recapture own hex costs 50g (−50g)
+    Vanguard: after capture, next attack within 12s costs 50g (−50g)
+    Reclamation + Vanguard stack: 100 − 50 − 50 = 0g (free attack)
 
 Victory:
-  Conquest: 60% map for 10 consecutive seconds
-  Tech Dominance: Tech Level 4 + 35% map for 10 seconds
-  Time limit: 30 min, highest hex count
+  Capital Capture only — capture the enemy capital hex to win instantly.
+  All loser hexes become unclaimed immediately.
 ```
 
 ---
