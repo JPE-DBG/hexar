@@ -25,10 +25,10 @@ Generated from CLAUDE.md. 6 milestones, ~6.5 weeks solo developer.
 | 15 | Garrison tech (adjacent owned hexes +1 Power in defense, cap +2 from Garrison, 30 TP) | core-loop | Yes |
 | 16 | Tech tree (12 techs, TP spending, no prerequisites) | core-loop | Yes |
 | 17 | Auto-drop (negative income, grace period) | balance | Yes |
-| 18 | Conquest victory (60%/10s) | win-condition | Yes |
+| ~~18~~ | ~~Conquest victory (60%/10s)~~ | ~~win-condition~~ | Removed — replaced by Capital Capture |
 | 19 | Fortify active action (spend 40g, prevent instant-takeover for 90s, requires Fortify tech) | core-loop | Yes |
-| 20 | Time limit victory (30 min) | win-condition | Yes |
-| 21 | Capital capture = instant loss | win-condition | Yes |
+| ~~20~~ | ~~Time limit victory (30 min)~~ | ~~win-condition~~ | Removed — no timeout tiebreaker |
+| 21 | Capital Capture = sole victory condition (capital taken → instant loss, all hexes unclaimed) | win-condition | Yes |
 | 22 | Tick loop (100ms, 6 phases) | networking | Yes |
 | 23 | WebSocket server + client connect | networking | Yes |
 | 24 | Delta state sync | networking | Yes |
@@ -52,7 +52,7 @@ Generated from CLAUDE.md. 6 milestones, ~6.5 weeks solo developer.
 
 ```
 Hex grid math (#1) ← everything else
-Tick loop (#22) ← economy (#4,5), battles (#12), victory (#18, #20, #21), delta (#24)
+Tick loop (#22) ← economy (#4,5), battles (#12), victory (#21), delta (#24)
 Hex ownership (#2) ← claiming (#3), buildings (#6-9), combat (#11-14)
 Gold income (#4) ← buildings (#6-9), combat (#11), counter-spend (#14)
 Stepped maintenance (#5) ← auto-drop (#17)
@@ -61,7 +61,7 @@ Research building (#8) ← tech tree (#16)
 Tech tree (#16) ← all tech effects (#15 and others within #16)
 Garrison (#15) ← tech tree (#16)  [Garrison effect active only after player unlocks Garrison tech]
 Fortify action (#19) ← tech tree (#16)  [action available only after player unlocks Fortify tech]
-Combat (#11-13) ← victory: conquest (#18), capital capture (#21)
+Combat (#11-13) ← victory: capital capture (#21)
 WebSocket (#23) ← delta sync (#24), snapshot (#25), disconnect (#34)
 Canvas render (#27) ← click detection (#28), all UI (#29-33)
 ```
@@ -138,7 +138,7 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 ---
 
-### M4 — Counter-Spend + Auto-Drop 🔜 NEXT (~1 week)
+### M4 — Counter-Spend + Auto-Drop ✅ DONE (~1 week)
 
 **Goal:** Complete the defensive gameplay loop and economic pressure system. Games now have real tension and economic collapse risk.
 
@@ -161,11 +161,11 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 ---
 
-### M5 — Tech Tree + Victory Conditions (~1.5 weeks)
+### M5 — Tech Tree + Victory Conditions 🔜 NEXT (~1.5 weeks)
 
 **Goal:** Complete game with win conditions. A full 15-30 minute match is playable end-to-end.
 
-**Features:** #15 (Garrison), #16 (all 12 techs functional), #18 (Conquest victory), #19 (Fortify action), #20 (Time limit), #21 (Capital capture)
+**Features:** #15 (Garrison), #16 (all 12 techs functional), #19 (Fortify action), #21 (Capital Capture victory)
 
 **Stubbed:**
 - No disconnect handling (both players must stay connected)
@@ -183,10 +183,10 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
   - Compound Growth: Gold buildings ×1.25 output
   - Garrison: adjacent owned hexes +1 Power in defense (cap: +2 from Garrison; +3 total with counter-spend)
   - Fortify: 40g action grants instant-takeover immunity for 90s on one hex
-  - Dominion: conquest timer 10s → 6s
+  - War Chest: capture enemy hex → recover 30g
   - Reclamation: recapture own hex for 50g
   - Resilience: drop grace 20s, drop refund 70%
-- Game ends when: player holds 60% for 6-10s (based on Dominion), OR capital captured, OR 30 min elapsed
+- Game ends when: player captures the enemy capital → instant win, all loser hexes unclaimed
 - Tech tree UI (built in M4) now shows unlocked techs as active with visual distinction; all 12 effects apply
 - Victory screen shows winner and reason
 - Full 15-30 min game is completable between two human players

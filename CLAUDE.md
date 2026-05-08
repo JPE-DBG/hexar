@@ -14,7 +14,7 @@ Hexar is a fast-paced, real-time multiplayer hex strategy game inspired by Antiy
 **Players:** 2-4 (starting with 1v1)  
 **Game Duration:** ~25-30 minutes  
 **Map:** Hexagonal grid, 60-80 total hexes per 1v1 map (players start with 1 hex, expand to 25-35)  
-**Win Conditions:** Conquest or Time Limit (see Victory Conditions)
+**Win Conditions:** Capital Capture (see Victory Conditions)
 
 ### Design Pillars
 
@@ -153,7 +153,7 @@ During the battle countdown, defender can spend resources to boost Defense Power
 
 ## Tech Tree
 
-Research buildings generate Tech Points at **0.2 TP/sec per Research level**. Spend TP to unlock any tech in any order — no prerequisites. **Total tree: 470 TP across 12 techs. No single game unlocks everything**, so every game has a distinct tech build.
+Research buildings generate Tech Points at **0.2 TP/sec per Research level**. Spend TP to unlock any tech in any order — no prerequisites. **Total tree: 460 TP across 12 techs. No single game unlocks everything**, so every game has a distinct tech build.
 
 | Tech | Cost | Effect | Archetype |
 |------|------|--------|-----------|
@@ -164,7 +164,7 @@ Research buildings generate Tech Points at **0.2 TP/sec per Research level**. Sp
 | Vanguard | 30 TP | After capturing an enemy hex, next attack within 12 seconds costs 50g instead of 100g | Aggressor |
 | Garrison | 30 TP | During battle, each adjacent owned hex adds +1 Power to defense (cap: +2 from Garrison; total defensive cap remains +3, shared with counter-spend) | Defender |
 | Supply Lines | 40 TP | Maintenance costs reduced: 0.9/sec (hexes 1-10), 1.8/sec (hexes 11-20), 2.7/sec (hexes 21+) | Builder |
-| Dominion | 40 TP | Conquest victory timer reduced from 10 seconds to 6 seconds | Territorial |
+| War Chest | 30 TP | When you capture an enemy hex, recover 30g | Territorial |
 | Resilience | 45 TP | Auto-drop grace period doubled (10s → 20s); building refund on drop increased to 70% | Defender |
 | Iron Grip | 55 TP | All owned hexes permanently +1 Power | Aggressor |
 | Compound Growth | 65 TP | Economy (Gold) buildings output ×1.25 (applied before Prosperity's flat bonus) | Builder |
@@ -180,7 +180,7 @@ Research buildings generate Tech Points at **0.2 TP/sec per Research level**. Sp
 - **Economic Builder:** Prosperity → Supply Lines → Compound Growth — sustain wide territory, win by income weight
 - **Fortress Defender:** Garrison → Fortify → Iron Grip → Resilience — make attacking you too expensive
 - **Siege Striker:** Iron Grip → Siege Mastery → Vanguard — fast decisive battles with Power baseline across all hexes
-- **Territorial:** Reclamation → Vanguard → Dominion — fluid borders, fast win once 60% reached
+- **Territorial:** Reclamation → Vanguard → War Chest — fluid borders, sustain attack chains through gold recovery
 
 ---
 
@@ -217,23 +217,26 @@ T=5 min+:  Border warfare begins in earnest
 
 ## Victory Conditions
 
-### 1. Conquest Victory (Primary)
-- Hold **60% of map for 10 consecutive seconds**
-- Timer resets if you drop below 60%
-- This is the most common win condition
+### Capital Capture
+- **Win by capturing the enemy's capital hex.**
+- All of the loser's hexes become unclaimed instantly.
+- No timers, no percentages — one decisive target per player.
 
-**Why 60%:** In 1v1, 50% means each player holds half the map — a draw state, not a decisive lead. 60% requires genuinely dominating your opponent, not just tying.
+**Why capital capture:**
+- Genre standard for hex conquest games (Antiyoy, Polytopia)
+- Forces the full economic loop: economy → Power → territory → capital approach
+- Clear target for both players with rich counterplay (defend capital with Defense buildings, Garrison, counter-spend)
+- Anti-stalemate is built-in: maintenance auto-drop gradually weakens over-extended players, exposing their capital; tech (Siege Mastery, Iron Grip) breaks late defensive deadlocks
 
-**Strategic implications:** Aggressive players win by pushing early; defensive players must hold the line and counter-attack to reset timer.
+**How to win:**
+- Expand territory toward the enemy capital corridor
+- Build Power advantage on hexes adjacent to the capital approach
+- Execute the final capital attack when Power difference is decisive (diff > 3 = instant takeover)
 
 **How to stop opponent:**
-- Attack their border hexes aggressively
-- Bring them below 60%, reset their timer
-- Race to 60% yourself
-
-### 2. Time Limit (Tiebreaker)
-- At 30 minutes, highest hex count wins
-- Rarely triggers in well-balanced games
+- Maintain high-Power hexes on your capital's adjacent hexes
+- Use Garrison, Fortify, and counter-spend to defend capital battles
+- Launch counter-offensives to force opponent to retreat and defend their own capital
 
 ---
 
@@ -330,8 +333,8 @@ T=5 min+:  Border warfare begins in earnest
 - **T=2-3min:** Land-grab slows, players meet at borders with ~10 hexes each
 - **T=3-5min:** First border skirmishes, Economy and Defense buildings appear
 - **T=5-15min:** Active border warfare, territory trades hands
-- **T=15-25min:** One player pushes toward 60% (42 hexes)
-- **T=25-30min:** Final race to victory condition
+- **T=15-25min:** Players contest capital approach corridors; tech investments (Siege Mastery, Iron Grip) enable decisive attacks
+- **T=25-30min:** Final push on the enemy capital — high-Power adjacent hex + 100g attack
 
 **Too small (30 hexes total):** Players meet at T=1min, constant warfare, no economy buildup, RNG-heavy
 **Too large (120+ hexes):** Players farm 15+ minutes unopposed, snowball guaranteed, long game
@@ -341,7 +344,6 @@ T=5 min+:  Border warfare begins in earnest
 - [ ] **Exponential cost feel:** Does progression curve feel right? Too fast/slow?
 - [ ] **Counter-spend cap:** Is +3 power cap balanced? Create interesting battles?
 - [ ] **Map size:** Does 70-hex map hit 30-min target? Adjust if needed.
-- [ ] **Conquest threshold:** Does 60% + 10 sec create tense endgame?
 - [ ] **Tech build diversity:** Which techs do players prioritize? Do all archetypes (Aggressor, Builder, Defender, Territorial) appear in practice?
 
 ### Mechanical Unknowns
@@ -398,7 +400,7 @@ Phase 1: PROCESS ACTIONS — drain queued player intentions, validate, apply
 Phase 2: ECONOMY — calculate income/maintenance, accrue gold/TP (×0.1 per tick)
 Phase 3: BATTLES — decrement timers by 0.1s, resolve expired (transfer or retain hex)
 Phase 4: AUTO-DROP — check negative income, manage 10s grace, drop if expired
-Phase 5: VICTORY — conquest (60%/10s), capital loss, time limit
+Phase 5: VICTORY — capital capture (all loser hexes unclaimed instantly)
 Phase 6: DELTA — diff vs previous tick, broadcast to clients
 ```
 
