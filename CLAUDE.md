@@ -401,6 +401,14 @@ T=5 min+:  Border warfare begins in earnest
   - Example: Vanguard (12s) → `"⚡Vanguard X.Xs"` in HUD — it is a player timer, not a hex timer, so it does not use border segments
 - **Battle timers**: separate established pattern — amber pulsing ring + countdown text + boost dots (not changed to border segments)
 
+**Timer stacking (multiple timers on same hex):** Battle timer always renders at full brightness (urgent, action-required). Passive hex timers (Fortify) dim to 40% opacity and lineWidth 1.5 while a battle is active on that hex.
+
+| Timer | Type | Visual | When stacked with battle |
+|---|---|---|---|
+| Fortify (90s) | Hex timer | Lime `#c8ff70` border segments, clockwise | Dimmed 40% opacity, lineWidth 1.5 |
+| Battle duration (6-15s) | Battle timer | Amber pulsing ring + countdown text + boost dots | Always full brightness (priority) |
+| Vanguard (12s) | Player timer | HUD text `⚡Vanguard X.Xs` | n/a |
+
 ### Tech Stack (Decided)
 
 | Layer | Choice | Swap later to |

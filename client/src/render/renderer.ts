@@ -173,12 +173,14 @@ export class Renderer {
     }
 
     // Fortify timer: shrinking lime border segments (clockwise from top)
+    // Dimmed when a battle is active on this hex — battle takes visual priority
     if (hex.fortifyTimer > 0) {
-      this.drawFortifySegments(px, py, hex.fortifyTimer / FORTIFY_DURATION);
+      const hasBattle = this.state?.battles.some(b => b.dq === hex.q && b.dr === hex.r) ?? false;
+      this.drawFortifySegments(px, py, hex.fortifyTimer / FORTIFY_DURATION, hasBattle);
     }
   }
 
-  private drawFortifySegments(px: number, py: number, fraction: number) {
+  private drawFortifySegments(px: number, py: number, fraction: number, dimmed = false) {
     if (fraction <= 0) return;
     const ctx = this.ctx;
 
@@ -197,8 +199,9 @@ export class Renderer {
     const partial = totalSides - fullSides;
 
     ctx.strokeStyle = '#c8ff70'; // Bright lime — readable on both P1 teal and P2 red
-    ctx.lineWidth = 3;
+    ctx.lineWidth = dimmed ? 1.5 : 3;
     ctx.lineCap = 'round';
+    if (dimmed) ctx.globalAlpha = 0.4;
 
     for (let i = 0; i <= fullSides && i < 6; i++) {
       const from = corners[cwOrder[i]];
@@ -212,6 +215,8 @@ export class Renderer {
       }
       ctx.stroke();
     }
+
+    if (dimmed) ctx.globalAlpha = 1.0;
   }
 
   private drawBattle(battle: BattleDTO) {
