@@ -106,25 +106,24 @@ Key questions:
 ```
 Timing-sensitive mechanics:
   Economy tick: every 100ms (server-dependent)
-  Battle duration: 6-15 seconds
-  Counter-spend window: real-time during battle countdown
-  Auto-drop grace period: 10 seconds
-  Conquest hold timer: 10 consecutive seconds
-  Tech Dominance hold timer: 10 consecutive seconds
+  Battle duration: 5 + (Attacker Power + Defender Power) / 2 seconds (range: 6-15s)
+  Counter-spend window: real-time during battle; cap = min(+3 power, seconds remaining)
+  Auto-drop grace period: 10 seconds (20s with Resilience tech)
+  Disconnect forfeit timer: 30 seconds
 
 State that must be server-authoritative:
   Gold/TP balances, hex ownership, building levels, Power values,
-  battle timers, victory condition progress, tech unlocks
+  battle timers, tech unlocks, capital hex identity per player
 
 Events (not ticks):
   Claim hex, build/upgrade/demolish, initiate attack, unlock tech,
   counter-spend activation, auto-drop choice
 
 Entities:
-  Hex: {id, owner, building_type, building_level, power}
-  Player: {id, gold, tp, techs_unlocked[], hex_count}
+  Hex: {id, owner, building_type, building_level, power, is_capital}
+  Player: {id, gold, tp, techs_unlocked[], hex_count, capital_hex_id}
   Battle: {hex_id, attacker_id, timer_remaining, attacker_power, defender_power}
-  Victory: {conquest_leader, conquest_timer, tech_dominance_leader, tech_dominance_timer}
+  Victory: instant on capital capture — no ongoing timers or progress state
 ```
 
 ---
