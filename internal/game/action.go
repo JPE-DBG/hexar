@@ -12,6 +12,7 @@ const (
 	ActionCounterSpend
 	ActionUnlockTech
 	ActionDropHex
+	ActionFortify
 )
 
 type Action struct {
@@ -40,6 +41,7 @@ var (
 	ErrTechAlreadyOwned  = errors.New("tech already owned")
 	ErrInvalidTechID     = errors.New("invalid tech ID")
 	ErrCannotDropCapital = errors.New("cannot drop capital hex")
+	ErrTechNotOwned      = errors.New("tech not owned")
 )
 
 func ProcessActions(state *GameState, actions []Action) {
@@ -73,6 +75,10 @@ func ProcessActions(state *GameState, actions []Action) {
 			if ValidateDropHex(state, a) == nil {
 				ApplyDropHex(state, a)
 			}
+		case ActionFortify:
+			if ValidateFortify(state, a) == nil {
+				ApplyFortify(state, a)
+			}
 		}
 	}
 }
@@ -92,14 +98,17 @@ func ValidateClaim(state *GameState, action Action) error {
 	if player == nil {
 		return ErrPlayerNotFound
 	}
-	if player.Gold < ClaimCost {
+	if !player.Tech[TechBlitz] && player.Gold < ClaimCost {
 		return ErrInsufficientGold
 	}
 	return nil
 }
 
 func ApplyClaim(state *GameState, action Action) {
-	state.Players[action.Player].Gold -= ClaimCost
+	player := state.Players[action.Player]
+	if !player.Tech[TechBlitz] {
+		player.Gold -= ClaimCost
+	}
 	state.Hexes[action.Target].Owner = action.Player
 }
 
@@ -140,8 +149,9 @@ func ValidateCounterSpend(state *GameState, action Action) error {
 	if player.Gold < CounterSpendCostPerSec {
 		return ErrInsufficientGold
 	}
-	timeCap := int(b.TimeLeft) // floor: 1.7 → 1, 0.9 → 0
-	effectiveCap := min(CounterSpendCap, timeCap)
+	timeCap := int(b.TimeLeft)
+	garrisonBoost := garrisonBoostForDefender(state, action.Player, action.Target)
+	effectiveCap := max(0, min(CounterSpendCap, timeCap)-garrisonBoost)
 	if b.CounterBoost >= effectiveCap {
 		return ErrCounterSpendCap
 	}
@@ -202,12 +212,41 @@ func ApplyDropHex(state *GameState, action Action) {
 	hs := state.Hexes[action.Target]
 	player := state.Players[action.Player]
 	if hs.Building != BuildingNone {
-		refund := TotalInvested(hs.Building, hs.Level) * AutoDropRefund
-		player.Gold += refund
+		refund := AutoDropRefund
+		if player.Tech[TechResilience] {
+			refund = ResilienceDropRefund
+		}
+		player.Gold += TotalInvested(hs.Building, hs.Level) * refund
 	}
 	hs.Owner = NoPlayer
 	hs.Building = BuildingNone
 	hs.Level = 0
 	hs.Capital = false
 	player.AutoDropActive = false
+}
+
+func ValidateFortify(state *GameState, action Action) error {
+	hs, ok := state.Hexes[action.Target]
+	if !ok {
+		return ErrHexNotFound
+	}
+	if hs.Owner != action.Player {
+		return ErrNotOwner
+	}
+	player := state.Players[action.Player]
+	if player == nil {
+		return ErrPlayerNotFound
+	}
+	if !player.Tech[TechFortify] {
+		return ErrTechNotOwned
+	}
+	if player.Gold < FortifyCost {
+		return ErrInsufficientGold
+	}
+	return nil
+}
+
+func ApplyFortify(state *GameState, action Action) {
+	state.Players[action.Player].Gold -= FortifyCost
+	state.Hexes[action.Target].FortifyTimer = FortifyDuration
 }

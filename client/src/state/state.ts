@@ -5,6 +5,8 @@ export interface HexDTO {
   building: number;
   level: number;
   capital: boolean;
+  fortifyTimer: number;
+  previousOwner: number;
 }
 
 export interface PlayerDTO {
@@ -33,6 +35,8 @@ export interface SnapshotMsg {
   players: Record<string, PlayerDTO>;
   battles: BattleDTO[];
   elapsed: number;
+  over: boolean;
+  winner: number;
 }
 
 export interface GameState {
@@ -40,6 +44,8 @@ export interface GameState {
   players: Map<string, PlayerDTO>;
   battles: BattleDTO[];
   elapsed: number;
+  over: boolean;
+  winner: number;
 }
 
 export function applySnapshot(msg: SnapshotMsg): GameState {
@@ -53,5 +59,5 @@ export function applySnapshot(msg: SnapshotMsg): GameState {
     players.set(key, player);
   }
 
-  return { hexes, players, battles: msg.battles || [], elapsed: msg.elapsed };
+  return { hexes, players, battles: msg.battles || [], elapsed: msg.elapsed, over: msg.over ?? false, winner: msg.winner ?? 0 };
 }

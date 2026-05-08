@@ -146,6 +146,14 @@ export class Renderer {
       ctx.lineWidth = 3;
       ctx.stroke();
     }
+
+    // Blue ring for fortified hexes
+    if (hex.fortifyTimer > 0) {
+      this.hexPath(px, py);
+      ctx.strokeStyle = 'rgba(100, 180, 255, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
   }
 
   private drawBattle(battle: BattleDTO) {

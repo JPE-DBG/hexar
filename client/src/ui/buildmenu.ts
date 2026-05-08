@@ -1,10 +1,11 @@
-import { HexDTO, BattleDTO } from '../state/state';
+import { HexDTO, BattleDTO, PlayerDTO } from '../state/state';
 import {
   GOLD_BUILD_COST, GOLD_PER_LEVEL, GOLD_BONUS_MULTIPLIER,
   POWER_BUILD_COST, POWER_PER_LEVEL,
   RESEARCH_BUILD_COST, RESEARCH_PER_LEVEL,
   DEMOLISH_REFUND, ATTACK_COST, CAPITAL_POWER, BASE_INCOME_PER_SEC,
   BUILDING_GOLD, BUILDING_POWER, BUILDING_RESEARCH,
+  FORTIFY_COST,
 } from '../constants';
 
 export interface BuildMenuCallbacks {
@@ -12,6 +13,7 @@ export interface BuildMenuCallbacks {
   onDemolish: () => void;
   onAttack: () => void;
   onDropHex: () => void;
+  onFortify: () => void;
 }
 
 const BUILD_COSTS: Record<number, number> = {
@@ -80,11 +82,12 @@ export class BuildMenu {
         case 'demolish': this.callbacks.onDemolish(); break;
         case 'attack': this.callbacks.onAttack(); break;
         case 'drop-hex': this.callbacks.onDropHex(); break;
+        case 'fortify': this.callbacks.onFortify(); break;
       }
     });
   }
 
-  updateWithActions(hex: HexDTO | null, gold: number, isOwn: boolean, isEnemy: boolean, attackerPower = 0, battle: BattleDTO | null = null) {
+  updateWithActions(hex: HexDTO | null, gold: number, isOwn: boolean, isEnemy: boolean, attackerPower = 0, battle: BattleDTO | null = null, player: PlayerDTO | null = null) {
     if (!hex) {
       this.el.style.display = 'none';
       this.lastKey = '';
@@ -100,6 +103,7 @@ export class BuildMenu {
       gold >= GOLD_BUILD_COST, gold >= RESEARCH_BUILD_COST, gold >= upgCost,
       canAttack, attackerPower, defPower,
       battle ? Math.floor(battle.timeLeft) : -1,
+      hex.fortifyTimer > 0 ? 1 : 0, player?.tech?.[1] ? 1 : 0,
     ].join('|');
 
     if (key === this.lastKey) {
@@ -129,6 +133,11 @@ export class BuildMenu {
       if (!hex.capital && !battle) {
         const sellRefund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
         html += this.makeBtn(`Sell hex${sellRefund > 0 ? ` (+${sellRefund}g)` : ''}`, true, 'drop-hex');
+      }
+
+      // Fortify: available when Fortify tech is owned and hex is not already fortified
+      if (player?.tech?.[1] && hex.fortifyTimer <= 0 && !battle) {
+        html += this.makeBtn(`Fortify (${FORTIFY_COST}g)`, gold >= FORTIFY_COST, 'fortify');
       }
     } else if (isEnemy) {
       html += this.makeBtn(`Attack (${ATTACK_COST}g)`, canAttack, 'attack');

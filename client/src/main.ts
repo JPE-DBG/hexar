@@ -43,6 +43,10 @@ const buildMenu = new BuildMenu(document.body, {
     if (!selectedHex) return;
     connection.send({ type: 'action', action: 'drop-hex', q: selectedHex.q, r: selectedHex.r });
   },
+  onFortify: () => {
+    if (!selectedHex) return;
+    connection.send({ type: 'action', action: 'fortify', q: selectedHex.q, r: selectedHex.r });
+  },
 });
 
 const techTreePanel = new TechTreePanel(document.body, (techId) => {
@@ -61,8 +65,29 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+let victoryOverlay: HTMLElement | null = null;
+
+function showVictory(isWinner: boolean) {
+  if (victoryOverlay) return;
+  victoryOverlay = document.createElement('div');
+  victoryOverlay.style.cssText = `
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.75);z-index:200;font-family:monospace;
+  `;
+  const msg = isWinner ? 'You win!' : 'You lose!';
+  const color = isWinner ? '#4ecdc4' : '#ff6b6b';
+  victoryOverlay.innerHTML = `<div style="font-size:48px;font-weight:bold;color:${color}">${msg}</div>
+    <div style="color:#aaa;margin-top:8px;font-size:16px">Capital captured</div>`;
+  document.body.appendChild(victoryOverlay);
+}
+
 function onSnapshot(msg: SnapshotMsg) {
   state = applySnapshot(msg);
+
+  if (state.over && myPlayerId > 0) {
+    showVictory(state.winner === myPlayerId);
+  }
 
   if (myPlayerId > 0) {
     let hexCount = 0;
@@ -113,7 +138,7 @@ function onSnapshot(msg: SnapshotMsg) {
         const isEnemy = current.owner !== 0 && current.owner !== myPlayerId;
         const atkPwr = bestAdjacentPower(state, myPlayerId, current);
         const battle = state.battles.find(b => b.dq === current.q && b.dr === current.r) ?? null;
-        buildMenu.updateWithActions(current, gold, isOwn, isEnemy, atkPwr, battle);
+        buildMenu.updateWithActions(current, gold, isOwn, isEnemy, atkPwr, battle, player ?? null);
       }
     }
   }
@@ -208,6 +233,6 @@ setupInput(
     const isOwn = hex.owner === myPlayerId;
     const isEnemy = hex.owner !== 0 && hex.owner !== myPlayerId;
     const atkPwr = bestAdjacentPower(state, myPlayerId, hex);
-    buildMenu.updateWithActions(hex, gold, isOwn, isEnemy, atkPwr, battle);
+    buildMenu.updateWithActions(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null);
   }
 );

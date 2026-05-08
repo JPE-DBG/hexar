@@ -58,7 +58,7 @@ export class TechTreePanel {
     const border = owned ? '#4a8a4a' : '#3a3a5a';
     let btnHtml = '';
     if (owned) {
-      btnHtml = `<div style="color:#6a8a6a;font-size:11px;margin-top:4px">Owned — effects active in M5</div>`;
+      btnHtml = `<div style="color:#6a8a6a;font-size:11px;margin-top:4px">Owned — active</div>`;
     } else {
       const btnStyle = canAfford
         ? 'background:#4a4a6a;color:#fff;border:1px solid #6a6a8a;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:monospace;font-size:11px'

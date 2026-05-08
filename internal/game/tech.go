@@ -16,8 +16,8 @@ func TechCost(id TechID) float64 {
 		return TechCostGarrison
 	case TechSupplyLines:
 		return TechCostSupplyLines
-	case TechDominion:
-		return TechCostDominion
+	case TechWarChest:
+		return TechCostWarChest
 	case TechResilience:
 		return TechCostResilience
 	case TechIronGrip:
