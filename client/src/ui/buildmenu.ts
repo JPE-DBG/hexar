@@ -161,14 +161,12 @@ export class BuildMenu {
     }
     this.lastKey = key;
 
+    const ownerPlayer = state?.players.get(String(hex.owner));
     let powerStr = `Pwr:${defPower}`;
-    if (player?.tech?.[9]) powerStr += ' (+1⚔️)'; // Iron Grip indicator
-    if (isEnemy && state) {
-      const defPlayer = state.players.get(String(hex.owner));
-      if (defPlayer?.tech?.[5]) { // Garrison
-        const garrisonBonus = Math.min(GARRISON_MAX_BOOST, countAdjacentOwned(hex, state, hex.owner));
-        if (garrisonBonus > 0) powerStr += ` (+${garrisonBonus}🛡️)`;
-      }
+    // Garrison: shown as defense-only note, not part of static power total
+    if (state && hex.owner > 0 && ownerPlayer?.tech?.[5]) {
+      const garrisonBonus = Math.min(GARRISON_MAX_BOOST, countAdjacentOwned(hex, state, hex.owner));
+      if (garrisonBonus > 0) powerStr += ` +${garrisonBonus} def`;
     }
     let html = `<span style="margin-right:4px">[${hex.q},${hex.r}] ${powerStr}</span>`;
 
@@ -217,23 +215,16 @@ export class BuildMenu {
     return `<button style="${style}" data-action="${action}" ${enabled ? '' : 'disabled'}>${label}</button>`;
   }
 
-  private calcPower(hex: HexDTO, player?: PlayerDTO | null, state?: GameState): number {
+  private calcPower(hex: HexDTO, _player?: PlayerDTO | null, state?: GameState): number {
     let p = 0;
     if (hex.capital) p = CAPITAL_POWER;
     if (hex.building === BUILDING_POWER) p += hex.level;
-    if (player?.tech?.[9]) p++; // TechIronGrip = 9
-
-    // For defender display, show Garrison bonus if applicable
+    // Iron Grip: use HEX OWNER's tech — server applies it per-owner in hexEffectivePower()
+    // Garrison NOT included: server only applies it in resolveBattle, not ValidateAttack
     if (state && hex.owner > 0) {
       const ownerPlayer = state.players.get(String(hex.owner));
-      if (ownerPlayer?.tech?.[5]) { // TechGarrison = 5
-        const garrisonBonus = Math.min(GARRISON_MAX_BOOST, countAdjacentOwned(hex, state, hex.owner));
-        if (garrisonBonus > 0) {
-          p += garrisonBonus;
-        }
-      }
+      if (ownerPlayer?.tech?.[9]) p++; // TechIronGrip
     }
-
     return p;
   }
 

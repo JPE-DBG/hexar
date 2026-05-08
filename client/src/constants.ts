@@ -42,6 +42,7 @@ export const COUNTER_SPEND_CAP = 3;
 export const RECLAMATION_ATTACK_COST = 50;
 export const VANGUARD_ATTACK_COST = 50;
 export const FORTIFY_COST = 40;
+export const FORTIFY_DURATION = 90;
 
 // Tech bonus constants (mirrors internal/game/constants.go)
 export const PROSPERITY_BONUS = 1.0;

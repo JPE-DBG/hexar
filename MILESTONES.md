@@ -161,7 +161,7 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 
 ---
 
-### M5 — Tech Tree + Victory Conditions 🔜 NEXT (~1.5 weeks)
+### M5 — Tech Tree + Victory Conditions ✅ COMPLETE
 
 **Goal:** Complete game with win conditions. A full 15-30 minute match is playable end-to-end.
 
@@ -190,6 +190,14 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 - Tech tree UI (built in M4) now shows unlocked techs as active with visual distinction; all 12 effects apply
 - Victory screen shows winner and reason
 - Full 15-30 min game is completable between two human players
+
+**Power display conventions (decided during M5 playtesting):**
+- Hex canvas labels show **effective combat power**, not raw building level for Power buildings
+  - Power L1 + Iron Grip → label shows "P2" (effective), not "P1" (level)
+  - Capital + Power L1 + Iron Grip → label shows "P3" (1 innate + 1 level + 1 IG)
+- Non-Power owned hexes show a small yellow power badge if power > 0 (capital innate, Iron Grip)
+- Garrison is **excluded from static power display** — it's a defense-battle-only bonus, shown as `"+N def"` note in build menu
+- Fortify timer rendered as **shrinking lime border segments** (clockwise from top), no text overlay
 
 **Design risk:** 12 techs is significantly more scope than original 4. Consider implementing the 6 cheap techs (≤40 TP) first and the 6 expensive techs second. Fortify introduces the first "active action from a tech" — may need new UI affordance. Siege Mastery's 40% timer reduction needs verification that the minimum 3s floor doesn't create degenerate battles.
 
