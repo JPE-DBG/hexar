@@ -197,6 +197,7 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
   - Capital + Power L1 + Iron Grip → label shows "P3" (1 innate + 1 level + 1 IG)
 - Non-Power owned hexes show a small yellow power badge if power > 0 (capital innate, Iron Grip)
 - Garrison is **excluded from static power display** — it's a defense-battle-only bonus, shown as `"+N def"` note in build menu
+- **Garrison attack threshold:** UI blocks attacks where attacker can't win due to Garrison (i.e. `attackerPower ≤ defPower + garrisonBonus`). Hint shows "Need Pwr > N" where N includes Garrison bonus. Server allows the attack (only validates base power); UI prevents committing 100g to a guaranteed-loss battle.
 - Fortify timer rendered as **shrinking lime border segments** (clockwise from top), no text overlay
 
 **Design risk:** 12 techs is significantly more scope than original 4. Consider implementing the 6 cheap techs (≤40 TP) first and the 6 expensive techs second. Fortify introduces the first "active action from a tech" — may need new UI affordance. Siege Mastery's 40% timer reduction needs verification that the minimum 3s floor doesn't create degenerate battles.

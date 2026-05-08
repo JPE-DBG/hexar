@@ -104,6 +104,7 @@ Each hex can have **one building** of three types. There is no separate "build" 
 - **Unclaimed hex cost:** 10 gold (instant takeover, no battle)
 - **Enemy hex cost:** 100 gold (triggers battle)
 - **Requirement vs enemy:** Attacker Power > Defender Power (strictly greater, ≤ fails with no cost)
+- **Garrison threshold:** If defender has Garrison tech, the effective attack threshold is `Defender Power + Garrison bonus`. The UI blocks attacks that cannot win even at battle start — the hint shows "Need Pwr > N" where N includes the Garrison bonus. (Server validates only base power; the UI prevents committing 100g to a guaranteed-loss battle.)
 
 ### Battle Resolution
 
@@ -194,6 +195,7 @@ Research buildings generate Tech Points at **0.2 TP/sec per Research level**. Sp
   - Economy L1 with both techs: (2 + 0.6) × 1.5 × 1.25 + 1.0 = 5.875 gold/sec
 - **Iron Grip + Garrison Stack:** Iron Grip adds +1 to all owned hexes; Garrison adds up to +2 during defense battles
   - Defender with both: base power + Iron Grip +1 + Garrison +2 (max) = +3 total possible bonus
+  - **Display distinction:** Iron Grip is static (always-on) → included in hex label and power total. Garrison is dynamic (defense-only, depends on adjacency) → shown as separate `"+N def"` note in build menu, excluded from the static power number on the hex.
 
 ---
 
@@ -383,6 +385,21 @@ T=5 min+:  Border warfare begins in earnest
 ### Scope
 - **Start with 1v1** — Easier to balance before adding 3-4 player variants
 - **UI priority:** Show hex Power prominently, battle timer clearly, resource flow transparent
+
+**Power display conventions (implemented in M5):**
+- Hex canvas labels show **effective static power** (base + Iron Grip), not raw building level
+  - Power building L1 with Iron Grip → label "P2" (effective), not "P1" (building level)
+  - Capital + Power L1 + Iron Grip → "P3" (1 capital innate + 1 level + 1 IG)
+  - Non-Power owned hexes (economy, research, empty) show a small yellow power badge if power > 0 (capital innate power or Iron Grip)
+- **Garrison excluded from hex label** — it's a defense-battle-only bonus, shown as `"+N def"` note in build menu
+- **Fortify timer** rendered as shrinking lime border segments (clockwise from top), 90s → 0s
+
+**Timer visualization conventions:**
+- **Hex timers** (timer state lives on a specific hex): rendered as shrinking colored border segments, clockwise from the top point, full ring at max duration → empty at 0. Fortify is the reference implementation. All future hex-level timers must follow this pattern.
+  - Color must be readable on both player hex colors (teal P1, red P2); lime `#c8ff70` is the established choice for Fortify
+- **Player timers** (timer state lives on a player, not tied to a hex): shown in the HUD as a text indicator
+  - Example: Vanguard (12s) → `"⚡Vanguard X.Xs"` in HUD — it is a player timer, not a hex timer, so it does not use border segments
+- **Battle timers**: separate established pattern — amber pulsing ring + countdown text + boost dots (not changed to border segments)
 
 ### Tech Stack (Decided)
 
