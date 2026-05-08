@@ -143,10 +143,19 @@ export class BuildMenu {
     }
 
     const defPower = this.calcPower(hex, player, state ?? undefined);
+    // Garrison activates immediately when battle starts, so attacker must exceed defPower + garrison
+    let garrisonBonus = 0;
+    if (isEnemy && state && hex.owner > 0) {
+      const ownerPlayer = state.players.get(String(hex.owner));
+      if (ownerPlayer?.tech?.[5]) {
+        garrisonBonus = Math.min(GARRISON_MAX_BOOST, countAdjacentOwned(hex, state, hex.owner));
+      }
+    }
+    const effectiveDefPower = defPower + garrisonBonus;
     const upgCost = upgradeCost(hex.building, hex.level);
     const hasBattle = battle !== null;
     const effectiveCost = effectiveAttackCost(player, hex);
-    const canAttack = !hasBattle && gold >= effectiveCost && attackerPower > defPower;
+    const canAttack = !hasBattle && gold >= effectiveCost && attackerPower > effectiveDefPower;
     const key = [
       hex.q, hex.r, hex.building, hex.level, isOwn, isEnemy,
       gold >= GOLD_BUILD_COST, gold >= RESEARCH_BUILD_COST, gold >= upgCost,
@@ -199,8 +208,8 @@ export class BuildMenu {
       html += this.makeBtn(`Attack (${effectiveCost}g)`, canAttack, 'attack');
       if (hasBattle) {
         html += `<span style="color:#fa0;margin-left:4px">Battle in progress</span>`;
-      } else if (attackerPower <= defPower) {
-        html += `<span style="color:#f66;margin-left:4px">Need Pwr > ${defPower}</span>`;
+      } else if (attackerPower <= effectiveDefPower) {
+        html += `<span style="color:#f66;margin-left:4px">Need Pwr > ${effectiveDefPower}</span>`;
       }
     }
 
