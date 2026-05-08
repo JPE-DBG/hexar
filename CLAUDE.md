@@ -161,7 +161,7 @@ Research buildings generate Tech Points at **0.2 TP/sec per Research level**. Sp
 | Fortify | 20 TP | New action: spend 40g to prevent instant-takeover on one hex for 90 seconds | Defender |
 | Prosperity | 25 TP | Each Economy (Gold) building generates +1/sec additional income | Builder |
 | Reclamation | 25 TP | Recapturing a hex you previously owned costs 50g instead of 100g | Territorial |
-| Vanguard | 30 TP | After capturing an enemy hex, next attack within 12 seconds costs 50g instead of 100g | Aggressor |
+| Vanguard | 30 TP | After capturing an enemy hex, attacks within 12 seconds cost 50g (timer refreshes on each capture) | Aggressor |
 | Garrison | 30 TP | During battle, each adjacent owned hex adds +1 Power to defense (cap: +2 from Garrison; total defensive cap remains +3, shared with counter-spend) | Defender |
 | Supply Lines | 40 TP | Maintenance costs reduced: 0.9/sec (hexes 1-10), 1.8/sec (hexes 11-20), 2.7/sec (hexes 21+) | Builder |
 | War Chest | 30 TP | When you capture an enemy hex, recover 30g | Territorial |
@@ -345,6 +345,7 @@ T=5 min+:  Border warfare begins in earnest
 - [ ] **Counter-spend cap:** Is +3 power cap balanced? Create interesting battles?
 - [ ] **Map size:** Does 70-hex map hit 30-min target? Adjust if needed.
 - [ ] **Tech build diversity:** Which techs do players prioritize? Do all archetypes (Aggressor, Builder, Defender, Territorial) appear in practice?
+- [ ] **Vanguard stacking:** Timer refreshes on each capture, allowing chain attacks at 50g each. Does this create unstoppable snowball, or is it balanced by Power requirements?
 
 ### Mechanical Unknowns
 
