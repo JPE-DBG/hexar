@@ -32,7 +32,7 @@ Hexar is a fast-paced, real-time multiplayer hex strategy game inspired by Antiy
 - **Player hexes (owned):** Controlled by a player, generates income, has buildings
 - **Unclaimed hexes (empty):** No owner, Power 0, no buildings
 - **Starting position:** Each player starts with exactly 1 hex (their capital)
-- **Capital hex:** Has innate Power 1 (no building needed). All other owned hexes start at Power 0 until a Defense building is placed.
+- **Capital hex:** Has innate Power 1 (no building needed). All other owned hexes start at Power 0 until a Power building is placed.
 - **Owned hex generates:** 2 resources/sec (base)
 - **Maintenance cost (Stepped):**
   - Hexes 1-10: 1 resource/sec each
@@ -83,7 +83,7 @@ Each hex can have **one building** of three types. There is no separate "build" 
 - **Formula:** `(base + 0.6 × level) × 1.5` → Level 1: 3.9/sec, Level 5: (2 + 3.0) × 1.5 = 7.5/sec
 - **Max level:** Unlimited (incremental)
 
-#### Defense Building
+#### Power Building
 - **Effect:** +1 Power per level (Power = level, so L1=1, L2=2, etc.)
 - **Upgrade cost:** L1=60, L2=120, L3=240, L4=480 (formula: `BuildCost × 2^level`)
 - **Max level:** Unlimited (incremental)
@@ -216,8 +216,8 @@ T=2 min:   Save 60 gold → Upgrade hex 1 to Economy L1 (~6 sec at +10/sec)
            Income: hex 1 = 3.9/sec, rest = 2/sec each → Total: 21.9/sec gross
            Maintenance: 10/sec → Net +11.9/sec
 
-T=2.5 min: Save 60 gold → Build Defense on border hex (~5 sec at +11/sec)
-           Spend 30 → Upgrade Defense L1. Power = 2 on that hex.
+T=2.5 min: Save 60 gold → Build Power on border hex (~5 sec at +11/sec)
+           Spend 30 → Upgrade Power L1. Power = 2 on that hex.
 
 T=3 min:   First enemy contact at borders
            Save 100 gold for first enemy hex attack (~9 sec at +11/sec)
@@ -240,7 +240,7 @@ T=5 min+:  Border warfare begins in earnest
 **Why capital capture:**
 - Genre standard for hex conquest games (Antiyoy, Polytopia)
 - Forces the full economic loop: economy → Power → territory → capital approach
-- Clear target for both players with rich counterplay (defend capital with Defense buildings, Garrison, counter-spend)
+- Clear target for both players with rich counterplay (defend capital with Power buildings, Garrison, counter-spend)
 - Anti-stalemate is built-in: maintenance auto-drop gradually weakens over-extended players, exposing their capital; tech (Siege Mastery, Iron Grip) breaks late defensive deadlocks
 
 **How to win:**
@@ -289,7 +289,7 @@ T=5 min+:  Border warfare begins in earnest
 
 - **If capital is captured:** Player immediately loses the game. All their hexes become unclaimed instantly.
 - **Captured capital:** Becomes a normal hex for the conqueror (no innate Power 1, no special rules)
-- **Building on capital:** Owner can place Defense buildings on their capital (Power stacks on top of innate Power 1, e.g., Defense L2 = Power 3 total)
+- **Building on capital:** Owner can place Power buildings on their capital (Power stacks on top of innate Power 1, e.g., Power L2 = Power 3 total)
 - **Strategic implication:** Capital is a high-value target — losing it ends the game, so defending it is critical. Attacker targeting capital forces defender to split attention between borders and home base.
 
 ---
@@ -327,8 +327,8 @@ T=5 min+:  Border warfare begins in earnest
 ### Exponential Upgrade Costs with Constant Rewards
 - **Economy cost:** Cheap start (60g build + 60g L1→L2), doubles from there. L4 costs 480g.
 - **Reward per level:** +0.9/sec net income gain (constant — each upgrade equally valuable)
-- **Defense/Research cost:** Still use `BuildCost × 2^level` (L1=120/160g)
-- **Effect:** Economy investment is accessible early game; exponential scaling caps extreme high-level chains. Defense requires deliberate gold commitment at every level.
+- **Power/Research cost:** Still use `BuildCost × 2^level` (L1=120/160g)
+- **Effect:** Economy investment is accessible early game; exponential scaling caps extreme high-level chains. Power building requires deliberate gold commitment at every level.
 
 ---
 
@@ -346,7 +346,7 @@ T=5 min+:  Border warfare begins in earnest
 **Pacing with 70 hexes (example):**
 - **T=0-2min:** Each player rapidly claims ~10 unclaimed hexes (10g each, income scales fast)
 - **T=2-3min:** Land-grab slows, players meet at borders with ~10 hexes each
-- **T=3-5min:** First border skirmishes, Economy and Defense buildings appear
+- **T=3-5min:** First border skirmishes, Economy and Power buildings appear
 - **T=5-15min:** Active border warfare, territory trades hands
 - **T=15-25min:** Players contest capital approach corridors; tech investments (Siege Mastery, Iron Grip) enable decisive attacks
 - **T=25-30min:** Final push on the enemy capital — high-Power adjacent hex + 100g attack
@@ -485,7 +485,7 @@ Phase 6: DELTA — diff vs previous tick, broadcast to clients
 | Capital captured during outgoing attack | Immediate game over, all battles canceled |
 | Counter-spend same tick as battle expires | Applied (Phase 1 runs before Phase 3) |
 | Gold below 0 | Clamped to 0, actions rejected if insufficient |
-| Player trapped (no Power≥1 border) | Must build Defense to regain attack ability |
+| Player trapped (no Power≥1 border) | Must build Power to regain attack ability |
 | Same player opens duplicate tab | Server closes new WS with code 4001; client shows "Already Connected" overlay, no retry |
 | Both players not yet connected | Game loop does not start; `state.Waiting = true`; loop starts only when all player slots filled for first time |
 | Game over by forfeit vs capital | `state.WinReason`: `"forfeit"` or `"capital"` — victory screen shows distinct subtitle |
@@ -559,6 +559,89 @@ hexar/
 | Live forfeit countdown (`state.PauseTimeLeft`, `M:SS` banner) | Remaining player had no visibility into how long until forfeit |
 | Cumulative reconnect budget (120s total, not reset per disconnect) | Per-disconnect timer allowed repeated short disconnects to accumulate unlimited free pause time |
 | Win reason (`state.WinReason`: `"capital"` / `"forfeit"`) | Victory screen always showed "Capital captured" even when opponent forfeited |
+
+**M7: Visual Polish**
+
+Goal: Make the game look modern and appealing to retain real players. Every visual addition must reinforce player decision-making — decoration gets cut.
+
+**Rendering approach (decided):** Stay on Canvas. rAF loop already exists in `renderer.ts`. No measured perf problem at 70 hexes. PixiJS migration only if rAF loop is measured > 12ms with effects enabled. No Svelte migration for the build menu — defer until live gold-threshold reactivity is actually needed.
+
+**Effect priority (by decision-making value):**
+
+| Effect | Value | Rationale |
+|---|---|---|
+| Capture flash on hex takeover | Must have | Confirms action resolved — player needs this to know attack succeeded |
+| Battle ring pulse (enhance existing) | Must have | Urgency signal during live counter-spend window |
+| Lobby/overlay polish | Must have | First impression; affects player trust and willingness to return |
+| Floating `+gold` on economy tick | Should have | Reinforces resource loop; helps players time purchases — keep small, float away from hex centre to avoid obscuring labels |
+| Build menu CSS + SVG icons | Should have | Core interaction surface — Economy/Power/Research distinction must be instant |
+| HUD monospace numbers | Should have | Prevents layout shift on fast-updating gold/TP counters |
+| Animated gold counter (smooth interpolation) | Nice to have | Low decision impact; add only after higher-priority items ship |
+| Screen shake on capital fall | Nice to have | Pure feel — cut if time is tight |
+| Idle hex shimmer | Skip | No decision value |
+
+**Sequencing within M7:**
+1. **Palette consolidation** — `constants.ts` as single source of truth for all colors; matching CSS file for DOM overlays; remove all inline `style.cssText` strings; no CSS variables that can drift from TS constants
+2. **Hex renderer polish** — radial gradient fill (center lighten → edge darken) + ownership glow (`ctx.shadowBlur`); capital hex distinct icon; ~60 lines in `renderer.ts:drawHexFill()`
+3. **Effects layer** — `Effect[]` array in existing rAF loop; `addCaptureFlash(hex, color)` and `addFloater(hex, text)` called from `applyDelta` on ownership change; effects are client-side only, never in game state
+4. **Build menu CSS + SVG icons** — CSS redesign of existing DOM `BuildMenu`; SVG icons for Economy (coin), Power (sword), Research (flask); keyboard shortcut labels; inline cost/effect text ("Economy L1 — 60g → +1.9/sec")
+5. **Overlay + lobby screens** — CSS for pause/victory/waiting/lobby; room code large and copyable on waiting screen; styled victory/forfeit distinction
+6. **HUD polish** — monospace font for all numeric values; animated gold counter last (lowest decision impact)
+
+**Technical constraints:**
+- Canvas + DOM split preserved throughout
+- Effects layer has zero game state access — purely visual, triggered by state transitions
+- Render hierarchy must not be obscured: ownership → power → building → status
+
+**M8: Testing**
+
+Goal: Build confidence before exposing to real users; catch regressions as the visual layer grows. Start with zero mocks in `internal/game/` — it's pure, just call the functions.
+
+**Layer 1: Game logic** (`internal/game/`) — stdlib only, no goroutines, table-driven:
+
+| File | Test cases |
+|---|---|
+| `testhelpers_test.go` | `twoPlayerState()`, `runTicks(n, actions...)`, adjacent hex builder — shared by all game tests |
+| `economy_test.go` | Gold accrues at 2/s per hex; stepped maintenance triggers at 10/20 hex boundaries; Prosperity + Compound Growth formula matches CLAUDE.md math |
+| `combat_test.go` | Attack validation: insufficient power, insufficient gold, hex already in battle; battle resolution: winner at timer expiry, loser retains on tie (unless Siege Mastery); instant takeover when diff > 3 |
+| `victory_test.go` | Capital capture sets `WinReason = "capital"`, all loser hexes unclaimed; `ForfeitPlayer` sets `WinReason = "forfeit"` |
+| `tech_test.go` | Tech unlock deducts TP and sets bool; Reclamation + Vanguard both active + conditions met = 0g attack cost |
+| `autodrop_test.go` | Negative net income triggers 10s grace; forced drop when grace expires; 50% refund on dropped hex |
+
+**Layer 2: Room/lobby integration** (`internal/room/`) — real goroutines, minimal `time.Sleep` (1–2 tick durations):
+
+| Test | Asserts |
+|---|---|
+| `TestWaitingState` | Loop does not start until 2nd player connects; P1 gold unchanged while waiting |
+| `TestPauseOnDisconnect` | `state.Paused = true` immediately; remaining client receives snapshot |
+| `TestUnpauseOnReconnect` | `state.Paused = false`; remaining grace saved to `remainingGrace[pid]` |
+| `TestCumulativeGrace` | Second disconnect starts from remaining budget, not 120s |
+| `TestForfeitEnqueued` | `PauseTimeLeft` hits 0 → `ActionForfeit` processed next tick |
+| `TestDuplicateConnect` | `IsConnected` returns true; second connection replaces first cleanly |
+
+**Layer 3: Playwright E2E** — defer until after M9 (needs a live server for disconnect/reconnect flows to be realistic). Cover: create → join → play → victory path; duplicate tab rejection; URL hash reconnect after tab close.
+
+**M9: Deployment**
+
+Goal: Make the game accessible to real players outside localhost.
+
+**Files to create (in implementation order):**
+
+1. `internal/net/server.go` — add `GET /health` endpoint returning `{"status":"ok","version":"..."}` (Fly.io uses this for crash detection)
+2. `client/src/net/connection.ts` — WebSocket URL: `const protocol = import.meta.env.PROD ? 'wss' : 'ws'`
+3. `Dockerfile` — multi-stage: `node:20-alpine` (Vite build) → `golang:1.23-alpine` (server build, `CGO_ENABLED=0 GOOS=linux`) → `gcr.io/distroless/static-debian12` (runtime); distroless has no shell — minimal attack surface
+4. `fly.toml` — `auto_stop_machines = false` (CRITICAL: Fly's default sleep kills active WebSocket connections), `min_machines_running = 1`, `force_https = true` (auto TLS upgrades `ws://` → `wss://`)
+5. `.github/workflows/deploy.yml` — `test` job (`go test ./...`) + `deploy` job (`needs: test`, `flyctl deploy --remote-only`); deploy never runs if tests fail
+
+**Deployment steps:**
+1. Add `/health` endpoint + verify locally (`curl localhost:8080/health`)
+2. Update WebSocket URL for `wss://` + verify Vite prod build connects correctly
+3. Write `Dockerfile` → `docker build -t hexar .` locally → `docker run -p 8080:8080 hexar` smoke test
+4. `fly launch` (generates initial `fly.toml`) → edit for Hexar constraints (`auto_stop_machines = false`)
+5. Write GitHub Actions workflow; add `FLY_API_TOKEN` to GitHub secrets
+6. `fly deploy` → post-deploy: load lobby, create game, join from second browser, verify `wss://` in DevTools Network tab
+
+**Known limitation (document in lobby UI):** Rooms are in-memory — a server restart ends all active games. Future fix: SQLite via `modernc.org/sqlite` (pure Go, no CGO) persisting room state as JSON blob. Not needed for initial deployment.
 
 ### Rejected Alternatives
 - **Node.js server:** Go developer, worse concurrency model for tick loops
