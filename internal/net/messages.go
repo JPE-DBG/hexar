@@ -21,6 +21,7 @@ type DeltaMsg struct {
 	Elapsed    float64      `json:"elapsed"`
 	Over       bool         `json:"over"`
 	Winner     int          `json:"winner,omitempty"`
+	Waiting    bool         `json:"waiting"`
 	HexChanges []*HexDTO    `json:"hexChanges,omitempty"`
 }
 
@@ -44,6 +45,7 @@ type SnapshotMsg struct {
 	Elapsed float64               `json:"elapsed"`
 	Over    bool                  `json:"over"`
 	Winner  int                   `json:"winner"`
+	Waiting bool                  `json:"waiting"`
 }
 
 type HexDTO struct {
@@ -87,6 +89,7 @@ func BuildSnapshot(state *game.GameState) *SnapshotMsg {
 		Elapsed: state.Elapsed,
 		Over:    state.Over,
 		Winner:  int(state.Winner),
+		Waiting: state.Waiting,
 	}
 
 	for hex, hs := range state.Hexes {

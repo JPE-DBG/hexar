@@ -62,12 +62,12 @@ type Player struct {
 }
 
 type Battle struct {
-	AttackerHex Hex      `json:"attackerHex"`
-	DefenderHex Hex      `json:"defenderHex"`
-	Attacker    PlayerID `json:"attacker"`
-	Defender    PlayerID `json:"defender"`
-	TimeLeft    float64  `json:"timeLeft"`
-	CounterBoost int     `json:"counterBoost"`
+	AttackerHex  Hex      `json:"attackerHex"`
+	DefenderHex  Hex      `json:"defenderHex"`
+	Attacker     PlayerID `json:"attacker"`
+	Defender     PlayerID `json:"defender"`
+	TimeLeft     float64  `json:"timeLeft"`
+	CounterBoost int      `json:"counterBoost"`
 }
 
 type GameState struct {
@@ -77,6 +77,7 @@ type GameState struct {
 	Elapsed float64              `json:"elapsed"`
 	Over    bool                 `json:"over"`
 	Winner  PlayerID             `json:"winner"`
+	Waiting bool                 `json:"waiting"`
 }
 
 func NewGameState() *GameState {

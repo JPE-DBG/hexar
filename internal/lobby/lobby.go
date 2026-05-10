@@ -62,7 +62,6 @@ func (l *Lobby) Create() (code, token string, pid game.PlayerID) {
 	defer l.mu.Unlock()
 	code = randCode()
 	r := room.New()
-	go r.Run()
 	entry := &Entry{
 		Room:     r,
 		sessions: make(map[string]*Session),

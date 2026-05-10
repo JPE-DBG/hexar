@@ -24,6 +24,7 @@ const renderer = new Renderer(canvas);
 
 let state: GameState | null = null;
 let myPlayerId = 0;
+let roomCode = '';
 let selectedHex: HexDTO | null = null;
 let dropMap = new Set<string>();
 let connection: Connection | null = null;
@@ -70,6 +71,29 @@ window.addEventListener('keydown', (e) => {
 });
 
 let victoryOverlay: HTMLElement | null = null;
+
+let waitingOverlay: HTMLElement | null = null;
+
+function showWaitingOverlay() {
+  if (waitingOverlay) return;
+  waitingOverlay = document.createElement('div');
+  waitingOverlay.style.cssText = `
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.75);z-index:200;font-family:monospace;
+  `;
+  waitingOverlay.innerHTML = `
+    <div style="font-size:36px;font-weight:bold;color:#4ecdc4">Waiting for opponent…</div>
+    <div style="color:#aaa;margin-top:12px;font-size:16px">Share this room code with player 2:</div>
+    <div style="font-size:48px;font-weight:bold;color:#fff;letter-spacing:8px;margin-top:12px">${roomCode}</div>
+  `;
+  document.body.appendChild(waitingOverlay);
+}
+
+function hideWaitingOverlay() {
+  waitingOverlay?.remove();
+  waitingOverlay = null;
+}
 
 function showVictory(isWinner: boolean) {
   if (victoryOverlay) return;
@@ -147,6 +171,12 @@ function showDisconnectOverlay() {
 
 function updateState(newState: GameState) {
   state = newState;
+
+  if (state.waiting) {
+    showWaitingOverlay();
+    return;
+  }
+  hideWaitingOverlay();
 
   if (state.over && myPlayerId > 0) {
     showVictory(state.winner === myPlayerId);
@@ -255,6 +285,7 @@ function bestAdjacentPower(gs: GameState, playerId: number, target: HexDTO, play
 }
 
 function startGame(code: string, token: string) {
+  roomCode = code;
   history.replaceState(null, '', `/#${code}:${token}`);
   sessionStorage.setItem('hexarSession', JSON.stringify({ code, token }));
 

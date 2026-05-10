@@ -23,11 +23,13 @@ type Room struct {
 	disconnectTimers map[game.PlayerID]*time.Timer
 	actions          chan game.Action
 	stop             chan struct{}
+	started          bool
 }
 
 func New() *Room {
 	state := game.NewGameState()
 	state.Hexes = mapgen.GenerateTestMap()
+	state.Waiting = true
 
 	spawns := mapgen.SpawnPositions()
 	for i, pos := range spawns {
@@ -55,6 +57,7 @@ func (r *Room) State() *game.GameState {
 
 // OnConnect registers a client for the given player and sends a full snapshot.
 // Cancels any pending disconnect/forfeit timer for this player.
+// Starts the game loop when all players are connected for the first time.
 func (r *Room) OnConnect(c ClientSender, pid game.PlayerID) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -77,6 +80,18 @@ func (r *Room) OnConnect(c ClientSender, pid game.PlayerID) {
 	r.clients = append(r.clients, c)
 	r.clientPlayer[c] = pid
 	r.activeClients[pid] = c
+
+	if !r.started && len(r.activeClients) == len(r.state.Players) {
+		r.state.Waiting = false
+		r.started = true
+		for _, cl := range r.clients {
+			if cl != c {
+				cl.SendSnapshot(r.state)
+			}
+		}
+		go r.Run()
+	}
+
 	c.SendSnapshot(r.state)
 }
 
@@ -97,7 +112,7 @@ func (r *Room) OnDisconnect(pid game.PlayerID, c ClientSender) {
 		}
 	}
 
-	if !r.state.Over {
+	if !r.state.Over && r.started {
 		timer := time.AfterFunc(disconnectGrace, func() {
 			r.EnqueueAction(game.Action{Type: game.ActionForfeit, Player: pid})
 		})

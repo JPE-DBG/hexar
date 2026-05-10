@@ -38,6 +38,7 @@ export interface SnapshotMsg {
   elapsed: number;
   over: boolean;
   winner: number;
+  waiting: boolean;
 }
 
 export interface DeltaMsg {
@@ -47,6 +48,7 @@ export interface DeltaMsg {
   elapsed: number;
   over: boolean;
   winner: number;
+  waiting: boolean;
   hexChanges?: HexDTO[];
 }
 
@@ -57,6 +59,7 @@ export interface GameState {
   elapsed: number;
   over: boolean;
   winner: number;
+  waiting: boolean;
 }
 
 export function applySnapshot(msg: SnapshotMsg): GameState {
@@ -70,7 +73,7 @@ export function applySnapshot(msg: SnapshotMsg): GameState {
     players.set(key, player);
   }
 
-  return { hexes, players, battles: msg.battles || [], elapsed: msg.elapsed, over: msg.over ?? false, winner: msg.winner ?? 0 };
+  return { hexes, players, battles: msg.battles || [], elapsed: msg.elapsed, over: msg.over ?? false, winner: msg.winner ?? 0, waiting: msg.waiting ?? false };
 }
 
 export function applyDelta(state: GameState, msg: DeltaMsg): GameState {
@@ -84,5 +87,5 @@ export function applyDelta(state: GameState, msg: DeltaMsg): GameState {
     hexes.set(`${hex.q},${hex.r}`, hex);
   }
 
-  return { hexes, players, battles: msg.battles, elapsed: msg.elapsed, over: msg.over, winner: msg.winner };
+  return { hexes, players, battles: msg.battles, elapsed: msg.elapsed, over: msg.over, winner: msg.winner, waiting: msg.waiting };
 }
