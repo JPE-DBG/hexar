@@ -73,6 +73,8 @@ let victoryOverlay: HTMLElement | null = null;
 
 function showVictory(isWinner: boolean) {
   if (victoryOverlay) return;
+  sessionStorage.removeItem('hexarSession');
+  history.replaceState(null, '', '/');
   victoryOverlay = document.createElement('div');
   victoryOverlay.style.cssText = `
     position:fixed;top:0;left:0;width:100%;height:100%;
@@ -110,6 +112,7 @@ function hideReconnecting() {
 
 function showAlreadyConnectedOverlay() {
   sessionStorage.removeItem('hexarSession');
+  history.replaceState(null, '', '/');
   const overlay = document.createElement('div');
   overlay.style.cssText = `
     position:fixed;top:0;left:0;width:100%;height:100%;
@@ -139,6 +142,7 @@ function showDisconnectOverlay() {
   `;
   document.body.appendChild(disconnectOverlay);
   sessionStorage.removeItem('hexarSession');
+  history.replaceState(null, '', '/');
 }
 
 function updateState(newState: GameState) {
@@ -251,6 +255,7 @@ function bestAdjacentPower(gs: GameState, playerId: number, target: HexDTO, play
 }
 
 function startGame(code: string, token: string) {
+  history.replaceState(null, '', `/#${code}:${token}`);
   sessionStorage.setItem('hexarSession', JSON.stringify({ code, token }));
 
   connection = new Connection(code, token, {
@@ -317,7 +322,17 @@ setupInput(
   }
 );
 
-// Try to reconnect from sessionStorage first, else show lobby
+// Try to reconnect from sessionStorage first, then URL hash, else show lobby
+function tryHashOrLobby() {
+  const hash = window.location.hash.slice(1);
+  const [code, token] = hash.split(':');
+  if (code && token) {
+    startGame(code, token);
+  } else {
+    new LobbyUI(document.body, ({ code, token }) => startGame(code, token));
+  }
+}
+
 const saved = sessionStorage.getItem('hexarSession');
 if (saved) {
   try {
@@ -325,8 +340,8 @@ if (saved) {
     startGame(code, token);
   } catch {
     sessionStorage.removeItem('hexarSession');
-    new LobbyUI(document.body, ({ code, token }) => startGame(code, token));
+    tryHashOrLobby();
   }
 } else {
-  new LobbyUI(document.body, ({ code, token }) => startGame(code, token));
+  tryHashOrLobby();
 }

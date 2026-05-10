@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const disconnectGrace = 30 * time.Second
+const disconnectGrace = 2 * time.Minute
 const actionQueueSize = 256
 
 type ClientSender interface {
