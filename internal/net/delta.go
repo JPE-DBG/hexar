@@ -24,6 +24,8 @@ func buildDelta(prev, curr *SnapshotMsg) *DeltaMsg {
 	return delta
 }
 
+// hexChanged checks all mutable HexDTO fields. Coordinates (Q, R) are immutable.
+// If new fields are added to HexDTO, update this function or deltas will desync.
 func hexChanged(prev, curr *HexDTO) bool {
 	return prev.Owner != curr.Owner ||
 		prev.Building != curr.Building ||

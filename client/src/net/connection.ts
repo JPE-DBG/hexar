@@ -11,6 +11,7 @@ export interface ConnectionHandlers {
   onSnapshot: (msg: SnapshotMsg) => void;
   onDelta: (msg: DeltaMsg) => void;
   onWelcome: (msg: WelcomeMsg) => void;
+  onReconnecting?: (attempt: number, max: number) => void;
   onDisconnect?: () => void;
 }
 
@@ -75,6 +76,7 @@ export class Connection {
         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 16000);
         this.reconnectAttempts++;
         console.log(`disconnected, reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+        this.handlers.onReconnecting?.(this.reconnectAttempts, this.maxReconnectAttempts);
         setTimeout(() => this.connect(), delay);
       } else {
         console.log('max reconnect attempts reached');

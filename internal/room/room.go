@@ -98,11 +98,7 @@ func (r *Room) OnDisconnect(pid game.PlayerID, c ClientSender) {
 
 	if !r.state.Over {
 		timer := time.AfterFunc(disconnectGrace, func() {
-			r.mu.Lock()
-			defer r.mu.Unlock()
-			if !r.state.Over {
-				game.ForfeitPlayer(r.state, pid)
-			}
+			r.EnqueueAction(game.Action{Type: game.ActionForfeit, Player: pid})
 		})
 		r.disconnectTimers[pid] = timer
 	}

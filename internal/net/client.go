@@ -41,6 +41,9 @@ func (c *Client) SendSnapshot(state *game.GameState) {
 		log.Printf("marshal error: %v", err)
 		return
 	}
+	if _, isDelta := msg.(*DeltaMsg); isDelta && len(data) > 500 {
+		log.Printf("delta over budget: %d bytes", len(data))
+	}
 	select {
 	case c.send <- data:
 	default:

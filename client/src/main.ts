@@ -87,6 +87,26 @@ function showVictory(isWinner: boolean) {
 
 let disconnectOverlay: HTMLElement | null = null;
 
+let reconnectBanner: HTMLElement | null = null;
+
+function showReconnecting(attempt: number, max: number) {
+  if (!reconnectBanner) {
+    reconnectBanner = document.createElement('div');
+    reconnectBanner.style.cssText = `
+      position:fixed;top:0;left:0;width:100%;padding:6px;text-align:center;
+      background:#c0392b;color:#fff;font-family:monospace;font-size:13px;z-index:150;
+    `;
+    document.body.appendChild(reconnectBanner);
+  }
+  reconnectBanner.textContent = `Reconnecting… (${attempt}/${max})`;
+}
+
+function hideReconnecting() {
+  reconnectBanner?.remove();
+  reconnectBanner = null;
+}
+
+
 function showDisconnectOverlay() {
   if (disconnectOverlay) return;
   disconnectOverlay = document.createElement('div');
@@ -221,8 +241,10 @@ function startGame(code: string, token: string) {
     onDelta,
     onWelcome: (msg) => {
       myPlayerId = msg.playerId;
+      hideReconnecting();
       console.log(`assigned player ${myPlayerId}`);
     },
+    onReconnecting: showReconnecting,
     onDisconnect: showDisconnectOverlay,
   });
 }
