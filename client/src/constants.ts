@@ -2,12 +2,23 @@ export const HEX_SIZE = 30;
 export const TICK_RATE = 100;
 
 export const COLORS = {
-  unclaimed: '#2d2d44',
-  player1: '#4ecdc4',
-  player2: '#ff6b6b',
-  grid: '#3d3d5c',
-  background: '#1a1a2e',
-  capital: '#ffd93d',
+  // Canvas colors — used by renderer
+  background: '#16213e',
+  unclaimed:  '#2a2a4a',
+  player1:    '#45b7d1',
+  player2:    '#e74c3c',
+  grid:       '#0f3460',
+  capital:    '#f9ca24',
+  battle:     '#f0932b',  // orange-amber, distinct from capital gold
+
+  // DOM colors — applied programmatically from TS, never hardcoded in CSS
+  pause:      '#6c3483',
+  reconnect:  '#c0392b',
+  warning:    '#f39c12',
+  accent:     '#45b7d1',  // same as player1 — single interactive accent
+  textMuted:  '#999999',
+  panelBg:    'rgba(22,33,62,0.95)',
+  overlayBg:  'rgba(14,20,40,0.88)',
 } as const;
 
 // Economy constants — mirrors internal/game/constants.go

@@ -12,6 +12,24 @@ function darken(color: string, amount: number): string {
   return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
 }
 
+function lighten(color: string, amount: number): string {
+  const n = parseInt(color.slice(1), 16);
+  const r = Math.min(255, (n >> 16) + Math.round(amount * 255));
+  const g = Math.min(255, ((n >> 8) & 0xff) + Math.round(amount * 255));
+  const b = Math.min(255, (n & 0xff) + Math.round(amount * 255));
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+interface Effect {
+  type: 'flash' | 'floater';
+  q: number;
+  r: number;
+  color: string;
+  text?: string;
+  startTime: number;
+  duration: number;
+}
+
 export class Renderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -20,6 +38,8 @@ export class Renderer {
   private selectedHex: { q: number; r: number } | null = null;
   private state: GameState | null = null;
   private dropMap = new Set<string>();
+  private effects: Effect[] = [];
+  private lastFloaterTime = new Map<string, number>();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -60,6 +80,18 @@ export class Renderer {
     this.dropMap = keys;
   }
 
+  addCaptureFlash(q: number, r: number, color: string) {
+    this.effects.push({ type: 'flash', q, r, color, startTime: Date.now(), duration: 350 });
+  }
+
+  addFloater(q: number, r: number, text: string) {
+    const key = `${q},${r}`;
+    const now = Date.now();
+    if (now - (this.lastFloaterTime.get(key) ?? 0) < 2000) return;
+    this.lastFloaterTime.set(key, now);
+    this.effects.push({ type: 'floater', q, r, color: COLORS.capital, text, startTime: now, duration: 900 });
+  }
+
   render(state: GameState) {
     const ctx = this.ctx;
     ctx.fillStyle = COLORS.background;
@@ -78,6 +110,9 @@ export class Renderer {
     for (const battle of state.battles) {
       this.drawBattle(battle);
     }
+
+    // Effects always last — on top of everything
+    this.drawEffects();
   }
 
   private hexPath(px: number, py: number) {
@@ -100,11 +135,38 @@ export class Renderer {
     const py = y + this.offsetY;
 
     this.hexPath(px, py);
-    ctx.fillStyle = hex.capital ? darken(this.hexColor(hex), 0.25) : this.hexColor(hex);
+
+    const baseColor = this.hexColor(hex);
+    if (hex.owner > 0) {
+      const grad = ctx.createRadialGradient(px, py, 0, px, py, HEX_SIZE * 0.85);
+      grad.addColorStop(0, lighten(baseColor, hex.capital ? 0.08 : 0.15));
+      grad.addColorStop(1, darken(baseColor, hex.capital ? 0.35 : 0.2));
+      ctx.fillStyle = grad;
+      ctx.shadowColor = baseColor;
+      ctx.shadowBlur = 8;
+    } else {
+      const grad = ctx.createRadialGradient(px, py, 0, px, py, HEX_SIZE * 0.85);
+      grad.addColorStop(0, lighten(baseColor, 0.04));
+      grad.addColorStop(1, baseColor);
+      ctx.fillStyle = grad;
+    }
     ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.strokeStyle = COLORS.grid;
     ctx.lineWidth = 1;
     ctx.stroke();
+
+    // Capital icon on empty capital hexes
+    if (hex.capital && hex.building === 0) {
+      ctx.beginPath();
+      ctx.moveTo(px, py - 8);
+      ctx.lineTo(px + 5, py - 3);
+      ctx.lineTo(px, py + 2);
+      ctx.lineTo(px - 5, py - 3);
+      ctx.closePath();
+      ctx.fillStyle = COLORS.capital;
+      ctx.fill();
+    }
 
     if (hex.building > 0) {
       const label = BUILDING_LABELS[hex.building] ?? '?';
@@ -114,7 +176,6 @@ export class Renderer {
       ctx.textBaseline = 'middle';
 
       if (hex.building === BUILDING_POWER && hex.owner > 0 && this.state) {
-        // Show effective power: capital innate + building level + Iron Grip
         const ownerPlayer = this.state.players.get(String(hex.owner));
         const capitalBonus = hex.capital ? CAPITAL_POWER : 0;
         const effectivePower = capitalBonus + hex.level + (ownerPlayer?.tech?.[TECH_IRON_GRIP] ? 1 : 0);
@@ -125,7 +186,6 @@ export class Renderer {
     }
 
     // Small yellow power badge for non-Power owned hexes that have power > 0
-    // (capital innate power, or Iron Grip on economy/research/empty hexes)
     if (hex.owner > 0 && hex.building !== BUILDING_POWER && this.state) {
       const ownerPlayer = this.state.players.get(String(hex.owner));
       let powerBadge = 0;
@@ -173,7 +233,6 @@ export class Renderer {
     }
 
     // Fortify timer: shrinking lime border segments (clockwise from top)
-    // Dimmed when a battle is active on this hex — battle takes visual priority
     if (hex.fortifyTimer > 0) {
       const hasBattle = this.state?.battles.some(b => b.dq === hex.q && b.dr === hex.r) ?? false;
       this.drawFortifySegments(px, py, hex.fortifyTimer / FORTIFY_DURATION, hasBattle);
@@ -184,8 +243,6 @@ export class Renderer {
     if (fraction <= 0) return;
     const ctx = this.ctx;
 
-    // 6 corners: angle = (60*i - 30)° for i=0..5
-    // i=0: -30° upper-right, i=5: 270° top
     const corners: { x: number; y: number }[] = [];
     for (let i = 0; i < 6; i++) {
       const angle = (Math.PI / 180) * (60 * i - 30);
@@ -198,7 +255,7 @@ export class Renderer {
     const fullSides = Math.floor(totalSides);
     const partial = totalSides - fullSides;
 
-    ctx.strokeStyle = '#c8ff70'; // Bright lime — readable on both P1 teal and P2 red
+    ctx.strokeStyle = '#c8ff70';
     ctx.lineWidth = dimmed ? 1.5 : 3;
     ctx.lineCap = 'round';
     if (dimmed) ctx.globalAlpha = 0.4;
@@ -228,28 +285,27 @@ export class Renderer {
     const cap = Math.min(COUNTER_SPEND_CAP, Math.floor(battle.timeLeft));
     const canBoost = battle.counterBoost < cap;
 
-    // Amber pulse only while counter-spend is still actionable; dim static ring when capped
     if (canBoost) {
       const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
       this.hexPath(px, py);
-      ctx.strokeStyle = `rgba(255, 200, 0, ${pulse})`;
+      ctx.strokeStyle = `rgba(240, 147, 43, ${pulse})`;
       ctx.lineWidth = 3;
       ctx.stroke();
     } else {
       this.hexPath(px, py);
-      ctx.strokeStyle = 'rgba(255, 200, 0, 0.25)';
+      ctx.strokeStyle = 'rgba(240, 147, 43, 0.25)';
       ctx.lineWidth = 2;
       ctx.stroke();
     }
 
     // Timer
     ctx.font = 'bold 11px monospace';
-    ctx.fillStyle = '#ffd93d';
+    ctx.fillStyle = COLORS.capital;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillText(`${battle.timeLeft.toFixed(1)}s`, px, py - 12);
 
-    // 3 boost dots: filled amber = used, outline amber = available, gray = time-capped
+    // 3 boost dots
     const dotR = 4, spacing = 11;
     for (let i = 0; i < 3; i++) {
       const dx = px + (i - 1) * spacing;
@@ -257,16 +313,50 @@ export class Renderer {
       ctx.beginPath();
       ctx.arc(dx, dy, dotR, 0, Math.PI * 2);
       if (i < battle.counterBoost) {
-        ctx.fillStyle = '#ffd93d';
+        ctx.fillStyle = COLORS.battle;
         ctx.fill();
       } else if (i < cap) {
-        ctx.strokeStyle = '#ffd93d';
+        ctx.strokeStyle = COLORS.battle;
         ctx.lineWidth = 1.5;
         ctx.stroke();
       } else {
         ctx.strokeStyle = '#555';
         ctx.lineWidth = 1.5;
         ctx.stroke();
+      }
+    }
+  }
+
+  private drawEffects() {
+    const ctx = this.ctx;
+    const now = Date.now();
+    this.effects = this.effects.filter(e => now - e.startTime < e.duration);
+
+    for (const e of this.effects) {
+      const t = (now - e.startTime) / e.duration;
+      const { x, y } = hexToPixel({ q: e.q, r: e.r });
+      const px = x + this.offsetX;
+      const py = y + this.offsetY;
+
+      if (e.type === 'flash') {
+        const alpha = (1 - t) * 0.55;
+        const alphaHex = Math.round(alpha * 255).toString(16).padStart(2, '0');
+        ctx.save();
+        this.hexPath(px, py);
+        ctx.fillStyle = e.color + alphaHex;
+        ctx.fill();
+        ctx.restore();
+      } else if (e.type === 'floater' && e.text) {
+        const alpha = 1 - t;
+        const dy = -22 * t;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.font = 'bold 11px monospace';
+        ctx.fillStyle = e.color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(e.text, px, py + dy);
+        ctx.restore();
       }
     }
   }

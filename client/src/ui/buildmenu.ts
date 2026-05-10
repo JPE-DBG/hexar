@@ -12,6 +12,7 @@ import {
   GARRISON_MAX_BOOST,
   TECH_COMPOUND_GROWTH, TECH_PROSPERITY, TECH_RECLAMATION,
   TECH_VANGUARD, TECH_GARRISON, TECH_FORTIFY, TECH_IRON_GRIP,
+  COLORS,
 } from '../constants';
 
 export interface BuildMenuCallbacks {
@@ -29,18 +30,24 @@ const BUILD_COSTS: Record<number, number> = {
 };
 const BUILDING_NAMES: Record<number, string> = { [BUILDING_GOLD]: 'Gold', [BUILDING_POWER]: 'Power', [BUILDING_RESEARCH]: 'Research' };
 
+const ICON_GOLD     = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="vertical-align:-2px;margin-right:3px"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="1.3"/><text x="6.5" y="9.5" text-anchor="middle" fill="currentColor" font-size="6.5" font-family="monospace" font-weight="bold">G</text></svg>`;
+const ICON_POWER    = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="vertical-align:-2px;margin-right:3px"><line x1="6.5" y1="1" x2="6.5" y2="12" stroke="currentColor" stroke-width="1.5"/><line x1="3.5" y1="8" x2="9.5" y2="8" stroke="currentColor" stroke-width="1.5"/><polygon points="6.5,0 4.5,3.5 8.5,3.5" fill="currentColor"/></svg>`;
+const ICON_RESEARCH = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="vertical-align:-2px;margin-right:3px"><path d="M4,11 L6.5,2 L9,11" stroke="currentColor" stroke-width="1.3" fill="none"/><ellipse cx="6.5" cy="10.5" rx="3.5" ry="1.5" stroke="currentColor" stroke-width="1.2" fill="none"/><line x1="5" y1="7" x2="8" y2="7" stroke="currentColor" stroke-width="1"/></svg>`;
+const BUILDING_ICONS: Record<number, string> = {
+  [BUILDING_GOLD]: ICON_GOLD,
+  [BUILDING_POWER]: ICON_POWER,
+  [BUILDING_RESEARCH]: ICON_RESEARCH,
+};
+
 function upgradeDelta(building: number, currentLevel: number, player?: PlayerDTO | null): string {
   if (building === BUILDING_GOLD) {
     let next = (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * (currentLevel + 1)) * GOLD_BONUS_MULTIPLIER;
     let curr = currentLevel === 0 ? BASE_INCOME_PER_SEC : (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * currentLevel) * GOLD_BONUS_MULTIPLIER;
 
-    // Apply Compound Growth multiplier
     if (player?.tech?.[TECH_COMPOUND_GROWTH]) {
       next *= COMPOUND_GROWTH_MULTIPLIER;
       if (currentLevel > 0) curr *= COMPOUND_GROWTH_MULTIPLIER;
     }
-
-    // Apply Prosperity bonus
     if (player?.tech?.[TECH_PROSPERITY]) {
       next += PROSPERITY_BONUS;
       if (currentLevel > 0) curr += PROSPERITY_BONUS;
@@ -64,20 +71,13 @@ function demolishRefund(building: number, level: number): number {
 
 function effectiveAttackCost(player: PlayerDTO | null, targetHex: HexDTO): number {
   if (!player) return ATTACK_COST;
-
   let cost = ATTACK_COST;
-
-  // Reclamation: -50g if previously owned by attacker
   if (player.tech?.[TECH_RECLAMATION] && targetHex.previousOwner === player.id) {
     cost -= RECLAMATION_ATTACK_COST;
   }
-
-  // Vanguard: -50g if timer active (within 12s of last capture)
   if (player.tech?.[TECH_VANGUARD] && player.vanguardTimer > 0) {
     cost -= VANGUARD_ATTACK_COST;
   }
-
-  // Both techs stack: 100 - 50 - 50 = 0 (free attack when reclaiming during Vanguard)
   return Math.max(0, cost);
 }
 
@@ -86,19 +86,18 @@ function countAdjacentOwned(hex: HexDTO, state: GameState, owner: number): numbe
   for (const n of neighbors({ q: hex.q, r: hex.r })) {
     const key = `${n.q},${n.r}`;
     const hs = state.hexes.get(key);
-    if (hs && hs.owner === owner) {
-      count++;
-    }
+    if (hs && hs.owner === owner) count++;
   }
   return count;
 }
 
 function upgradeLabel(building: number, currentLevel: number, player?: PlayerDTO | null): string {
   const name = BUILDING_NAMES[building] ?? '?';
+  const icon = BUILDING_ICONS[building] ?? '';
   const targetLevel = currentLevel + 1;
   const cost = upgradeCost(building, currentLevel);
   const delta = upgradeDelta(building, currentLevel, player);
-  return `${name} ${targetLevel} (${cost}g) ${delta}`;
+  return `${icon}${name} ${targetLevel} (${cost}g) ${delta}`;
 }
 
 export class BuildMenu {
@@ -110,13 +109,7 @@ export class BuildMenu {
     this.callbacks = callbacks;
     this.el = document.createElement('div');
     this.el.id = 'build-menu';
-    this.el.style.cssText = `
-      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.8); padding: 8px 16px; border-radius: 8px;
-      display: none; gap: 8px; align-items: center; font-family: monospace;
-      color: #e0e0e0; font-size: 13px; height: 40px; box-sizing: border-box;
-      flex-wrap: nowrap; white-space: nowrap;
-    `;
+    this.el.style.background = COLORS.panelBg;
     parent.appendChild(this.el);
 
     this.el.addEventListener('pointerdown', (e) => {
@@ -145,7 +138,6 @@ export class BuildMenu {
     }
 
     const defPower = this.calcPower(hex, player, state ?? undefined);
-    // Garrison activates immediately when battle starts, so attacker must exceed defPower + garrison
     let garrisonBonus = 0;
     if (isEnemy && state && hex.owner > 0) {
       const ownerPlayer = state.players.get(String(hex.owner));
@@ -174,10 +166,9 @@ export class BuildMenu {
 
     const ownerPlayer = state?.players.get(String(hex.owner));
     let powerStr = `Pwr:${defPower}`;
-    // Garrison: shown as defense-only note, not part of static power total
     if (state && hex.owner > 0 && ownerPlayer?.tech?.[TECH_GARRISON]) {
-      const garrisonBonus = Math.min(GARRISON_MAX_BOOST, countAdjacentOwned(hex, state, hex.owner));
-      if (garrisonBonus > 0) powerStr += ` +${garrisonBonus} def`;
+      const gb = Math.min(GARRISON_MAX_BOOST, countAdjacentOwned(hex, state, hex.owner));
+      if (gb > 0) powerStr += ` +${gb} def`;
     }
     let html = `<span style="margin-right:4px">[${hex.q},${hex.r}] ${powerStr}</span>`;
 
@@ -193,16 +184,14 @@ export class BuildMenu {
         html += this.makeBtn(upgradeLabel(hex.building, hex.level, player), gold >= upgCost, 'upgrade');
       }
 
-      html += `<span style="border-left:1px solid #555;height:20px;margin:0 8px;display:inline-block;vertical-align:middle"></span>`;
+      html += `<span class="divider-v"></span>`;
       html += this.makeBtn(`🗑${hasBuilding ? ` (+${refund}g)` : ''}`, hasBuilding, 'demolish');
 
-      // Sell hex: voluntary drop at any time (no battle, non-capital)
       if (!hex.capital && !battle) {
         const sellRefund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
         html += this.makeBtn(`Sell hex${sellRefund > 0 ? ` (+${sellRefund}g)` : ''}`, true, 'drop-hex');
       }
 
-      // Fortify: available when Fortify tech is owned and hex is not already fortified
       if (player?.tech?.[TECH_FORTIFY] && hex.fortifyTimer <= 0 && !battle) {
         html += this.makeBtn(`Fortify (${FORTIFY_COST}g)`, gold >= FORTIFY_COST, 'fortify');
       }
@@ -220,18 +209,14 @@ export class BuildMenu {
   }
 
   private makeBtn(label: string, enabled: boolean, action: string): string {
-    const style = enabled
-      ? 'background:#4a4a6a;color:#fff;border:1px solid #6a6a8a;padding:4px 10px;border-radius:4px;cursor:pointer;margin:0 2px'
-      : 'background:#2a2a3a;color:#666;border:1px solid #3a3a4a;padding:4px 10px;border-radius:4px;margin:0 2px';
-    return `<button style="${style}" data-action="${action}" ${enabled ? '' : 'disabled'}>${label}</button>`;
+    const cls = enabled ? 'btn-sm btn-active' : 'btn-sm btn-disabled';
+    return `<button class="${cls}" data-action="${action}" ${enabled ? '' : 'disabled'}>${label}</button>`;
   }
 
   private calcPower(hex: HexDTO, _player?: PlayerDTO | null, state?: GameState): number {
     let p = 0;
     if (hex.capital) p = CAPITAL_POWER;
     if (hex.building === BUILDING_POWER) p += hex.level;
-    // Iron Grip: use HEX OWNER's tech — server applies it per-owner in hexEffectivePower()
-    // Garrison NOT included: server only applies it in resolveBattle, not ValidateAttack
     if (state && hex.owner > 0) {
       const ownerPlayer = state.players.get(String(hex.owner));
       if (ownerPlayer?.tech?.[TECH_IRON_GRIP]) p++;

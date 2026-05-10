@@ -1,16 +1,10 @@
+import { COLORS } from '../constants';
+
 export interface LobbyResult {
   code: string;
   token: string;
   playerId: number;
 }
-
-const STYLE = `
-  position:fixed;top:0;left:0;width:100%;height:100%;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:#1a1a2e;z-index:1000;font-family:monospace;color:#e0e0e0;
-`;
-
-const BTN = `padding:12px 32px;font-size:18px;border:none;border-radius:4px;cursor:pointer;font-family:monospace;`;
 
 export class LobbyUI {
   private el: HTMLElement;
@@ -19,24 +13,23 @@ export class LobbyUI {
   constructor(container: HTMLElement, onReady: (result: LobbyResult) => void) {
     this.onReady = onReady;
     this.el = document.createElement('div');
-    this.el.style.cssText = STYLE;
+    this.el.className = 'overlay';
+    this.el.style.background = COLORS.background;
     this.el.innerHTML = `
-      <h1 style="font-size:48px;color:#4ecdc4;margin-bottom:40px;letter-spacing:4px">HEXAR</h1>
-      <div id="lobby-main" style="display:flex;flex-direction:column;gap:16px;align-items:center">
-        <button id="createBtn" style="${BTN}background:#4ecdc4;color:#1a1a2e">Create Game</button>
+      <h1 class="lobby-title" style="font-size:48px;color:${COLORS.accent}">HEXAR</h1>
+      <div id="lobby-main" class="lobby-main">
+        <button id="createBtn" class="btn" style="background:${COLORS.accent};color:${COLORS.background}">Create Game</button>
         <div style="color:#555;margin:4px 0">— or —</div>
-        <div style="display:flex;gap:8px">
-          <input id="codeInput" placeholder="ROOM CODE" maxlength="4"
-            style="padding:12px;font-size:18px;background:#2a2a4e;color:#e0e0e0;border:1px solid #444;
-                   border-radius:4px;width:150px;font-family:monospace;text-transform:uppercase;text-align:center">
-          <button id="joinBtn" style="${BTN}background:#ff6b6b;color:#fff">Join</button>
+        <div class="lobby-row">
+          <input id="codeInput" class="code-input" placeholder="ROOM CODE" maxlength="4">
+          <button id="joinBtn" class="btn" style="background:${COLORS.player2};color:#fff">Join</button>
         </div>
-        <div id="lobbyStatus" style="color:#aaa;margin-top:8px;min-height:28px;text-align:center"></div>
+        <div id="lobbyStatus" class="lobby-status" style="color:${COLORS.textMuted}"></div>
       </div>
-      <div id="lobby-waiting" style="display:none;flex-direction:column;align-items:center;gap:16px">
-        <div style="color:#aaa;font-size:14px">Share this code with your opponent:</div>
-        <div id="displayCode" style="font-size:64px;color:#4ecdc4;letter-spacing:12px;font-weight:bold"></div>
-        <button id="enterBtn" style="${BTN}background:#4ecdc4;color:#1a1a2e;margin-top:8px">Enter Game</button>
+      <div id="lobby-waiting" class="lobby-waiting">
+        <div style="color:${COLORS.textMuted};font-size:14px">Share this code with your opponent:</div>
+        <div id="displayCode" class="lobby-code" style="font-size:64px;color:${COLORS.accent}"></div>
+        <button id="enterBtn" class="btn" style="background:${COLORS.accent};color:${COLORS.background};margin-top:8px">Enter Game</button>
       </div>
     `;
     container.appendChild(this.el);
