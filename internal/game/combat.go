@@ -104,7 +104,7 @@ func ApplyAttack(state *GameState, action Action) {
 	if diff > InstantTakeoverMinDiff && hs.FortifyTimer <= 0 {
 		transferHex(state, action.Target, action.Player)
 	} else {
-		duration := 5.0 + float64(attackerPower+defenderPower)/2.0
+		duration := BaseBattleDuration + float64(attackerPower+defenderPower)/2.0
 		if player.Tech[TechSiegeMastery] {
 			duration = max(SiegeMasteryMinDur, duration*SiegeMasteryMult)
 		}

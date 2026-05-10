@@ -15,6 +15,7 @@ import {
   COUNTER_SPEND_COST, COUNTER_SPEND_CAP,
   GOLD_BUILD_COST, POWER_BUILD_COST, RESEARCH_BUILD_COST,
   PROSPERITY_BONUS, COMPOUND_GROWTH_MULTIPLIER,
+  TECH_PROSPERITY, TECH_COMPOUND_GROWTH, TECH_IRON_GRIP,
 } from './constants';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -201,10 +202,10 @@ function hexIncome(hex: HexDTO, player?: PlayerDTO | null): number {
     return BASE_INCOME_PER_SEC;
   }
   let income = (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * hex.level) * GOLD_BONUS_MULTIPLIER;
-  if (player?.tech?.[10]) {
+  if (player?.tech?.[TECH_COMPOUND_GROWTH]) {
     income *= COMPOUND_GROWTH_MULTIPLIER;
   }
-  if (player?.tech?.[2]) {
+  if (player?.tech?.[TECH_PROSPERITY]) {
     income += PROSPERITY_BONUS;
   }
   return income;
@@ -227,7 +228,7 @@ function bestAdjacentPower(gs: GameState, playerId: number, target: HexDTO, play
     let p = 0;
     if (hs.capital) p = CAPITAL_POWER;
     if (hs.building === BUILDING_POWER) p += hs.level;
-    if (player?.tech?.[9]) p++;
+    if (player?.tech?.[TECH_IRON_GRIP]) p++;
     if (p > best) best = p;
   }
   return best;

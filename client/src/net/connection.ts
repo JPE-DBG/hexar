@@ -1,5 +1,9 @@
 import { SnapshotMsg, DeltaMsg } from '../state/state';
 
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_INITIAL_DELAY = 1000; // ms, doubles each attempt
+const RECONNECT_MAX_DELAY = 16000;    // ms cap on backoff
+
 export interface WelcomeMsg {
   type: 'welcome';
   playerId: number;
@@ -21,7 +25,7 @@ export class Connection {
   private code: string;
   private token: string;
   private reconnectAttempts = 0;
-  private readonly maxReconnectAttempts = 5;
+  private readonly maxReconnectAttempts = MAX_RECONNECT_ATTEMPTS;
   private closed = false;
 
   constructor(code: string, token: string, handlers: ConnectionHandlers) {
@@ -73,7 +77,7 @@ export class Connection {
     this.ws.onclose = () => {
       if (this.closed) return;
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
-        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 16000);
+        const delay = Math.min(RECONNECT_INITIAL_DELAY * Math.pow(2, this.reconnectAttempts), RECONNECT_MAX_DELAY);
         this.reconnectAttempts++;
         console.log(`disconnected, reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
         this.handlers.onReconnecting?.(this.reconnectAttempts, this.maxReconnectAttempts);

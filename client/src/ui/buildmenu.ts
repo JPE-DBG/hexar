@@ -10,6 +10,8 @@ import {
   PROSPERITY_BONUS, COMPOUND_GROWTH_MULTIPLIER,
   RECLAMATION_ATTACK_COST, VANGUARD_ATTACK_COST,
   GARRISON_MAX_BOOST,
+  TECH_COMPOUND_GROWTH, TECH_PROSPERITY, TECH_RECLAMATION,
+  TECH_VANGUARD, TECH_GARRISON, TECH_FORTIFY, TECH_IRON_GRIP,
 } from '../constants';
 
 export interface BuildMenuCallbacks {
@@ -33,13 +35,13 @@ function upgradeDelta(building: number, currentLevel: number, player?: PlayerDTO
     let curr = currentLevel === 0 ? BASE_INCOME_PER_SEC : (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * currentLevel) * GOLD_BONUS_MULTIPLIER;
 
     // Apply Compound Growth multiplier
-    if (player?.tech?.[10]) {
+    if (player?.tech?.[TECH_COMPOUND_GROWTH]) {
       next *= COMPOUND_GROWTH_MULTIPLIER;
       if (currentLevel > 0) curr *= COMPOUND_GROWTH_MULTIPLIER;
     }
 
     // Apply Prosperity bonus
-    if (player?.tech?.[2]) {
+    if (player?.tech?.[TECH_PROSPERITY]) {
       next += PROSPERITY_BONUS;
       if (currentLevel > 0) curr += PROSPERITY_BONUS;
     }
@@ -66,12 +68,12 @@ function effectiveAttackCost(player: PlayerDTO | null, targetHex: HexDTO): numbe
   let cost = ATTACK_COST;
 
   // Reclamation: -50g if previously owned by attacker
-  if (player.tech?.[3] && targetHex.previousOwner === player.id) {
+  if (player.tech?.[TECH_RECLAMATION] && targetHex.previousOwner === player.id) {
     cost -= RECLAMATION_ATTACK_COST;
   }
 
   // Vanguard: -50g if timer active (within 12s of last capture)
-  if (player.tech?.[4] && player.vanguardTimer > 0) {
+  if (player.tech?.[TECH_VANGUARD] && player.vanguardTimer > 0) {
     cost -= VANGUARD_ATTACK_COST;
   }
 
@@ -147,7 +149,7 @@ export class BuildMenu {
     let garrisonBonus = 0;
     if (isEnemy && state && hex.owner > 0) {
       const ownerPlayer = state.players.get(String(hex.owner));
-      if (ownerPlayer?.tech?.[5]) {
+      if (ownerPlayer?.tech?.[TECH_GARRISON]) {
         garrisonBonus = Math.min(GARRISON_MAX_BOOST, countAdjacentOwned(hex, state, hex.owner));
       }
     }
@@ -161,7 +163,7 @@ export class BuildMenu {
       gold >= GOLD_BUILD_COST, gold >= RESEARCH_BUILD_COST, gold >= upgCost,
       canAttack, attackerPower, defPower,
       battle ? Math.floor(battle.timeLeft) : -1,
-      hex.fortifyTimer > 0 ? 1 : 0, player?.tech?.[1] ? 1 : 0,
+      hex.fortifyTimer > 0 ? 1 : 0, player?.tech?.[TECH_FORTIFY] ? 1 : 0,
     ].join('|');
 
     if (key === this.lastKey) {
@@ -173,7 +175,7 @@ export class BuildMenu {
     const ownerPlayer = state?.players.get(String(hex.owner));
     let powerStr = `Pwr:${defPower}`;
     // Garrison: shown as defense-only note, not part of static power total
-    if (state && hex.owner > 0 && ownerPlayer?.tech?.[5]) {
+    if (state && hex.owner > 0 && ownerPlayer?.tech?.[TECH_GARRISON]) {
       const garrisonBonus = Math.min(GARRISON_MAX_BOOST, countAdjacentOwned(hex, state, hex.owner));
       if (garrisonBonus > 0) powerStr += ` +${garrisonBonus} def`;
     }
@@ -201,7 +203,7 @@ export class BuildMenu {
       }
 
       // Fortify: available when Fortify tech is owned and hex is not already fortified
-      if (player?.tech?.[1] && hex.fortifyTimer <= 0 && !battle) {
+      if (player?.tech?.[TECH_FORTIFY] && hex.fortifyTimer <= 0 && !battle) {
         html += this.makeBtn(`Fortify (${FORTIFY_COST}g)`, gold >= FORTIFY_COST, 'fortify');
       }
     } else if (isEnemy) {
@@ -232,7 +234,7 @@ export class BuildMenu {
     // Garrison NOT included: server only applies it in resolveBattle, not ValidateAttack
     if (state && hex.owner > 0) {
       const ownerPlayer = state.players.get(String(hex.owner));
-      if (ownerPlayer?.tech?.[9]) p++; // TechIronGrip
+      if (ownerPlayer?.tech?.[TECH_IRON_GRIP]) p++;
     }
     return p;
   }

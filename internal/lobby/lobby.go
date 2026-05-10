@@ -23,7 +23,7 @@ type Entry struct {
 func (e *Entry) AddSession() (token string, pid game.PlayerID, err error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if len(e.sessions) >= 2 {
+	if len(e.sessions) >= maxPlayersPerRoom {
 		return "", 0, errors.New("room full")
 	}
 	pid = game.PlayerID(len(e.sessions) + 1)
@@ -50,6 +50,12 @@ type Lobby struct {
 func New() *Lobby {
 	return &Lobby{rooms: make(map[string]*Entry)}
 }
+
+const (
+	maxPlayersPerRoom  = 2
+	roomCodeBytes      = 2  // produces a 4-char uppercase hex code
+	sessionTokenBytes  = 16 // produces a 32-char hex token
+)
 
 func (l *Lobby) Create() (code, token string, pid game.PlayerID) {
 	l.mu.Lock()
@@ -84,13 +90,13 @@ func (l *Lobby) Get(code string) (*Entry, bool) {
 }
 
 func randCode() string {
-	b := make([]byte, 2)
+	b := make([]byte, roomCodeBytes)
 	rand.Read(b)
 	return strings.ToUpper(hex.EncodeToString(b))
 }
 
 func randToken() string {
-	b := make([]byte, 16)
+	b := make([]byte, sessionTokenBytes)
 	rand.Read(b)
 	return hex.EncodeToString(b)
 }

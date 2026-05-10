@@ -10,6 +10,11 @@ import (
 	"github.com/coder/websocket"
 )
 
+const (
+	sendBufferSize = 64  // outbound message channel capacity per client
+	maxDeltaBytes  = 500 // M6 success criterion: steady-state delta must stay under this
+)
+
 type Client struct {
 	conn         *websocket.Conn
 	room         *room.Room
@@ -22,7 +27,7 @@ func NewClient(conn *websocket.Conn, r *room.Room) *Client {
 	return &Client{
 		conn: conn,
 		room: r,
-		send: make(chan []byte, 64),
+		send: make(chan []byte, sendBufferSize),
 	}
 }
 
@@ -41,7 +46,7 @@ func (c *Client) SendSnapshot(state *game.GameState) {
 		log.Printf("marshal error: %v", err)
 		return
 	}
-	if _, isDelta := msg.(*DeltaMsg); isDelta && len(data) > 500 {
+	if _, isDelta := msg.(*DeltaMsg); isDelta && len(data) > maxDeltaBytes {
 		log.Printf("delta over budget: %d bytes", len(data))
 	}
 	select {

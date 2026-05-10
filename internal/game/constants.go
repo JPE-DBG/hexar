@@ -58,6 +58,7 @@ const (
 
 	SiegeMasteryMult   = 0.6
 	SiegeMasteryMinDur = 3.0
+	BaseBattleDuration = 5.0 // base seconds added to (attackerPower + defenderPower) / 2
 
 	ProsperityBonus          = 1.0
 	CompoundGrowthMultiplier = 1.25

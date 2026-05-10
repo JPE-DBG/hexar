@@ -8,6 +8,7 @@ import (
 )
 
 const disconnectGrace = 30 * time.Second
+const actionQueueSize = 256
 
 type ClientSender interface {
 	SendSnapshot(state *game.GameState)
@@ -41,7 +42,7 @@ func New() *Room {
 		clientPlayer:     make(map[ClientSender]game.PlayerID),
 		activeClients:    make(map[game.PlayerID]ClientSender),
 		disconnectTimers: make(map[game.PlayerID]*time.Timer),
-		actions:          make(chan game.Action, 256),
+		actions:          make(chan game.Action, actionQueueSize),
 		stop:             make(chan struct{}),
 	}
 }
