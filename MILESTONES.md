@@ -239,7 +239,6 @@ Canvas render (#27) ← click detection (#28), all UI (#29-33)
 - 3-4 player mode
 - Alliances / diplomacy
 - Special hex types (terrain)
-- Hero units
 - Ranked ladder / matchmaking
 - Persistent accounts (OAuth)
 - Match history (SQLite)

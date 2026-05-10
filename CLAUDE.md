@@ -560,6 +560,44 @@ hexar/
 | Cumulative reconnect budget (120s total, not reset per disconnect) | Per-disconnect timer allowed repeated short disconnects to accumulate unlimited free pause time |
 | Win reason (`state.WinReason`: `"capital"` / `"forfeit"`) | Victory screen always showed "Capital captured" even when opponent forfeited |
 
+**M7: Visual Polish**
+
+Goal: Make the game look modern and appealing to retain real players.
+
+Sequencing within M7:
+1. Color palette + CSS variables — establishes visual identity, unblocks everything else
+2. Hex renderer polish — gradients, borders, ownership glow (biggest perceived quality jump)
+3. Build menu redesign — Svelte component + SVG icons for buildings/techs (already listed as planned swap in Tech Stack)
+4. Capture/battle effect layer — separate 60fps `requestAnimationFrame` animation loop layered on top of 100ms game-state render; capture flash, battle pulse, floating `+gold` numbers
+5. Lobby + overlay screens — animated hex background, styled room code entry, themed victory/pause/waiting screens
+6. HUD animations — resource bar, animated gold counter
+
+Technical notes:
+- Keep Canvas + DOM split; cosmetic animation loop has no game state access — purely visual
+- CSS file replaces inline `style.cssText` strings; CSS variables for palette
+- If effects grow complex (particles, shaders), migrate renderer to PixiJS (GPU-accelerated); cost is rewriting `client/src/render/renderer.ts` (~500 lines)
+
+**M8: Testing**
+
+Goal: Build confidence before exposing to real users; catch regressions as the visual layer grows.
+
+Three layers in priority order:
+1. **Go headless game tests** (`internal/game/`) — `RunTick` is a pure function, fully testable today. Table-driven tests for: economy ticks, combat resolution, forfeit processing, tech stacking, auto-drop, victory conditions.
+2. **Room/lobby integration tests** — spin up a real `Room` + fake `ClientSender` mocks; drive `OnConnect` / `EnqueueAction` / `OnDisconnect`; assert state transitions (waiting→active, pause/resume, cumulative grace budget).
+3. **Playwright end-to-end** — two browser instances against a real server; test the full create→join→play→victory path and the disconnect/reconnect flow.
+
+**M9: Deployment**
+
+Goal: Make the game accessible to real players outside localhost.
+
+Steps:
+1. `Dockerfile` — multi-stage build (Go builder + distroless/alpine runtime); single binary serves API + static files
+2. Deploy to **Fly.io** — free tier supports persistent WebSocket connections; Fly handles TLS so WebSockets upgrade to `wss://`
+3. Domain + DNS wired to Fly app
+4. Client WebSocket URL switches to `wss://` in production builds via Vite env variable
+
+Known limitation: rooms are in-memory — a server restart wipes active games. Acceptable for initial deployment; future fix is SQLite-backed room state.
+
 ### Rejected Alternatives
 - **Node.js server:** Go developer, worse concurrency model for tick loops
 - **Phaser/PixiJS:** Overkill for colored hexagons + text; adds framework weight
