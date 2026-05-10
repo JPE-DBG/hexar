@@ -2,12 +2,14 @@ package net
 
 func buildDelta(prev, curr *SnapshotMsg) *DeltaMsg {
 	delta := &DeltaMsg{
-		Type:    MsgDelta,
-		Elapsed: curr.Elapsed,
-		Over:    curr.Over,
-		Winner:  curr.Winner,
-		Waiting: curr.Waiting,
-		Paused:  curr.Paused,
+		Type:          MsgDelta,
+		Elapsed:       curr.Elapsed,
+		Over:          curr.Over,
+		Winner:        curr.Winner,
+		WinReason:     curr.WinReason,
+		Waiting:       curr.Waiting,
+		Paused:        curr.Paused,
+		PauseTimeLeft: curr.PauseTimeLeft,
 	}
 
 	for _, p := range curr.Players {

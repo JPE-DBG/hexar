@@ -95,7 +95,7 @@ function hideWaitingOverlay() {
   waitingOverlay = null;
 }
 
-function showVictory(isWinner: boolean) {
+function showVictory(isWinner: boolean, winReason: string) {
   if (victoryOverlay) return;
   sessionStorage.removeItem('hexarSession');
   history.replaceState(null, '', '/');
@@ -107,8 +107,11 @@ function showVictory(isWinner: boolean) {
   `;
   const msg = isWinner ? 'You win!' : 'You lose!';
   const color = isWinner ? '#4ecdc4' : '#ff6b6b';
+  const subtitle = winReason === 'forfeit'
+    ? (isWinner ? 'Opponent forfeited' : 'You forfeited')
+    : 'Capital captured';
   victoryOverlay.innerHTML = `<div style="font-size:48px;font-weight:bold;color:${color}">${msg}</div>
-    <div style="color:#aaa;margin-top:8px;font-size:16px">Capital captured</div>`;
+    <div style="color:#aaa;margin-top:8px;font-size:16px">${subtitle}</div>`;
   document.body.appendChild(victoryOverlay);
 }
 
@@ -118,23 +121,25 @@ let reconnectBanner: HTMLElement | null = null;
 
 let pauseBanner: HTMLElement | null = null;
 
-function showPauseBanner() {
-  if (pauseBanner) return;
-  pauseBanner = document.createElement('div');
-  pauseBanner.style.cssText = `
-    position:fixed;top:0;left:0;width:100%;padding:8px;text-align:center;
-    background:#8e44ad;color:#fff;font-family:monospace;font-size:14px;z-index:150;
-  `;
-  pauseBanner.innerHTML = `<b>Game paused</b> — opponent disconnected. Waiting to reconnect… (forfeits in ${Math.round(disconnectGraceMs / 60000)}:00)`;
-  document.body.appendChild(pauseBanner);
+function updatePauseBanner(timeLeft: number) {
+  if (!pauseBanner) {
+    pauseBanner = document.createElement('div');
+    pauseBanner.style.cssText = `
+      position:fixed;top:0;left:0;width:100%;padding:8px;text-align:center;
+      background:#8e44ad;color:#fff;font-family:monospace;font-size:14px;z-index:150;
+    `;
+    document.body.appendChild(pauseBanner);
+  }
+  const mins = Math.floor(timeLeft / 60);
+  const secs = Math.floor(timeLeft % 60);
+  const countdown = `${mins}:${String(secs).padStart(2, '0')}`;
+  pauseBanner.innerHTML = `<b>Game paused</b> — opponent disconnected. Reconnect within <b>${countdown}</b> or forfeit.`;
 }
 
 function hidePauseBanner() {
   pauseBanner?.remove();
   pauseBanner = null;
 }
-
-const disconnectGraceMs = 2 * 60 * 1000;
 
 function showReconnecting(attempt: number, max: number) {
   if (!reconnectBanner) {
@@ -199,13 +204,13 @@ function updateState(newState: GameState) {
   hideWaitingOverlay();
 
   if (state.paused) {
-    showPauseBanner();
+    updatePauseBanner(state.pauseTimeLeft);
   } else {
     hidePauseBanner();
   }
 
   if (state.over && myPlayerId > 0) {
-    showVictory(state.winner === myPlayerId);
+    showVictory(state.winner === myPlayerId, state.winReason);
   }
 
   if (myPlayerId > 0) {

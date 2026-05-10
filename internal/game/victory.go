@@ -9,6 +9,7 @@ func ForfeitPlayer(state *GameState, loser PlayerID) {
 		}
 	}
 	TriggerVictory(state, winner)
+	state.WinReason = "forfeit"
 }
 
 func TriggerVictory(state *GameState, winner PlayerID) {
@@ -17,6 +18,7 @@ func TriggerVictory(state *GameState, winner PlayerID) {
 	}
 	state.Over = true
 	state.Winner = winner
+	state.WinReason = "capital"
 	for pid := range state.Players {
 		if pid == winner {
 			continue

@@ -15,15 +15,16 @@ type ClientSender interface {
 }
 
 type Room struct {
-	mu               sync.Mutex
-	state            *game.GameState
-	clients          []ClientSender
-	clientPlayer     map[ClientSender]game.PlayerID
-	activeClients    map[game.PlayerID]ClientSender
-	disconnectTimers map[game.PlayerID]*time.Timer
-	actions          chan game.Action
-	stop             chan struct{}
-	started          bool
+	mu             sync.Mutex
+	state          *game.GameState
+	clients        []ClientSender
+	clientPlayer   map[ClientSender]game.PlayerID
+	activeClients  map[game.PlayerID]ClientSender
+	remainingGrace map[game.PlayerID]float64
+	pausedPlayer   game.PlayerID
+	actions        chan game.Action
+	stop           chan struct{}
+	started        bool
 }
 
 func New() *Room {
@@ -32,20 +33,22 @@ func New() *Room {
 	state.Waiting = true
 
 	spawns := mapgen.SpawnPositions()
+	remainingGrace := make(map[game.PlayerID]float64, len(spawns))
 	for i, pos := range spawns {
 		pid := game.PlayerID(i + 1)
 		state.Players[pid] = &game.Player{ID: pid}
 		state.Hexes[pos].Owner = pid
 		state.Hexes[pos].Capital = true
+		remainingGrace[pid] = disconnectGrace.Seconds()
 	}
 
 	return &Room{
-		state:            state,
-		clientPlayer:     make(map[ClientSender]game.PlayerID),
-		activeClients:    make(map[game.PlayerID]ClientSender),
-		disconnectTimers: make(map[game.PlayerID]*time.Timer),
-		actions:          make(chan game.Action, actionQueueSize),
-		stop:             make(chan struct{}),
+		state:          state,
+		clientPlayer:   make(map[ClientSender]game.PlayerID),
+		activeClients:  make(map[game.PlayerID]ClientSender),
+		remainingGrace: remainingGrace,
+		actions:        make(chan game.Action, actionQueueSize),
+		stop:           make(chan struct{}),
 	}
 }
 
@@ -56,16 +59,11 @@ func (r *Room) State() *game.GameState {
 }
 
 // OnConnect registers a client for the given player and sends a full snapshot.
-// Cancels any pending disconnect/forfeit timer for this player.
 // Starts the game loop when all players are connected for the first time.
+// Unpauses and saves remaining grace time when a disconnected player returns.
 func (r *Room) OnConnect(c ClientSender, pid game.PlayerID) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
-	if timer, ok := r.disconnectTimers[pid]; ok {
-		timer.Stop()
-		delete(r.disconnectTimers, pid)
-	}
 
 	if old, ok := r.activeClients[pid]; ok {
 		for i, cl := range r.clients {
@@ -90,8 +88,11 @@ func (r *Room) OnConnect(c ClientSender, pid game.PlayerID) {
 			}
 		}
 		go r.Run()
-	} else if r.started && r.state.Paused && len(r.activeClients) == len(r.state.Players) {
+	} else if r.started && r.state.Paused && r.pausedPlayer == pid {
+		r.remainingGrace[pid] = r.state.PauseTimeLeft
 		r.state.Paused = false
+		r.state.PauseTimeLeft = 0
+		r.pausedPlayer = 0
 		for _, cl := range r.clients {
 			if cl != c {
 				cl.SendSnapshot(r.state)
@@ -102,7 +103,7 @@ func (r *Room) OnConnect(c ClientSender, pid game.PlayerID) {
 	c.SendSnapshot(r.state)
 }
 
-// OnDisconnect removes a client and starts a 30-second forfeit timer.
+// OnDisconnect removes a client, pauses the game, and starts the loop-driven forfeit countdown.
 func (r *Room) OnDisconnect(pid game.PlayerID, c ClientSender) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -121,14 +122,9 @@ func (r *Room) OnDisconnect(pid game.PlayerID, c ClientSender) {
 
 	if !r.state.Over && r.started {
 		r.state.Paused = true
+		r.state.PauseTimeLeft = r.remainingGrace[pid]
+		r.pausedPlayer = pid
 		r.broadcast()
-		timer := time.AfterFunc(disconnectGrace, func() {
-			r.mu.Lock()
-			r.state.Paused = false
-			r.mu.Unlock()
-			r.EnqueueAction(game.Action{Type: game.ActionForfeit, Player: pid})
-		})
-		r.disconnectTimers[pid] = timer
 	}
 }
 

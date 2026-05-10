@@ -13,7 +13,16 @@ func (r *Room) Run() {
 		select {
 		case <-ticker.C:
 			r.mu.Lock()
-			if !r.state.Paused {
+			if r.state.Paused {
+				r.state.PauseTimeLeft -= game.TickDt
+				if r.state.PauseTimeLeft <= 0 {
+					r.state.PauseTimeLeft = 0
+					r.state.Paused = false
+					pid := r.pausedPlayer
+					r.pausedPlayer = 0
+					r.actions <- game.Action{Type: game.ActionForfeit, Player: pid}
+				}
+			} else {
 				actions := r.drainActions()
 				game.RunTick(r.state, game.TickDt, actions)
 			}

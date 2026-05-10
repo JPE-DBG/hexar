@@ -71,14 +71,16 @@ type Battle struct {
 }
 
 type GameState struct {
-	Hexes   map[Hex]*HexState    `json:"hexes"`
-	Players map[PlayerID]*Player `json:"players"`
-	Battles []Battle             `json:"battles"`
-	Elapsed float64              `json:"elapsed"`
-	Over    bool                 `json:"over"`
-	Winner  PlayerID             `json:"winner"`
-	Waiting bool                 `json:"waiting"`
-	Paused  bool                 `json:"paused"`
+	Hexes         map[Hex]*HexState    `json:"hexes"`
+	Players       map[PlayerID]*Player `json:"players"`
+	Battles       []Battle             `json:"battles"`
+	Elapsed       float64              `json:"elapsed"`
+	Over          bool                 `json:"over"`
+	Winner        PlayerID             `json:"winner"`
+	WinReason     string               `json:"winReason"`
+	Waiting       bool                 `json:"waiting"`
+	Paused        bool                 `json:"paused"`
+	PauseTimeLeft float64              `json:"pauseTimeLeft"`
 }
 
 func NewGameState() *GameState {

@@ -38,8 +38,10 @@ export interface SnapshotMsg {
   elapsed: number;
   over: boolean;
   winner: number;
+  winReason: string;
   waiting: boolean;
   paused: boolean;
+  pauseTimeLeft: number;
 }
 
 export interface DeltaMsg {
@@ -49,8 +51,10 @@ export interface DeltaMsg {
   elapsed: number;
   over: boolean;
   winner: number;
+  winReason: string;
   waiting: boolean;
   paused: boolean;
+  pauseTimeLeft: number;
   hexChanges?: HexDTO[];
 }
 
@@ -61,8 +65,10 @@ export interface GameState {
   elapsed: number;
   over: boolean;
   winner: number;
+  winReason: string;
   waiting: boolean;
   paused: boolean;
+  pauseTimeLeft: number;
 }
 
 export function applySnapshot(msg: SnapshotMsg): GameState {
@@ -76,7 +82,7 @@ export function applySnapshot(msg: SnapshotMsg): GameState {
     players.set(key, player);
   }
 
-  return { hexes, players, battles: msg.battles || [], elapsed: msg.elapsed, over: msg.over ?? false, winner: msg.winner ?? 0, waiting: msg.waiting ?? false, paused: msg.paused ?? false };
+  return { hexes, players, battles: msg.battles || [], elapsed: msg.elapsed, over: msg.over ?? false, winner: msg.winner ?? 0, winReason: msg.winReason ?? '', waiting: msg.waiting ?? false, paused: msg.paused ?? false, pauseTimeLeft: msg.pauseTimeLeft ?? 0 };
 }
 
 export function applyDelta(state: GameState, msg: DeltaMsg): GameState {
@@ -90,5 +96,5 @@ export function applyDelta(state: GameState, msg: DeltaMsg): GameState {
     hexes.set(`${hex.q},${hex.r}`, hex);
   }
 
-  return { hexes, players, battles: msg.battles, elapsed: msg.elapsed, over: msg.over, winner: msg.winner, waiting: msg.waiting, paused: msg.paused };
+  return { hexes, players, battles: msg.battles, elapsed: msg.elapsed, over: msg.over, winner: msg.winner, winReason: msg.winReason, waiting: msg.waiting, paused: msg.paused, pauseTimeLeft: msg.pauseTimeLeft };
 }

@@ -15,15 +15,17 @@ const (
 )
 
 type DeltaMsg struct {
-	Type       MsgType      `json:"type"`
-	Players    []*PlayerDTO `json:"players"`
-	Battles    []*BattleDTO `json:"battles"`
-	Elapsed    float64      `json:"elapsed"`
-	Over       bool         `json:"over"`
-	Winner     int          `json:"winner,omitempty"`
-	Waiting    bool         `json:"waiting"`
-	Paused     bool         `json:"paused"`
-	HexChanges []*HexDTO    `json:"hexChanges,omitempty"`
+	Type          MsgType      `json:"type"`
+	Players       []*PlayerDTO `json:"players"`
+	Battles       []*BattleDTO `json:"battles"`
+	Elapsed       float64      `json:"elapsed"`
+	Over          bool         `json:"over"`
+	Winner        int          `json:"winner,omitempty"`
+	WinReason     string       `json:"winReason,omitempty"`
+	Waiting       bool         `json:"waiting"`
+	Paused        bool         `json:"paused"`
+	PauseTimeLeft float64      `json:"pauseTimeLeft"`
+	HexChanges    []*HexDTO    `json:"hexChanges,omitempty"`
 }
 
 type WelcomeMsg struct {
@@ -39,15 +41,17 @@ type ActionMsg struct {
 }
 
 type SnapshotMsg struct {
-	Type    MsgType               `json:"type"`
-	Hexes   map[string]*HexDTO    `json:"hexes"`
-	Players map[string]*PlayerDTO `json:"players"`
-	Battles []*BattleDTO          `json:"battles"`
-	Elapsed float64               `json:"elapsed"`
-	Over    bool                  `json:"over"`
-	Winner  int                   `json:"winner"`
-	Waiting bool                  `json:"waiting"`
-	Paused  bool                  `json:"paused"`
+	Type          MsgType               `json:"type"`
+	Hexes         map[string]*HexDTO    `json:"hexes"`
+	Players       map[string]*PlayerDTO `json:"players"`
+	Battles       []*BattleDTO          `json:"battles"`
+	Elapsed       float64               `json:"elapsed"`
+	Over          bool                  `json:"over"`
+	Winner        int                   `json:"winner"`
+	WinReason     string                `json:"winReason"`
+	Waiting       bool                  `json:"waiting"`
+	Paused        bool                  `json:"paused"`
+	PauseTimeLeft float64               `json:"pauseTimeLeft"`
 }
 
 type HexDTO struct {
@@ -88,11 +92,13 @@ func BuildSnapshot(state *game.GameState) *SnapshotMsg {
 		Hexes:   make(map[string]*HexDTO, len(state.Hexes)),
 		Players: make(map[string]*PlayerDTO, len(state.Players)),
 		Battles: make([]*BattleDTO, 0, len(state.Battles)),
-		Elapsed: state.Elapsed,
-		Over:    state.Over,
-		Winner:  int(state.Winner),
-		Waiting: state.Waiting,
-		Paused:  state.Paused,
+		Elapsed:       state.Elapsed,
+		Over:          state.Over,
+		Winner:        int(state.Winner),
+		WinReason:     state.WinReason,
+		Waiting:       state.Waiting,
+		Paused:        state.Paused,
+		PauseTimeLeft: state.PauseTimeLeft,
 	}
 
 	for hex, hs := range state.Hexes {
