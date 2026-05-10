@@ -7,6 +7,7 @@ func buildDelta(prev, curr *SnapshotMsg) *DeltaMsg {
 		Over:    curr.Over,
 		Winner:  curr.Winner,
 		Waiting: curr.Waiting,
+		Paused:  curr.Paused,
 	}
 
 	for _, p := range curr.Players {

@@ -116,6 +116,26 @@ let disconnectOverlay: HTMLElement | null = null;
 
 let reconnectBanner: HTMLElement | null = null;
 
+let pauseBanner: HTMLElement | null = null;
+
+function showPauseBanner() {
+  if (pauseBanner) return;
+  pauseBanner = document.createElement('div');
+  pauseBanner.style.cssText = `
+    position:fixed;top:0;left:0;width:100%;padding:8px;text-align:center;
+    background:#8e44ad;color:#fff;font-family:monospace;font-size:14px;z-index:150;
+  `;
+  pauseBanner.innerHTML = `<b>Game paused</b> — opponent disconnected. Waiting to reconnect… (forfeits in ${Math.round(disconnectGraceMs / 60000)}:00)`;
+  document.body.appendChild(pauseBanner);
+}
+
+function hidePauseBanner() {
+  pauseBanner?.remove();
+  pauseBanner = null;
+}
+
+const disconnectGraceMs = 2 * 60 * 1000;
+
 function showReconnecting(attempt: number, max: number) {
   if (!reconnectBanner) {
     reconnectBanner = document.createElement('div');
@@ -177,6 +197,12 @@ function updateState(newState: GameState) {
     return;
   }
   hideWaitingOverlay();
+
+  if (state.paused) {
+    showPauseBanner();
+  } else {
+    hidePauseBanner();
+  }
 
   if (state.over && myPlayerId > 0) {
     showVictory(state.winner === myPlayerId);

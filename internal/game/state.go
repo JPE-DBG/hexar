@@ -78,6 +78,7 @@ type GameState struct {
 	Over    bool                 `json:"over"`
 	Winner  PlayerID             `json:"winner"`
 	Waiting bool                 `json:"waiting"`
+	Paused  bool                 `json:"paused"`
 }
 
 func NewGameState() *GameState {

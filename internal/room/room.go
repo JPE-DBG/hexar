@@ -90,6 +90,13 @@ func (r *Room) OnConnect(c ClientSender, pid game.PlayerID) {
 			}
 		}
 		go r.Run()
+	} else if r.started && r.state.Paused && len(r.activeClients) == len(r.state.Players) {
+		r.state.Paused = false
+		for _, cl := range r.clients {
+			if cl != c {
+				cl.SendSnapshot(r.state)
+			}
+		}
 	}
 
 	c.SendSnapshot(r.state)
@@ -113,7 +120,12 @@ func (r *Room) OnDisconnect(pid game.PlayerID, c ClientSender) {
 	}
 
 	if !r.state.Over && r.started {
+		r.state.Paused = true
+		r.broadcast()
 		timer := time.AfterFunc(disconnectGrace, func() {
+			r.mu.Lock()
+			r.state.Paused = false
+			r.mu.Unlock()
 			r.EnqueueAction(game.Action{Type: game.ActionForfeit, Player: pid})
 		})
 		r.disconnectTimers[pid] = timer
