@@ -125,12 +125,14 @@ window.addEventListener('keydown', (e) => {
         connection?.send({ type: 'action', action: 'fortify', q: selectedHex.q, r: selectedHex.r });
       }
       break;
-    case 'C': // Counter-spend
-      const battle = state.battles.find(b => b.dq === selectedHex.q && b.dr === selectedHex.r);
-      if (battle && selectedHex.owner === myPlayerId) {
-        connection?.send({ type: 'action', action: 'counter-spend', q: selectedHex.q, r: selectedHex.r });
+    case 'C': { // Counter-spend
+      const hex = selectedHex;
+      const battle = state.battles.find(b => b.dq === hex.q && b.dr === hex.r);
+      if (battle && hex.owner === myPlayerId) {
+        connection?.send({ type: 'action', action: 'counter-spend', q: hex.q, r: hex.r });
       }
       break;
+    }
   }
 });
 
