@@ -16,6 +16,7 @@ export interface ConnectionHandlers {
   onDelta: (msg: DeltaMsg) => void;
   onWelcome: (msg: WelcomeMsg) => void;
   onReconnecting?: (attempt: number, max: number) => void;
+  onAlreadyConnected?: () => void;
   onDisconnect?: () => void;
 }
 
@@ -74,8 +75,13 @@ export class Connection {
       }
     };
 
-    this.ws.onclose = () => {
+    this.ws.onclose = (event: CloseEvent) => {
       if (this.closed) return;
+      if (event.code === 4001) {
+        this.closed = true;
+        this.handlers.onAlreadyConnected?.();
+        return;
+      }
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
         const delay = Math.min(RECONNECT_INITIAL_DELAY * Math.pow(2, this.reconnectAttempts), RECONNECT_MAX_DELAY);
         this.reconnectAttempts++;

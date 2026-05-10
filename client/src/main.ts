@@ -108,6 +108,22 @@ function hideReconnecting() {
 }
 
 
+function showAlreadyConnectedOverlay() {
+  sessionStorage.removeItem('hexarSession');
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.85);z-index:300;font-family:monospace;color:#e0e0e0;
+  `;
+  overlay.innerHTML = `
+    <div style="font-size:28px;color:#f39c12;margin-bottom:16px">Already Connected</div>
+    <div style="color:#aaa;font-size:16px;margin-bottom:24px">This game is already open in another tab.</div>
+    <button onclick="location.reload()" style="padding:10px 28px;font-size:16px;background:#4ecdc4;color:#1a1a2e;border:none;border-radius:4px;cursor:pointer;font-family:monospace">Back to Lobby</button>
+  `;
+  document.body.appendChild(overlay);
+}
+
 function showDisconnectOverlay() {
   if (disconnectOverlay) return;
   disconnectOverlay = document.createElement('div');
@@ -246,6 +262,7 @@ function startGame(code: string, token: string) {
       console.log(`assigned player ${myPlayerId}`);
     },
     onReconnecting: showReconnecting,
+    onAlreadyConnected: showAlreadyConnectedOverlay,
     onDisconnect: showDisconnectOverlay,
   });
 }

@@ -91,6 +91,12 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	rm := entry.Room
+
+	if rm.IsConnected(pid) {
+		conn.Close(websocket.StatusCode(4001), "already connected in another tab")
+		return
+	}
+
 	client := NewClient(conn, rm)
 	client.playerID = pid
 

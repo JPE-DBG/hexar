@@ -121,3 +121,11 @@ func (r *Room) broadcast() {
 func (r *Room) Stop() {
 	close(r.stop)
 }
+
+// IsConnected returns true if the given player already has an active WebSocket connection.
+func (r *Room) IsConnected(pid game.PlayerID) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, ok := r.activeClients[pid]
+	return ok
+}
