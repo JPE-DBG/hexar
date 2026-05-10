@@ -11,10 +11,11 @@ import (
 )
 
 type Client struct {
-	conn     *websocket.Conn
-	room     *room.Room
-	playerID game.PlayerID
-	send     chan []byte
+	conn         *websocket.Conn
+	room         *room.Room
+	playerID     game.PlayerID
+	send         chan []byte
+	prevSnapshot *SnapshotMsg
 }
 
 func NewClient(conn *websocket.Conn, r *room.Room) *Client {
@@ -26,7 +27,15 @@ func NewClient(conn *websocket.Conn, r *room.Room) *Client {
 }
 
 func (c *Client) SendSnapshot(state *game.GameState) {
-	msg := BuildSnapshot(state)
+	curr := BuildSnapshot(state)
+	var msg any
+	if c.prevSnapshot == nil {
+		msg = curr
+	} else {
+		msg = buildDelta(c.prevSnapshot, curr)
+	}
+	c.prevSnapshot = curr
+
 	data, err := json.Marshal(msg)
 	if err != nil {
 		log.Printf("marshal error: %v", err)

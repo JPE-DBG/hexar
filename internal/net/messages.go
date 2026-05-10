@@ -9,9 +9,20 @@ type MsgType string
 
 const (
 	MsgSnapshot MsgType = "snapshot"
+	MsgDelta    MsgType = "delta"
 	MsgWelcome  MsgType = "welcome"
 	MsgAction   MsgType = "action"
 )
+
+type DeltaMsg struct {
+	Type       MsgType      `json:"type"`
+	Players    []*PlayerDTO `json:"players"`
+	Battles    []*BattleDTO `json:"battles"`
+	Elapsed    float64      `json:"elapsed"`
+	Over       bool         `json:"over"`
+	Winner     int          `json:"winner,omitempty"`
+	HexChanges []*HexDTO    `json:"hexChanges,omitempty"`
+}
 
 type WelcomeMsg struct {
 	Type     MsgType `json:"type"`

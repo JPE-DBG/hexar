@@ -40,6 +40,16 @@ export interface SnapshotMsg {
   winner: number;
 }
 
+export interface DeltaMsg {
+  type: 'delta';
+  players: PlayerDTO[];
+  battles: BattleDTO[];
+  elapsed: number;
+  over: boolean;
+  winner: number;
+  hexChanges?: HexDTO[];
+}
+
 export interface GameState {
   hexes: Map<string, HexDTO>;
   players: Map<string, PlayerDTO>;
@@ -61,4 +71,18 @@ export function applySnapshot(msg: SnapshotMsg): GameState {
   }
 
   return { hexes, players, battles: msg.battles || [], elapsed: msg.elapsed, over: msg.over ?? false, winner: msg.winner ?? 0 };
+}
+
+export function applyDelta(state: GameState, msg: DeltaMsg): GameState {
+  const players = new Map(state.players);
+  for (const p of msg.players) {
+    players.set(String(p.id), p);
+  }
+
+  const hexes = new Map(state.hexes);
+  for (const hex of (msg.hexChanges ?? [])) {
+    hexes.set(`${hex.q},${hex.r}`, hex);
+  }
+
+  return { hexes, players, battles: msg.battles, elapsed: msg.elapsed, over: msg.over, winner: msg.winner };
 }

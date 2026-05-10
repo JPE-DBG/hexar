@@ -1,11 +1,12 @@
 import { Connection } from './net/connection';
-import { applySnapshot, GameState, SnapshotMsg, HexDTO, PlayerDTO } from './state/state';
+import { applySnapshot, applyDelta, GameState, SnapshotMsg, DeltaMsg, HexDTO, PlayerDTO } from './state/state';
 import { Renderer } from './render/renderer';
 import { setupInput } from './input/input';
 import { updateHUD, calcMaintenance } from './ui/hud';
 import { BuildMenu } from './ui/buildmenu';
 import { TechTreePanel } from './ui/techtree';
 import { AutoDropPanel } from './ui/autodrop';
+import { LobbyUI } from './ui/lobby';
 import { neighbors } from './hexmath';
 import {
   BUILDING_GOLD, BUILDING_POWER, BUILDING_RESEARCH,
@@ -24,34 +25,35 @@ let state: GameState | null = null;
 let myPlayerId = 0;
 let selectedHex: HexDTO | null = null;
 let dropMap = new Set<string>();
+let connection: Connection | null = null;
 
 const buildMenu = new BuildMenu(document.body, {
   onUpgrade: (building?) => {
-    if (!selectedHex) return;
+    if (!selectedHex || !connection) return;
     const msg: Record<string, unknown> = { type: 'action', action: 'upgrade', q: selectedHex.q, r: selectedHex.r };
     if (building) msg.building = building;
     connection.send(msg);
   },
   onDemolish: () => {
-    if (!selectedHex) return;
+    if (!selectedHex || !connection) return;
     connection.send({ type: 'action', action: 'demolish', q: selectedHex.q, r: selectedHex.r });
   },
   onAttack: () => {
-    if (!selectedHex) return;
+    if (!selectedHex || !connection) return;
     connection.send({ type: 'action', action: 'attack', q: selectedHex.q, r: selectedHex.r });
   },
   onDropHex: () => {
-    if (!selectedHex) return;
+    if (!selectedHex || !connection) return;
     connection.send({ type: 'action', action: 'drop-hex', q: selectedHex.q, r: selectedHex.r });
   },
   onFortify: () => {
-    if (!selectedHex) return;
+    if (!selectedHex || !connection) return;
     connection.send({ type: 'action', action: 'fortify', q: selectedHex.q, r: selectedHex.r });
   },
 });
 
 const techTreePanel = new TechTreePanel(document.body, (techId) => {
-  connection.send({ type: 'action', action: 'unlock-tech', techId });
+  connection?.send({ type: 'action', action: 'unlock-tech', techId });
 });
 
 const autoDropPanel = new AutoDropPanel(document.body);
@@ -83,8 +85,27 @@ function showVictory(isWinner: boolean) {
   document.body.appendChild(victoryOverlay);
 }
 
-function onSnapshot(msg: SnapshotMsg) {
-  state = applySnapshot(msg);
+let disconnectOverlay: HTMLElement | null = null;
+
+function showDisconnectOverlay() {
+  if (disconnectOverlay) return;
+  disconnectOverlay = document.createElement('div');
+  disconnectOverlay.style.cssText = `
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.85);z-index:300;font-family:monospace;color:#e0e0e0;
+  `;
+  disconnectOverlay.innerHTML = `
+    <div style="font-size:32px;color:#ff6b6b;margin-bottom:16px">Disconnected</div>
+    <div style="color:#aaa;font-size:16px;margin-bottom:24px">Could not reconnect to server.</div>
+    <button onclick="location.reload()" style="padding:10px 28px;font-size:16px;background:#4ecdc4;color:#1a1a2e;border:none;border-radius:4px;cursor:pointer;font-family:monospace">Back to Lobby</button>
+  `;
+  document.body.appendChild(disconnectOverlay);
+  sessionStorage.removeItem('hexarSession');
+}
+
+function updateState(newState: GameState) {
+  state = newState;
 
   if (state.over && myPlayerId > 0) {
     showVictory(state.winner === myPlayerId);
@@ -114,7 +135,6 @@ function onSnapshot(msg: SnapshotMsg) {
     }
     autoDropPanel.update(player ?? null);
 
-    // Compute drop map: all hexes at minimum (income, totalInvested) score
     dropMap = new Set<string>();
     if (player?.autoDropActive) {
       const droppable = [...state.hexes.values()]
@@ -147,15 +167,24 @@ function onSnapshot(msg: SnapshotMsg) {
   renderer.setState(state);
 }
 
+function onSnapshot(msg: SnapshotMsg) {
+  updateState(applySnapshot(msg));
+}
+
+function onDelta(msg: DeltaMsg) {
+  if (!state) return;
+  updateState(applyDelta(state, msg));
+}
+
 function hexIncome(hex: HexDTO, player?: PlayerDTO | null): number {
   if (hex.building !== BUILDING_GOLD) {
     return BASE_INCOME_PER_SEC;
   }
   let income = (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * hex.level) * GOLD_BONUS_MULTIPLIER;
-  if (player?.tech?.[10]) { // TechCompoundGrowth = 10
+  if (player?.tech?.[10]) {
     income *= COMPOUND_GROWTH_MULTIPLIER;
   }
-  if (player?.tech?.[2]) { // TechProsperity = 2
+  if (player?.tech?.[2]) {
     income += PROSPERITY_BONUS;
   }
   return income;
@@ -178,20 +207,25 @@ function bestAdjacentPower(gs: GameState, playerId: number, target: HexDTO, play
     let p = 0;
     if (hs.capital) p = CAPITAL_POWER;
     if (hs.building === BUILDING_POWER) p += hs.level;
-    if (player?.tech?.[9]) p++; // TechIronGrip = 9
+    if (player?.tech?.[9]) p++;
     if (p > best) best = p;
   }
   return best;
 }
 
-const wsUrl = `ws://${window.location.host}/ws`;
-const connection = new Connection(wsUrl, {
-  onSnapshot,
-  onWelcome: (msg) => {
-    myPlayerId = msg.playerId;
-    console.log(`assigned player ${myPlayerId}`);
-  },
-});
+function startGame(code: string, token: string) {
+  sessionStorage.setItem('hexarSession', JSON.stringify({ code, token }));
+
+  connection = new Connection(code, token, {
+    onSnapshot,
+    onDelta,
+    onWelcome: (msg) => {
+      myPlayerId = msg.playerId;
+      console.log(`assigned player ${myPlayerId}`);
+    },
+    onDisconnect: showDisconnectOverlay,
+  });
+}
 
 setupInput(
   canvas,
@@ -209,31 +243,28 @@ setupInput(
     }
 
     if (hex.owner === 0) {
-      connection.send({ type: 'action', action: 'claim', q, r });
+      connection?.send({ type: 'action', action: 'claim', q, r });
       selectedHex = null;
       renderer.setSelected(null);
       buildMenu.hide();
       return;
     }
 
-    // Priority 1: crisis drop (red pulsing hex) — emergency recovery
     if (dropMap.has(key) && hex.owner === myPlayerId) {
-      connection.send({ type: 'action', action: 'drop-hex', q, r });
+      connection?.send({ type: 'action', action: 'drop-hex', q, r });
       return;
     }
 
-    // Priority 2: counter-spend (amber pulsing, still actionable)
     const battle = state.battles.find(b => b.dq === q && b.dr === r) ?? null;
     if (battle && hex.owner === myPlayerId) {
       const cap = Math.min(COUNTER_SPEND_CAP, Math.floor(battle.timeLeft));
       const player = state.players.get(String(myPlayerId));
       if ((player?.gold ?? 0) >= COUNTER_SPEND_COST && battle.counterBoost < cap) {
-        connection.send({ type: 'action', action: 'counter-spend', q, r });
+        connection?.send({ type: 'action', action: 'counter-spend', q, r });
         return;
       }
     }
 
-    // Priority 3: normal selection → show build menu
     selectedHex = hex;
     renderer.setSelected({ q, r });
 
@@ -245,3 +276,17 @@ setupInput(
     buildMenu.updateWithActions(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
   }
 );
+
+// Try to reconnect from sessionStorage first, else show lobby
+const saved = sessionStorage.getItem('hexarSession');
+if (saved) {
+  try {
+    const { code, token } = JSON.parse(saved) as { code: string; token: string };
+    startGame(code, token);
+  } catch {
+    sessionStorage.removeItem('hexarSession');
+    new LobbyUI(document.body, ({ code, token }) => startGame(code, token));
+  }
+} else {
+  new LobbyUI(document.body, ({ code, token }) => startGame(code, token));
+}

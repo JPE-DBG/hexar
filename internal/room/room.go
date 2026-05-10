@@ -4,20 +4,24 @@ import (
 	"hexar/internal/game"
 	"hexar/internal/mapgen"
 	"sync"
+	"time"
 )
+
+const disconnectGrace = 30 * time.Second
 
 type ClientSender interface {
 	SendSnapshot(state *game.GameState)
 }
 
 type Room struct {
-	mu           sync.RWMutex
-	state        *game.GameState
-	clients      []ClientSender
-	clientPlayer map[ClientSender]game.PlayerID
-	nextSlot     int
-	actions      chan game.Action
-	stop         chan struct{}
+	mu               sync.Mutex
+	state            *game.GameState
+	clients          []ClientSender
+	clientPlayer     map[ClientSender]game.PlayerID
+	activeClients    map[game.PlayerID]ClientSender
+	disconnectTimers map[game.PlayerID]*time.Timer
+	actions          chan game.Action
+	stop             chan struct{}
 }
 
 func New() *Room {
@@ -33,43 +37,75 @@ func New() *Room {
 	}
 
 	return &Room{
-		state:        state,
-		clientPlayer: make(map[ClientSender]game.PlayerID),
-		actions:      make(chan game.Action, 256),
-		stop:         make(chan struct{}),
+		state:            state,
+		clientPlayer:     make(map[ClientSender]game.PlayerID),
+		activeClients:    make(map[game.PlayerID]ClientSender),
+		disconnectTimers: make(map[game.PlayerID]*time.Timer),
+		actions:          make(chan game.Action, 256),
+		stop:             make(chan struct{}),
 	}
 }
 
 func (r *Room) State() *game.GameState {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	return r.state
 }
 
-func (r *Room) AddClient(c ClientSender) game.PlayerID {
-	r.mu.Lock()
-	r.clients = append(r.clients, c)
-	var pid game.PlayerID
-	if r.nextSlot < 2 {
-		pid = game.PlayerID(r.nextSlot + 1)
-		r.nextSlot++
-	}
-	r.clientPlayer[c] = pid
-	r.mu.Unlock()
-	c.SendSnapshot(r.state)
-	return pid
-}
-
-func (r *Room) RemoveClient(c ClientSender) {
+// OnConnect registers a client for the given player and sends a full snapshot.
+// Cancels any pending disconnect/forfeit timer for this player.
+func (r *Room) OnConnect(c ClientSender, pid game.PlayerID) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	if timer, ok := r.disconnectTimers[pid]; ok {
+		timer.Stop()
+		delete(r.disconnectTimers, pid)
+	}
+
+	if old, ok := r.activeClients[pid]; ok {
+		for i, cl := range r.clients {
+			if cl == old {
+				r.clients = append(r.clients[:i], r.clients[i+1:]...)
+				break
+			}
+		}
+		delete(r.clientPlayer, old)
+	}
+
+	r.clients = append(r.clients, c)
+	r.clientPlayer[c] = pid
+	r.activeClients[pid] = c
+	c.SendSnapshot(r.state)
+}
+
+// OnDisconnect removes a client and starts a 30-second forfeit timer.
+func (r *Room) OnDisconnect(pid game.PlayerID, c ClientSender) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.activeClients[pid] != c {
+		return
+	}
+	delete(r.activeClients, pid)
+	delete(r.clientPlayer, c)
 	for i, cl := range r.clients {
 		if cl == c {
 			r.clients = append(r.clients[:i], r.clients[i+1:]...)
 			break
 		}
 	}
-	delete(r.clientPlayer, c)
+
+	if !r.state.Over {
+		timer := time.AfterFunc(disconnectGrace, func() {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+			if !r.state.Over {
+				game.ForfeitPlayer(r.state, pid)
+			}
+		})
+		r.disconnectTimers[pid] = timer
+	}
 }
 
 func (r *Room) EnqueueAction(action game.Action) {
