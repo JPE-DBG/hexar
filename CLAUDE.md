@@ -425,6 +425,35 @@ T=5 min+:  Border warfare begins in earnest
 | Auth | None (MVP) | OAuth when accounts added |
 | Testing | Go `testing` (headless) + manual browser | Playwright |
 
+### Session & Connection Behaviour (implemented post-M6)
+
+**Lobby flow:**
+- `POST /lobby/create` → room code (4-char hex) + session token (32-char hex) + playerID
+- `POST /lobby/join` → token + playerID (room full after 2 players)
+- `GET /ws?code=…&token=…` → WebSocket connection; server validates token before upgrading
+
+**Session persistence (URL hash):**
+- On game start, client writes `/#CODE:TOKEN` into the URL (`history.replaceState`)
+- On page load, client checks sessionStorage first (network-drop reconnects), then URL hash (tab-close reconnects)
+- URL hash is per-tab (unlike localStorage), so two players on the same browser get different hashes and don't collide
+- Hash is cleared on game end (victory, disconnect, "Already Connected")
+
+**Waiting state:**
+- Room created → `state.Waiting = true`; game loop goroutine NOT started
+- Second player connects → server sets `state.Waiting = false`, starts the loop, broadcasts to player 1
+- Player 1 sees "Waiting for opponent…" overlay with room code displayed
+
+**Pause on disconnect:**
+- Any player disconnects during an active game → `state.Paused = true`, `state.PauseTimeLeft` set to that player's remaining budget
+- Loop ticks continue (so clients receive countdown updates) but `RunTick` is skipped — economy, battles, auto-drop all frozen
+- Remaining player sees purple banner with live `M:SS` countdown
+- Reconnecting player → `state.Paused = false`, budget saved to `remainingGrace[pid]`; game resumes from exact state
+- Budget exhausted → loop clears pause, enqueues `ActionForfeit`; next tick processes it normally
+
+**Forfeit budget:**
+- Each player starts with 120 seconds total across the whole game
+- Reconnecting saves the remaining time; a second disconnect resumes from where it left off, not from 120s again
+
 ### Architecture Constraints
 - **Server-authoritative:** Client never modifies game state — only sends intentions ("claim hex X", "attack hex Y"), server validates and responds
 - **Tick-based economy:** Every 100ms tick: process queued player actions → update gold/TP → advance battle timers → check victory → emit delta to clients
@@ -450,13 +479,16 @@ Phase 6: DELTA — diff vs previous tick, broadcast to clients
 
 | Scenario | Decision |
 |---|---|
-| Disconnect mid-battle | Game continues 30s, then forfeit |
+| Disconnect mid-game | Game pauses immediately; opponent sees live countdown; player has 2-min cumulative budget to reconnect (not reset per disconnect); budget exhausted → forfeit |
 | Two attacks on same hex | First-in-queue wins, second rejected (one battle per hex) |
-| Reconnection | Full snapshot (~3KB), no replay log |
+| Reconnection | Full snapshot on connect (prevSnapshot = nil); delta sync resumes after that |
 | Capital captured during outgoing attack | Immediate game over, all battles canceled |
 | Counter-spend same tick as battle expires | Applied (Phase 1 runs before Phase 3) |
 | Gold below 0 | Clamped to 0, actions rejected if insufficient |
 | Player trapped (no Power≥1 border) | Must build Defense to regain attack ability |
+| Same player opens duplicate tab | Server closes new WS with code 4001; client shows "Already Connected" overlay, no retry |
+| Both players not yet connected | Game loop does not start; `state.Waiting = true`; loop starts only when all player slots filled for first time |
+| Game over by forfeit vs capital | `state.WinReason`: `"forfeit"` or `"capital"` — victory screen shows distinct subtitle |
 
 ### Project Structure
 
@@ -504,6 +536,29 @@ hexar/
 ```
 
 **Key rule:** `internal/game/` has zero imports outside stdlib. `RunTick(state, dt)` is a pure function — fully testable with `go test` alone.
+
+### Milestone Status
+
+**M1–M5:** Core game loop, hex grid, economy, combat, tech tree, UI polish, power display conventions.
+
+**M6 (in-scope — implemented):**
+- Simple lobby: `POST /lobby/create` and `POST /lobby/join` with room codes and session tokens
+- Delta sync: incremental state updates (~300–500 bytes/tick vs 7KB full snapshot)
+- WebSocket reconnect with exponential backoff (5 attempts, 1–16s)
+- Disconnect forfeit via `ActionForfeit` enqueued through the action channel (not direct state mutation)
+
+**Post-M6 additions (discovered during manual testing):**
+
+| Feature | Trigger |
+|---|---|
+| Vite dev proxy for `/lobby/*` | "Create Game" always errored in dev mode — Vite had no proxy for the new HTTP endpoints |
+| Duplicate tab prevention (WS close code 4001 + "Already Connected" overlay) | Opening the game in a duplicate tab silently evicted the original connection |
+| URL hash session persistence (`/#CODE:TOKEN`) | Closing a tab lost sessionStorage; localStorage would collide when testing 2 players in same browser |
+| Waiting state (`state.Waiting`) before both players connect | Game loop ran from room creation, giving player 1 a gold head-start before player 2 joined |
+| Game pause on disconnect (`state.Paused`) | Active player had a free 2-minute window to expand unopposed while opponent was disconnected |
+| Live forfeit countdown (`state.PauseTimeLeft`, `M:SS` banner) | Remaining player had no visibility into how long until forfeit |
+| Cumulative reconnect budget (120s total, not reset per disconnect) | Per-disconnect timer allowed repeated short disconnects to accumulate unlimited free pause time |
+| Win reason (`state.WinReason`: `"capital"` / `"forfeit"`) | Victory screen always showed "Capital captured" even when opponent forfeited |
 
 ### Rejected Alternatives
 - **Node.js server:** Go developer, worse concurrency model for tick loops

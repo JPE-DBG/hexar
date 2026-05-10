@@ -1,5 +1,5 @@
 import { hexToPixel } from '../hexmath';
-import { HEX_SIZE, COLORS, BUILDING_POWER, CAPITAL_POWER, FORTIFY_DURATION } from '../constants';
+import { HEX_SIZE, COLORS, BUILDING_POWER, CAPITAL_POWER, FORTIFY_DURATION, TECH_IRON_GRIP, COUNTER_SPEND_CAP } from '../constants';
 import { GameState, HexDTO, BattleDTO } from '../state/state';
 
 const BUILDING_LABELS: Record<number, string> = { 1: 'G', 2: 'P', 3: 'R' };
@@ -117,7 +117,7 @@ export class Renderer {
         // Show effective power: capital innate + building level + Iron Grip
         const ownerPlayer = this.state.players.get(String(hex.owner));
         const capitalBonus = hex.capital ? CAPITAL_POWER : 0;
-        const effectivePower = capitalBonus + hex.level + (ownerPlayer?.tech?.[9] ? 1 : 0);
+        const effectivePower = capitalBonus + hex.level + (ownerPlayer?.tech?.[TECH_IRON_GRIP] ? 1 : 0);
         ctx.fillText(`${label}${effectivePower}`, px, py);
       } else {
         ctx.fillText(`${label}${hex.level}`, px, py);
@@ -130,7 +130,7 @@ export class Renderer {
       const ownerPlayer = this.state.players.get(String(hex.owner));
       let powerBadge = 0;
       if (hex.capital) powerBadge = CAPITAL_POWER;
-      if (ownerPlayer?.tech?.[9]) powerBadge++; // TechIronGrip = 9
+      if (ownerPlayer?.tech?.[TECH_IRON_GRIP]) powerBadge++;
       if (powerBadge > 0) {
         ctx.font = 'bold 9px monospace';
         ctx.fillStyle = '#ffdd44';
@@ -225,7 +225,7 @@ export class Renderer {
     const px = x + this.offsetX;
     const py = y + this.offsetY;
 
-    const cap = Math.min(3, Math.floor(battle.timeLeft));
+    const cap = Math.min(COUNTER_SPEND_CAP, Math.floor(battle.timeLeft));
     const canBoost = battle.counterBoost < cap;
 
     // Amber pulse only while counter-spend is still actionable; dim static ring when capped

@@ -10,27 +10,44 @@ import (
 	"github.com/coder/websocket"
 )
 
+const (
+	sendBufferSize = 64  // outbound message channel capacity per client
+	maxDeltaBytes  = 500 // M6 success criterion: steady-state delta must stay under this
+)
+
 type Client struct {
-	conn     *websocket.Conn
-	room     *room.Room
-	playerID game.PlayerID
-	send     chan []byte
+	conn         *websocket.Conn
+	room         *room.Room
+	playerID     game.PlayerID
+	send         chan []byte
+	prevSnapshot *SnapshotMsg
 }
 
 func NewClient(conn *websocket.Conn, r *room.Room) *Client {
 	return &Client{
 		conn: conn,
 		room: r,
-		send: make(chan []byte, 64),
+		send: make(chan []byte, sendBufferSize),
 	}
 }
 
 func (c *Client) SendSnapshot(state *game.GameState) {
-	msg := BuildSnapshot(state)
+	curr := BuildSnapshot(state)
+	var msg any
+	if c.prevSnapshot == nil {
+		msg = curr
+	} else {
+		msg = buildDelta(c.prevSnapshot, curr)
+	}
+	c.prevSnapshot = curr
+
 	data, err := json.Marshal(msg)
 	if err != nil {
 		log.Printf("marshal error: %v", err)
 		return
+	}
+	if _, isDelta := msg.(*DeltaMsg); isDelta && len(data) > maxDeltaBytes {
+		log.Printf("delta over budget: %d bytes", len(data))
 	}
 	select {
 	case c.send <- data:

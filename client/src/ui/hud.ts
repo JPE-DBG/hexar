@@ -1,4 +1,4 @@
-import { BASE_INCOME_PER_SEC, MAINTENANCE_TIER1, MAINTENANCE_TIER2, MAINTENANCE_TIER3, MAINTENANCE_TIER1_CAP, MAINTENANCE_TIER2_CAP, SUPPLY_LINES_TIER1, SUPPLY_LINES_TIER2, SUPPLY_LINES_TIER3 } from '../constants';
+import { BASE_INCOME_PER_SEC, MAINTENANCE_TIER1, MAINTENANCE_TIER2, MAINTENANCE_TIER3, MAINTENANCE_TIER1_CAP, MAINTENANCE_TIER2_CAP, SUPPLY_LINES_TIER1, SUPPLY_LINES_TIER2, SUPPLY_LINES_TIER3, TECH_SUPPLY_LINES } from '../constants';
 import { PlayerDTO } from '../state/state';
 
 const PLAYER_COLORS: Record<number, string> = {
@@ -44,7 +44,7 @@ export function calcMaintenance(hexCount: number, player?: PlayerDTO | null): nu
   const tier2 = Math.min(Math.max(hexCount - MAINTENANCE_TIER1_CAP, 0), MAINTENANCE_TIER2_CAP - MAINTENANCE_TIER1_CAP);
   const tier3 = Math.max(hexCount - MAINTENANCE_TIER2_CAP, 0);
 
-  if (player?.tech?.[6]) { // TechSupplyLines = 6
+  if (player?.tech?.[TECH_SUPPLY_LINES]) { // TechSupplyLines
     return tier1 * SUPPLY_LINES_TIER1 + tier2 * SUPPLY_LINES_TIER2 + tier3 * SUPPLY_LINES_TIER3;
   }
   return tier1 * MAINTENANCE_TIER1 + tier2 * MAINTENANCE_TIER2 + tier3 * MAINTENANCE_TIER3;

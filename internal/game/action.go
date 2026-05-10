@@ -13,6 +13,7 @@ const (
 	ActionUnlockTech
 	ActionDropHex
 	ActionFortify
+	ActionForfeit // Player field = loser; enqueued by disconnect timer
 )
 
 type Action struct {
@@ -79,6 +80,8 @@ func ProcessActions(state *GameState, actions []Action) {
 			if ValidateFortify(state, a) == nil {
 				ApplyFortify(state, a)
 			}
+		case ActionForfeit:
+			ForfeitPlayer(state, a.Player)
 		}
 	}
 }

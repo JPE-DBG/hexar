@@ -13,8 +13,19 @@ func (r *Room) Run() {
 		select {
 		case <-ticker.C:
 			r.mu.Lock()
-			actions := r.drainActions()
-			game.RunTick(r.state, game.TickDt, actions)
+			if r.state.Paused {
+				r.state.PauseTimeLeft -= game.TickDt
+				if r.state.PauseTimeLeft <= 0 {
+					r.state.PauseTimeLeft = 0
+					r.state.Paused = false
+					pid := r.pausedPlayer
+					r.pausedPlayer = 0
+					r.actions <- game.Action{Type: game.ActionForfeit, Player: pid}
+				}
+			} else {
+				actions := r.drainActions()
+				game.RunTick(r.state, game.TickDt, actions)
+			}
 			r.broadcast()
 			r.mu.Unlock()
 		case <-r.stop:

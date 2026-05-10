@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
+	"hexar/internal/lobby"
 	"hexar/internal/net"
-	"hexar/internal/room"
 	"log"
 )
 
@@ -12,9 +12,7 @@ func main() {
 	clientDir := flag.String("client", "./client/dist", "path to client dist")
 	flag.Parse()
 
-	r := room.New()
-	go r.Run()
-
-	srv := net.NewServer(r, *clientDir)
+	lob := lobby.New()
+	srv := net.NewServer(lob, *clientDir)
 	log.Fatal(net.ListenAndServe(*addr, srv))
 }

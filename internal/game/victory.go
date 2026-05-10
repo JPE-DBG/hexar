@@ -1,11 +1,24 @@
 package game
 
+func ForfeitPlayer(state *GameState, loser PlayerID) {
+	var winner PlayerID
+	for pid := range state.Players {
+		if pid != loser {
+			winner = pid
+			break
+		}
+	}
+	TriggerVictory(state, winner)
+	state.WinReason = "forfeit"
+}
+
 func TriggerVictory(state *GameState, winner PlayerID) {
 	if state.Over {
 		return
 	}
 	state.Over = true
 	state.Winner = winner
+	state.WinReason = "capital"
 	for pid := range state.Players {
 		if pid == winner {
 			continue

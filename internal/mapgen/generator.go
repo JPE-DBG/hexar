@@ -2,13 +2,14 @@ package mapgen
 
 import "hexar/internal/game"
 
+const mapRadius = 4
+
 func GenerateTestMap() map[game.Hex]*game.HexState {
 	hexes := make(map[game.Hex]*game.HexState)
 
-	radius := 4
-	for q := -radius; q <= radius; q++ {
-		r1 := max(-radius, -q-radius)
-		r2 := min(radius, -q+radius)
+	for q := -mapRadius; q <= mapRadius; q++ {
+		r1 := max(-mapRadius, -q-mapRadius)
+		r2 := min(mapRadius, -q+mapRadius)
 		for r := r1; r <= r2; r++ {
 			hexes[game.Hex{Q: q, R: r}] = &game.HexState{}
 		}
@@ -19,7 +20,7 @@ func GenerateTestMap() map[game.Hex]*game.HexState {
 
 func SpawnPositions() [2]game.Hex {
 	return [2]game.Hex{
-		{Q: -4, R: 0},
-		{Q: 4, R: 0},
+		{Q: -mapRadius, R: 0},
+		{Q: mapRadius, R: 0},
 	}
 }

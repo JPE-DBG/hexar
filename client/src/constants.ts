@@ -56,6 +56,20 @@ export const BUILDING_GOLD = 1;
 export const BUILDING_POWER = 2;
 export const BUILDING_RESEARCH = 3;
 
+// Tech IDs — must match TechID iota order in internal/game/state.go
+export const TECH_BLITZ = 0;
+export const TECH_FORTIFY = 1;
+export const TECH_PROSPERITY = 2;
+export const TECH_RECLAMATION = 3;
+export const TECH_VANGUARD = 4;
+export const TECH_GARRISON = 5;
+export const TECH_SUPPLY_LINES = 6;
+export const TECH_WAR_CHEST = 7;
+export const TECH_RESILIENCE = 8;
+export const TECH_IRON_GRIP = 9;
+export const TECH_COMPOUND_GROWTH = 10;
+export const TECH_SIEGE_MASTERY = 11;
+
 export interface TechDef {
   id: number;
   name: string;

@@ -3,7 +3,7 @@ package net
 import (
 	"context"
 	"encoding/json"
-	"hexar/internal/room"
+	"hexar/internal/lobby"
 	"log"
 	"net/http"
 
@@ -11,16 +11,16 @@ import (
 )
 
 type Server struct {
-	room *room.Room
-	mux  *http.ServeMux
+	lobby *lobby.Lobby
+	mux   *http.ServeMux
 }
 
-func NewServer(r *room.Room, clientDir string) *Server {
-	s := &Server{room: r, mux: http.NewServeMux()}
-
+func NewServer(lob *lobby.Lobby, clientDir string) *Server {
+	s := &Server{lobby: lob, mux: http.NewServeMux()}
 	s.mux.Handle("/", http.FileServer(http.Dir(clientDir)))
+	s.mux.HandleFunc("/lobby/create", s.handleCreate)
+	s.mux.HandleFunc("/lobby/join", s.handleJoin)
 	s.mux.HandleFunc("/ws", s.handleWS)
-
 	return s
 }
 
@@ -28,7 +28,59 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
+func (s *Server) handleCreate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST required", http.StatusMethodNotAllowed)
+		return
+	}
+	code, token, pid := s.lobby.Create()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"code":     code,
+		"token":    token,
+		"playerId": int(pid),
+	})
+}
+
+func (s *Server) handleJoin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST required", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Code string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	token, pid, err := s.lobby.Join(req.Code)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"token":    token,
+		"playerId": int(pid),
+	})
+}
+
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	token := r.URL.Query().Get("token")
+
+	entry, ok := s.lobby.Get(code)
+	if !ok {
+		http.Error(w, "room not found", http.StatusNotFound)
+		return
+	}
+	pid, ok := entry.Validate(token)
+	if !ok {
+		http.Error(w, "invalid token", http.StatusForbidden)
+		return
+	}
+
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		InsecureSkipVerify: true,
 	})
@@ -38,18 +90,25 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	client := NewClient(conn, s.room)
-	pid := s.room.AddClient(client)
+	rm := entry.Room
+
+	if rm.IsConnected(pid) {
+		conn.Close(websocket.StatusCode(4001), "already connected in another tab")
+		return
+	}
+
+	client := NewClient(conn, rm)
 	client.playerID = pid
+
+	rm.OnConnect(client, pid)
 
 	welcome, _ := json.Marshal(WelcomeMsg{Type: MsgWelcome, PlayerID: int(pid)})
 	conn.Write(ctx, websocket.MessageText, welcome)
 
 	go client.WritePump(ctx)
-
 	client.ReadPump(ctx)
 
-	s.room.RemoveClient(client)
+	rm.OnDisconnect(pid, client)
 	close(client.send)
 	conn.Close(websocket.StatusNormalClosure, "")
 }
