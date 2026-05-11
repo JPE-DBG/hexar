@@ -101,6 +101,11 @@ export class Sidebar {
     this.el = document.createElement('div');
     this.el.id = 'sidebar';
     this.el.innerHTML = `
+      <div class="sidebar-section sidebar-context" id="sidebar-context">
+        <div class="section-label">SELECT HEX</div>
+        <div class="context-hint">Click a hex to see actions</div>
+      </div>
+
       <div class="sidebar-section">
         <div class="section-label">BUILD</div>
         <button class="sidebar-btn" data-tool="economy" data-hotkey="Q">
@@ -121,12 +126,6 @@ export class Sidebar {
           <span class="btn-cost">80g</span>
           <span class="btn-hotkey">E</span>
         </button>
-      </div>
-
-
-<div class="sidebar-section sidebar-context" id="sidebar-context">
-        <div class="section-label">SELECT HEX</div>
-        <div class="context-hint">Click a hex to see actions</div>
       </div>
     `;
     parent.appendChild(this.el);

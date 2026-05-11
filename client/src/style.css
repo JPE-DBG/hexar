@@ -198,9 +198,9 @@ canvas { display: block; }
 }
 
 .sidebar-context {
-  margin-top: auto; /* Push to bottom */
-  padding-top: 12px;
-  border-top: 1px solid rgba(69,183,209,0.15);
+  min-height: 260px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(69,183,209,0.15);
 }
 
 .context-hint {
