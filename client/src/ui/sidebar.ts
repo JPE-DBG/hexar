@@ -123,21 +123,8 @@ export class Sidebar {
         </button>
       </div>
 
-      <div class="sidebar-section">
-        <div class="section-label">MANAGE</div>
-        <button class="sidebar-btn" data-tool="demolish" data-hotkey="D">
-          <span class="btn-icon">🗑</span>
-          <span class="btn-label">Demolish</span>
-          <span class="btn-hotkey">D</span>
-        </button>
-        <button class="sidebar-btn" data-tool="sell-hex" data-hotkey="X">
-          <span class="btn-icon">❌</span>
-          <span class="btn-label">Sell Hex</span>
-          <span class="btn-hotkey">X</span>
-        </button>
-      </div>
 
-      <div class="sidebar-section sidebar-context" id="sidebar-context">
+<div class="sidebar-section sidebar-context" id="sidebar-context">
         <div class="section-label">SELECT HEX</div>
         <div class="context-hint">Click a hex to see actions</div>
       </div>

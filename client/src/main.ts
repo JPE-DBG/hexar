@@ -94,12 +94,6 @@ window.addEventListener('keydown', (e) => {
     case 'E':
       sidebar.selectTool(selectedTool === 'research' ? null : 'research');
       break;
-    case 'D':
-      sidebar.selectTool(selectedTool === 'demolish' ? null : 'demolish');
-      break;
-    case 'X':
-      sidebar.selectTool(selectedTool === 'sell-hex' ? null : 'sell-hex');
-      break;
     case 'ESCAPE':
       sidebar.selectTool(null);
       break;
@@ -118,6 +112,16 @@ window.addEventListener('keydown', (e) => {
     case 'A': // Attack
       if (selectedHex.owner !== myPlayerId && selectedHex.owner > 0) {
         connection?.send({ type: 'action', action: 'attack', q: selectedHex.q, r: selectedHex.r });
+      }
+      break;
+    case 'D': // Demolish
+      if (selectedHex.owner === myPlayerId && selectedHex.building > 0) {
+        connection?.send({ type: 'action', action: 'demolish', q: selectedHex.q, r: selectedHex.r });
+      }
+      break;
+    case 'X': // Sell hex
+      if (selectedHex.owner === myPlayerId && !selectedHex.capital) {
+        connection?.send({ type: 'action', action: 'drop-hex', q: selectedHex.q, r: selectedHex.r });
       }
       break;
     case 'F': // Fortify
@@ -432,16 +436,6 @@ setupInput(
         // Tool stays selected for batch operations
         return;
       }
-    }
-
-    if (selectedTool === 'demolish' && hex.owner === myPlayerId && hex.building > 0) {
-      connection?.send({ type: 'action', action: 'demolish', q, r });
-      return;
-    }
-
-    if (selectedTool === 'sell-hex' && hex.owner === myPlayerId && !hex.capital) {
-      connection?.send({ type: 'action', action: 'drop-hex', q, r });
-      return;
     }
 
     // No tool selected or invalid target → normal hex interaction
