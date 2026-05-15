@@ -669,7 +669,20 @@ Goal: Build confidence before exposing to real users; catch regressions as the v
 | `TestForfeitEnqueued` | `PauseTimeLeft` hits 0 → `ActionForfeit` processed next tick |
 | `TestDuplicateConnect` | `IsConnected` returns true; second connection replaces first cleanly |
 
-**Layer 3: Playwright E2E** — defer until after M9 (needs a live server for disconnect/reconnect flows to be realistic). Cover: create → join → play → victory path; duplicate tab rejection; URL hash reconnect after tab close.
+**Layer 3: Playwright E2E** (`e2e/`) — runs locally via `make test-e2e`; no deployment needed. Playwright's `webServer` config auto-starts both the Go server (`:8080`) and the Vite dev server (`:5173`) before the suite runs. Multi-player scenarios use two `BrowserContext` objects in one test process.
+
+| Spec | Tests |
+|---|---|
+| `lobby.spec.ts` | Create shows 4-char code; join with bad code shows error; waiting overlay appears; HUD activates when P2 joins |
+| `gameplay.spec.ts` | Canvas + HUD visible after both connect; gold counter increases over time; sidebar visible |
+| `connection.spec.ts` | Duplicate tab shows "Already Connected"; URL hash reconnects after tab close; pause banner appears on opponent disconnect |
+
+**Setup:**
+```bash
+npm install          # installs @playwright/test from root package.json
+npx playwright install chromium
+make test-e2e        # starts both servers, runs e2e/, exits
+```
 
 **M9: Deployment**
 
