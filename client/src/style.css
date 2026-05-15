@@ -228,17 +228,21 @@ canvas { display: block; }
   }
 
   .sidebar-btn {
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
     padding: 6px;
     min-width: 60px;
   }
 
   .btn-label {
-    font-size: 9px;
+    display: none;
   }
 
   .btn-cost {
-    display: none; /* Hide cost on mobile landscape */
+    font-size: 8px;
+    letter-spacing: 0;
   }
 }
 
@@ -254,6 +258,7 @@ canvas { display: block; }
     justify-content: space-around;
     padding: 4px;
     gap: 4px;
+    overflow: visible; /* allow context panel to extend above the bar */
   }
 
   .sidebar-section {
@@ -262,15 +267,55 @@ canvas { display: block; }
 
   .section-label,
   .btn-label,
-  .btn-cost,
+  .btn-hotkey,
   .sidebar-context {
-    display: none; /* Icon-only on mobile portrait */
+    display: none;
+  }
+
+  /* Show cost on all buttons (icon + price in row) */
+  .btn-cost {
+    font-size: 8px;
+    letter-spacing: 0;
+  }
+
+  /* Remove the context-only cost override — cost now shows everywhere */
+
+  /* Show context as floating panel above bottom bar when a hex is selected.
+     position:absolute (not fixed) because backdrop-filter on #sidebar makes it
+     the containing block for fixed children, and overflow clips them. */
+  #sidebar.has-context .sidebar-context {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    position: absolute;
+    bottom: 50px;
+    left: 0;
+    right: 0;
+    min-height: 0; /* override desktop min-height: 260px */
+    background: rgba(18, 18, 18, 0.95);
+    border-top: 1px solid #333;
+    padding: 6px 8px;
+    gap: 6px;
+    overflow-x: auto;
+  }
+
+  /* Context action buttons: compact row layout matching build buttons */
+  #sidebar.has-context .sidebar-context .sidebar-btn {
+    flex: 1;
+    flex-shrink: 0;
+    height: 42px;
+    min-width: 60px;
+    max-width: 100px;
+    align-self: auto;
   }
 
   .sidebar-btn {
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     justify-content: center;
-    padding: 4px;
+    gap: 6px;
+    padding: 4px 6px;
     flex: 1;
     min-width: 50px;
   }

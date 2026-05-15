@@ -48,7 +48,8 @@ export class Connection {
   }
 
   private buildUrl(): string {
-    return `ws://${window.location.host}/ws?code=${this.code}&token=${this.token}`;
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${proto}://${window.location.host}/ws?code=${this.code}&token=${this.token}`;
   }
 
   private connect() {

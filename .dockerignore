@@ -1,0 +1,11 @@
+.git/
+node_modules/
+client/node_modules/
+client/dist/
+client/.vite/
+test-results/
+playwright-report/
+playwright.config.ts
+e2e/
+*.md
+.github/

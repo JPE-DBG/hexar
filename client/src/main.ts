@@ -473,7 +473,8 @@ setupInput(
     const isEnemy = hex.owner !== 0 && hex.owner !== myPlayerId;
     const atkPwr = bestAdjacentPower(state, myPlayerId, hex, player);
     sidebar.updateContext(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
-  }
+  },
+  (dx, dy) => renderer.pan(dx, dy),
 );
 
 // Try to reconnect from sessionStorage first, then URL hash, else show lobby
