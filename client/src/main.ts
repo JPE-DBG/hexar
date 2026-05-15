@@ -43,6 +43,9 @@ const sidebar = new Sidebar(document.body, {
   onDemolish: () => {
     if (!selectedHex || !connection) return;
     connection.send({ type: 'action', action: 'demolish', q: selectedHex.q, r: selectedHex.r });
+    selectedHex = null;
+    renderer.setSelected(null);
+    sidebar.hide();
   },
   onAttack: () => {
     if (!selectedHex || !connection) return;
@@ -51,6 +54,9 @@ const sidebar = new Sidebar(document.body, {
   onDropHex: () => {
     if (!selectedHex || !connection) return;
     connection.send({ type: 'action', action: 'drop-hex', q: selectedHex.q, r: selectedHex.r });
+    selectedHex = null;
+    renderer.setSelected(null);
+    sidebar.hide();
   },
   onFortify: () => {
     if (!selectedHex || !connection) return;
