@@ -418,7 +418,9 @@ setupInput(
     }
 
     // If tool is selected and hex is valid target, apply tool
-    if (selectedTool && hex.owner === myPlayerId && hex.building === 0) {
+    // Skip tool if hex is under active battle — counter-spend must take priority
+    const hexBattle = state.battles.find(b => b.dq === q && b.dr === r);
+    if (selectedTool && hex.owner === myPlayerId && hex.building === 0 && !hexBattle) {
       let building: string | undefined;
       switch (selectedTool) {
         case 'economy':

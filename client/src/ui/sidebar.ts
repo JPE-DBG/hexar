@@ -25,7 +25,7 @@ export interface SidebarCallbacks {
 }
 
 // Enhanced SVG icons (32x32, color-coded)
-const ICON_ECONOMY = `<svg width="32" height="32" viewBox="0 0 32 32">
+const ICON_GOLD = `<svg width="32" height="32" viewBox="0 0 32 32">
   <circle cx="16" cy="16" r="13" fill="#f9ca2422" stroke="#f9ca24" stroke-width="2.5"/>
   <text x="16" y="21" text-anchor="middle" fill="#f9ca24" font-size="14" font-weight="bold" font-family="monospace">G</text>
 </svg>`;
@@ -109,8 +109,8 @@ export class Sidebar {
       <div class="sidebar-section">
         <div class="section-label">BUILD</div>
         <button class="sidebar-btn" data-tool="economy" data-hotkey="Q">
-          ${ICON_ECONOMY}
-          <span class="btn-label">Economy</span>
+          ${ICON_GOLD}
+          <span class="btn-label">Gold</span>
           <span class="btn-cost">60g</span>
           <span class="btn-hotkey">Q</span>
         </button>
@@ -239,7 +239,7 @@ export class Sidebar {
       const refund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
 
       // Upgrade button
-      if (hasBuilding) {
+      if (hasBuilding && !battle) {
         const upgCost = upgradeCost(hex.building, hex.level);
         const canUpgrade = gold >= upgCost;
         html += `

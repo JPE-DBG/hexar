@@ -31,6 +31,9 @@ func ValidateUpgrade(state *GameState, action Action) error {
 	if hs.Owner != action.Player {
 		return ErrNotOwner
 	}
+	if hasBattleOnHex(state, action.Target) {
+		return ErrBattleInProgress
+	}
 	if hs.Level == 0 {
 		if action.Building == BuildingNone {
 			return ErrNoBuilding
