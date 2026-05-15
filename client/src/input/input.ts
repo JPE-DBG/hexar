@@ -25,10 +25,11 @@ export function setupInput(
       isDragging = true;
     }
     if (isDragging) {
+      ev.preventDefault();
       onPan(dx, dy);
       dragStart = { x: ev.clientX, y: ev.clientY };
     }
-  });
+  }, { passive: false });
 
   canvas.addEventListener('pointerup', (ev) => {
     if (dragStart && !isDragging) {

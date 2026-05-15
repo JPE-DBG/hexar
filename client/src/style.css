@@ -1,7 +1,7 @@
 /* === Reset === */
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #16213e; overflow: hidden; }
-canvas { display: block; }
+html, body { background: #16213e; overflow: hidden; height: 100%; }
+canvas { display: block; touch-action: none; }
 
 /* === Overlays (full-screen, centred content) === */
 .overlay {
