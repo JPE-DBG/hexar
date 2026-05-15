@@ -547,24 +547,29 @@ hexar/
 - ~~Mode-based~~ — creates "what mode am I in?" confusion; sidebar uses simple highlighted button state instead
 
 **Sidebar sections:**
-1. **BUILD** (always visible): Economy [Q], Power [W], Research [E]
-2. **MANAGE** (always visible): Demolish [D], Sell Hex [X]
-3. **CONTEXT** (dynamic): Upgrade/Attack/Counter-spend buttons appear based on selected hex state
+1. **CONTEXT** (dynamic, top): Upgrade/Attack/Demolish/Sell Hex/Fortify/Counter-spend buttons appear based on selected hex state
+2. **BUILD** (always visible, bottom): Economy [Q], Power [W], Research [E]
 
 **Sticky tool behavior:**
 - Click tool button (or press hotkey) → button highlights → click hexes to place buildings
 - Tool stays selected for batch operations (e.g., click Economy once, then click 5 hexes = 6 actions total)
 - **Toggle to deselect:** Click selected button again (or press hotkey again, or press ESC) → unhighlights
-- Toggle is critical: if Economy is selected and you want to view context actions (like counter-spend during battle), pressing Q again deselects the tool so clicking hex shows context instead of placing building
+- **Battle interaction:** BUILD tool is skipped when clicking a hex under active battle — click falls through to context selection showing counter-spend
 
 **Keyboard shortcuts:**
 - Q/W/E: Select Economy/Power/Research (toggle if already selected)
-- D/X: Select Demolish/Sell Hex (toggle if already selected)
+- D: Demolish selected hex (context action — fires on selected hex, not a sticky tool)
+- X: Sell Hex selected hex (context action — fires on selected hex, not a sticky tool)
 - Space: Upgrade selected hex (context action)
 - A: Attack selected hex (context action)
 - F: Fortify selected hex (context action, if tech unlocked)
 - C: Counter-spend during battle (context action)
 - ESC: Deselect any selected tool
+
+**Battle restrictions:**
+- No new building placement or upgrade allowed on hexes under active battle (server enforces `ErrBattleInProgress` in `ValidateUpgrade`)
+- Demolish remains allowed during battle — defender may recover gold for counter-spend
+- Upgrade button is hidden in context UI during battle; reappears automatically when battle resolves
 
 **Why this is faster than bottom menu:**
 - **Batch building (expansion phase):** 6 actions for 5 buildings vs. 10 actions with bottom menu
@@ -579,7 +584,7 @@ hexar/
 **Implementation files:**
 - `client/src/ui/sidebar.ts` — replaces `buildmenu.ts`
 - `client/src/style.css` — sidebar styles + responsive layouts
-- `client/src/input/input.ts` — keyboard shortcuts with toggle logic
+- `client/src/main.ts` — keyboard shortcuts and tool logic
 
 ### Milestone Status
 

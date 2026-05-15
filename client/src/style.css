@@ -92,12 +92,6 @@ canvas { display: block; }
 .overlay-sub    { margin-top: 8px; }
 .overlay-action { margin-top: 24px; }
 
-/* === Vertical divider (build menu) === */
-.divider-v {
-  border-left: 1px solid #555; height: 20px;
-  margin: 0 8px; display: inline-block; vertical-align: middle;
-}
-
 /* === Sidebar === */
 #sidebar {
   position: fixed;

@@ -1,9 +1,9 @@
 import { HexDTO, BattleDTO, PlayerDTO, GameState } from '../state/state';
 import { neighbors } from '../hexmath';
 import {
-  GOLD_BUILD_COST, GOLD_PER_LEVEL, GOLD_BONUS_MULTIPLIER,
-  POWER_BUILD_COST, POWER_PER_LEVEL,
-  RESEARCH_BUILD_COST, RESEARCH_PER_LEVEL,
+  GOLD_BUILD_COST,
+  POWER_BUILD_COST,
+  RESEARCH_BUILD_COST,
   DEMOLISH_REFUND, ATTACK_COST, CAPITAL_POWER, BASE_INCOME_PER_SEC,
   BUILDING_GOLD, BUILDING_POWER, BUILDING_RESEARCH,
   FORTIFY_COST, COUNTER_SPEND_COST, COUNTER_SPEND_CAP,
@@ -210,11 +210,14 @@ export class Sidebar {
     const canAttack = !battle && gold >= effectiveCost && attackerPower > effectiveDefPower;
 
     // Cache key to avoid unnecessary re-renders
+    const upgCostForKey = hex.building !== 0 ? upgradeCost(hex.building, hex.level) : 0;
     const key = [
       hex.q, hex.r, hex.building, hex.level, isOwn, isEnemy,
       gold >= GOLD_BUILD_COST, gold >= RESEARCH_BUILD_COST,
+      gold >= upgCostForKey,
       canAttack, attackerPower, defPower,
       battle ? Math.floor(battle.timeLeft) : -1,
+      battle ? battle.counterBoost : -1,
       hex.fortifyTimer > 0 ? 1 : 0,
     ].join('|');
 
