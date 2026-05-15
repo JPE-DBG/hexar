@@ -537,6 +537,55 @@ hexar/
 
 **Key rule:** `internal/game/` has zero imports outside stdlib. `RunTick(state, dt)` is a pure function — fully testable with `go test` alone.
 
+### UI Architecture (M7 Design)
+
+**Pattern:** Sidebar with sticky tools (left edge, 180px wide)
+
+**Chosen over alternatives:**
+- ~~Bottom menu~~ — 40% slower for batch building (10 actions vs 6 for placing 5 Economy buildings)
+- ~~Radial menu~~ — occludes adjacent hexes during battles when players need to see Garrison bonuses
+- ~~Mode-based~~ — creates "what mode am I in?" confusion; sidebar uses simple highlighted button state instead
+
+**Sidebar sections:**
+1. **CONTEXT** (dynamic, top): Upgrade/Attack/Demolish/Sell Hex/Fortify/Counter-spend buttons appear based on selected hex state
+2. **BUILD** (always visible, bottom): Economy [Q], Power [W], Research [E]
+
+**Sticky tool behavior:**
+- Click tool button (or press hotkey) → button highlights → click hexes to place buildings
+- Tool stays selected for batch operations (e.g., click Economy once, then click 5 hexes = 6 actions total)
+- **Toggle to deselect:** Click selected button again (or press hotkey again, or press ESC) → unhighlights
+- **Battle interaction:** BUILD tool is skipped when clicking a hex under active battle — click falls through to context selection showing counter-spend
+
+**Keyboard shortcuts:**
+- Q/W/E: Select Economy/Power/Research (toggle if already selected)
+- D: Demolish selected hex (context action — fires on selected hex, not a sticky tool)
+- X: Sell Hex selected hex (context action — fires on selected hex, not a sticky tool)
+- Space: Upgrade selected hex (context action)
+- A: Attack selected hex (context action)
+- F: Fortify selected hex (context action, if tech unlocked)
+- C: Counter-spend during battle (context action)
+- ESC: Deselect any selected tool
+
+**Battle restrictions:**
+- No new building placement or upgrade allowed on hexes under active battle (server enforces `ErrBattleInProgress` in `ValidateUpgrade`)
+- Demolish remains allowed during battle — defender may recover gold for counter-spend
+- Upgrade button is hidden in context UI during battle; reappears automatically when battle resolves
+
+**Why this is faster than bottom menu:**
+- **Batch building (expansion phase):** 6 actions for 5 buildings vs. 10 actions with bottom menu
+- **Mixed operations (warfare phase):** Equivalent speed (context actions work same way)
+- **Always-visible affordances:** No hunting for buttons after clicking hex
+
+**Responsive behavior:**
+- Desktop (>1024px): Left sidebar, full labels, context area
+- Mobile landscape (896×414): Bottom bar (60px), icon + label
+- Mobile portrait (<768px): Bottom bar (50px), icons only
+
+**Implementation files:**
+- `client/src/ui/sidebar.ts` — replaces `buildmenu.ts`
+- `client/src/style.css` — sidebar styles + responsive layouts
+- `client/src/main.ts` — keyboard shortcuts and tool logic
+
 ### Milestone Status
 
 **M1–M5:** Core game loop, hex grid, economy, combat, tech tree, UI polish, power display conventions.
@@ -572,9 +621,10 @@ Goal: Make the game look modern and appealing to retain real players. Every visu
 |---|---|---|
 | Capture flash on hex takeover | Must have | Confirms action resolved — player needs this to know attack succeeded |
 | Battle ring pulse (enhance existing) | Must have | Urgency signal during live counter-spend window |
+| **Sidebar with sticky tools** | Must have | Replace bottom menu; 40% faster batch building; always-visible tools with Q/W/E/D/X hotkeys and toggle-to-deselect |
 | Lobby/overlay polish | Must have | First impression; affects player trust and willingness to return |
 | Floating `+gold` on economy tick | Should have | Reinforces resource loop; helps players time purchases — keep small, float away from hex centre to avoid obscuring labels |
-| Build menu CSS + SVG icons | Should have | Core interaction surface — Economy/Power/Research distinction must be instant |
+| **Sidebar CSS + enhanced SVG icons** | Should have | Color-coded icons (gold=#f9ca24, power=#e74c3c, research=#45b7d1); context actions; responsive layouts |
 | HUD monospace numbers | Should have | Prevents layout shift on fast-updating gold/TP counters |
 | Animated gold counter (smooth interpolation) | Nice to have | Low decision impact; add only after higher-priority items ship |
 | Screen shake on capital fall | Nice to have | Pure feel — cut if time is tight |
@@ -584,9 +634,9 @@ Goal: Make the game look modern and appealing to retain real players. Every visu
 1. **Palette consolidation** — `constants.ts` as single source of truth for all colors; matching CSS file for DOM overlays; remove all inline `style.cssText` strings; no CSS variables that can drift from TS constants
 2. **Hex renderer polish** — radial gradient fill (center lighten → edge darken) + ownership glow (`ctx.shadowBlur`); capital hex distinct icon; ~60 lines in `renderer.ts:drawHexFill()`
 3. **Effects layer** — `Effect[]` array in existing rAF loop; `addCaptureFlash(hex, color)` and `addFloater(hex, text)` called from `applyDelta` on ownership change; effects are client-side only, never in game state
-4. **Build menu CSS + SVG icons** — CSS redesign of existing DOM `BuildMenu`; SVG icons for Economy (coin), Power (sword), Research (flask); keyboard shortcut labels; inline cost/effect text ("Economy L1 — 60g → +1.9/sec")
-5. **Overlay + lobby screens** — CSS for pause/victory/waiting/lobby; room code large and copyable on waiting screen; styled victory/forfeit distinction
-6. **HUD polish** — monospace font for all numeric values; animated gold counter last (lowest decision impact)
+4. **Sidebar with sticky tools** — New `sidebar.ts` replaces `buildmenu.ts`; left-edge 180px; 3 sections (BUILD/MANAGE/CONTEXT); toggle-to-deselect behavior; Q/W/E/D/X/Space/A/F/C/ESC hotkeys; responsive layouts for mobile
+5. **HUD polish** — Structured layout with monospace `tabular-nums` font; color-coded rates (green=positive, red=negative); visual hierarchy with labels/values/rates
+6. **Overlay + lobby screens** — CSS for pause/victory/waiting/lobby; room code large and copyable on waiting screen; styled victory/forfeit distinction
 
 **Technical constraints:**
 - Canvas + DOM split preserved throughout

@@ -1,9 +1,10 @@
+import './style.css';
 import { Connection } from './net/connection';
 import { applySnapshot, applyDelta, GameState, SnapshotMsg, DeltaMsg, HexDTO, PlayerDTO } from './state/state';
 import { Renderer } from './render/renderer';
 import { setupInput } from './input/input';
 import { updateHUD, calcMaintenance } from './ui/hud';
-import { BuildMenu } from './ui/buildmenu';
+import { Sidebar } from './ui/sidebar';
 import { TechTreePanel } from './ui/techtree';
 import { AutoDropPanel } from './ui/autodrop';
 import { LobbyUI } from './ui/lobby';
@@ -16,6 +17,7 @@ import {
   GOLD_BUILD_COST, POWER_BUILD_COST, RESEARCH_BUILD_COST,
   PROSPERITY_BONUS, COMPOUND_GROWTH_MULTIPLIER,
   TECH_PROSPERITY, TECH_COMPOUND_GROWTH, TECH_IRON_GRIP,
+  COLORS,
 } from './constants';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -26,15 +28,17 @@ let state: GameState | null = null;
 let myPlayerId = 0;
 let roomCode = '';
 let selectedHex: HexDTO | null = null;
+let selectedTool: string | null = null;
 let dropMap = new Set<string>();
 let connection: Connection | null = null;
 
-const buildMenu = new BuildMenu(document.body, {
-  onUpgrade: (building?) => {
+const sidebar = new Sidebar(document.body, {
+  onToolSelect: (tool) => {
+    selectedTool = tool;
+  },
+  onUpgrade: () => {
     if (!selectedHex || !connection) return;
-    const msg: Record<string, unknown> = { type: 'action', action: 'upgrade', q: selectedHex.q, r: selectedHex.r };
-    if (building) msg.building = building;
-    connection.send(msg);
+    connection.send({ type: 'action', action: 'upgrade', q: selectedHex.q, r: selectedHex.r });
   },
   onDemolish: () => {
     if (!selectedHex || !connection) return;
@@ -52,6 +56,10 @@ const buildMenu = new BuildMenu(document.body, {
     if (!selectedHex || !connection) return;
     connection.send({ type: 'action', action: 'fortify', q: selectedHex.q, r: selectedHex.r });
   },
+  onCounterSpend: () => {
+    if (!selectedHex || !connection) return;
+    connection.send({ type: 'action', action: 'counter-spend', q: selectedHex.q, r: selectedHex.r });
+  },
 });
 
 const techTreePanel = new TechTreePanel(document.body, (techId) => {
@@ -61,31 +69,89 @@ const techTreePanel = new TechTreePanel(document.body, (techId) => {
 const autoDropPanel = new AutoDropPanel(document.body);
 
 window.addEventListener('keydown', (e) => {
+  // Don't intercept text input
+  if (e.target instanceof HTMLInputElement) return;
+
+  // Tech tree toggle
   if (e.key === 't' || e.key === 'T') {
     techTreePanel.toggle();
     if (state && myPlayerId > 0) {
       const player = state.players.get(String(myPlayerId));
       if (player) techTreePanel.update(player);
     }
+    return;
+  }
+
+  // Sidebar tool shortcuts with toggle
+  const key = e.key.toUpperCase();
+  switch (key) {
+    case 'Q':
+      sidebar.selectTool(selectedTool === 'economy' ? null : 'economy');
+      break;
+    case 'W':
+      sidebar.selectTool(selectedTool === 'power' ? null : 'power');
+      break;
+    case 'E':
+      sidebar.selectTool(selectedTool === 'research' ? null : 'research');
+      break;
+    case 'ESCAPE':
+      sidebar.selectTool(null);
+      break;
+  }
+
+  // Context action shortcuts (require selected hex)
+  if (!selectedHex || !state) return;
+
+  switch (key) {
+    case ' ': // Space = upgrade
+      e.preventDefault();
+      if (selectedHex.owner === myPlayerId && selectedHex.building > 0) {
+        connection?.send({ type: 'action', action: 'upgrade', q: selectedHex.q, r: selectedHex.r });
+      }
+      break;
+    case 'A': // Attack
+      if (selectedHex.owner !== myPlayerId && selectedHex.owner > 0) {
+        connection?.send({ type: 'action', action: 'attack', q: selectedHex.q, r: selectedHex.r });
+      }
+      break;
+    case 'D': // Demolish
+      if (selectedHex.owner === myPlayerId && selectedHex.building > 0) {
+        connection?.send({ type: 'action', action: 'demolish', q: selectedHex.q, r: selectedHex.r });
+      }
+      break;
+    case 'X': // Sell hex
+      if (selectedHex.owner === myPlayerId && !selectedHex.capital) {
+        connection?.send({ type: 'action', action: 'drop-hex', q: selectedHex.q, r: selectedHex.r });
+      }
+      break;
+    case 'F': // Fortify
+      if (selectedHex.owner === myPlayerId) {
+        connection?.send({ type: 'action', action: 'fortify', q: selectedHex.q, r: selectedHex.r });
+      }
+      break;
+    case 'C': { // Counter-spend
+      const hex = selectedHex;
+      const battle = state.battles.find(b => b.dq === hex.q && b.dr === hex.r);
+      if (battle && hex.owner === myPlayerId) {
+        connection?.send({ type: 'action', action: 'counter-spend', q: hex.q, r: hex.r });
+      }
+      break;
+    }
   }
 });
 
 let victoryOverlay: HTMLElement | null = null;
-
 let waitingOverlay: HTMLElement | null = null;
 
 function showWaitingOverlay() {
   if (waitingOverlay) return;
   waitingOverlay = document.createElement('div');
-  waitingOverlay.style.cssText = `
-    position:fixed;top:0;left:0;width:100%;height:100%;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    background:rgba(0,0,0,0.75);z-index:200;font-family:monospace;
-  `;
+  waitingOverlay.className = 'overlay';
+  waitingOverlay.style.background = COLORS.overlayBg;
   waitingOverlay.innerHTML = `
-    <div style="font-size:36px;font-weight:bold;color:#4ecdc4">Waiting for opponent…</div>
-    <div style="color:#aaa;margin-top:12px;font-size:16px">Share this room code with player 2:</div>
-    <div style="font-size:48px;font-weight:bold;color:#fff;letter-spacing:8px;margin-top:12px">${roomCode}</div>
+    <div class="overlay-title" style="font-size:36px;color:${COLORS.accent}">Waiting for opponent…</div>
+    <div class="overlay-sub" style="color:${COLORS.textMuted};font-size:16px">Share this room code with player 2:</div>
+    <div style="font-size:56px;font-weight:bold;color:#fff;letter-spacing:10px;margin-top:16px">${roomCode}</div>
   `;
   document.body.appendChild(waitingOverlay);
 }
@@ -100,34 +166,29 @@ function showVictory(isWinner: boolean, winReason: string) {
   sessionStorage.removeItem('hexarSession');
   history.replaceState(null, '', '/');
   victoryOverlay = document.createElement('div');
-  victoryOverlay.style.cssText = `
-    position:fixed;top:0;left:0;width:100%;height:100%;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    background:rgba(0,0,0,0.75);z-index:200;font-family:monospace;
-  `;
+  victoryOverlay.className = 'overlay';
+  victoryOverlay.style.background = COLORS.overlayBg;
   const msg = isWinner ? 'You win!' : 'You lose!';
-  const color = isWinner ? '#4ecdc4' : '#ff6b6b';
+  const color = isWinner ? COLORS.accent : COLORS.player2;
   const subtitle = winReason === 'forfeit'
     ? (isWinner ? 'Opponent forfeited' : 'You forfeited')
     : 'Capital captured';
-  victoryOverlay.innerHTML = `<div style="font-size:48px;font-weight:bold;color:${color}">${msg}</div>
-    <div style="color:#aaa;margin-top:8px;font-size:16px">${subtitle}</div>`;
+  victoryOverlay.innerHTML = `
+    <div class="overlay-title" style="font-size:48px;color:${color}">${msg}</div>
+    <div class="overlay-sub" style="color:${COLORS.textMuted};font-size:16px">${subtitle}</div>
+  `;
   document.body.appendChild(victoryOverlay);
 }
 
 let disconnectOverlay: HTMLElement | null = null;
-
 let reconnectBanner: HTMLElement | null = null;
-
 let pauseBanner: HTMLElement | null = null;
 
 function updatePauseBanner(timeLeft: number) {
   if (!pauseBanner) {
     pauseBanner = document.createElement('div');
-    pauseBanner.style.cssText = `
-      position:fixed;top:0;left:0;width:100%;padding:8px;text-align:center;
-      background:#8e44ad;color:#fff;font-family:monospace;font-size:14px;z-index:150;
-    `;
+    pauseBanner.className = 'banner';
+    pauseBanner.style.background = COLORS.pause;
     document.body.appendChild(pauseBanner);
   }
   const mins = Math.floor(timeLeft / 60);
@@ -144,10 +205,8 @@ function hidePauseBanner() {
 function showReconnecting(attempt: number, max: number) {
   if (!reconnectBanner) {
     reconnectBanner = document.createElement('div');
-    reconnectBanner.style.cssText = `
-      position:fixed;top:0;left:0;width:100%;padding:6px;text-align:center;
-      background:#c0392b;color:#fff;font-family:monospace;font-size:13px;z-index:150;
-    `;
+    reconnectBanner.className = 'banner';
+    reconnectBanner.style.background = COLORS.reconnect;
     document.body.appendChild(reconnectBanner);
   }
   reconnectBanner.textContent = `Reconnecting… (${attempt}/${max})`;
@@ -158,20 +217,16 @@ function hideReconnecting() {
   reconnectBanner = null;
 }
 
-
 function showAlreadyConnectedOverlay() {
   sessionStorage.removeItem('hexarSession');
   history.replaceState(null, '', '/');
   const overlay = document.createElement('div');
-  overlay.style.cssText = `
-    position:fixed;top:0;left:0;width:100%;height:100%;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    background:rgba(0,0,0,0.85);z-index:300;font-family:monospace;color:#e0e0e0;
-  `;
+  overlay.className = 'overlay';
+  overlay.style.background = 'rgba(0,0,0,0.85)';
   overlay.innerHTML = `
-    <div style="font-size:28px;color:#f39c12;margin-bottom:16px">Already Connected</div>
-    <div style="color:#aaa;font-size:16px;margin-bottom:24px">This game is already open in another tab.</div>
-    <button onclick="location.reload()" style="padding:10px 28px;font-size:16px;background:#4ecdc4;color:#1a1a2e;border:none;border-radius:4px;cursor:pointer;font-family:monospace">Back to Lobby</button>
+    <div class="overlay-title" style="font-size:28px;color:${COLORS.warning};margin-bottom:16px">Already Connected</div>
+    <div class="overlay-sub" style="color:${COLORS.textMuted};font-size:16px;margin-bottom:24px">This game is already open in another tab.</div>
+    <button onclick="location.reload()" class="btn overlay-action" style="background:${COLORS.accent};color:${COLORS.background}">Back to Lobby</button>
   `;
   document.body.appendChild(overlay);
 }
@@ -179,15 +234,12 @@ function showAlreadyConnectedOverlay() {
 function showDisconnectOverlay() {
   if (disconnectOverlay) return;
   disconnectOverlay = document.createElement('div');
-  disconnectOverlay.style.cssText = `
-    position:fixed;top:0;left:0;width:100%;height:100%;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    background:rgba(0,0,0,0.85);z-index:300;font-family:monospace;color:#e0e0e0;
-  `;
+  disconnectOverlay.className = 'overlay';
+  disconnectOverlay.style.background = 'rgba(0,0,0,0.85)';
   disconnectOverlay.innerHTML = `
-    <div style="font-size:32px;color:#ff6b6b;margin-bottom:16px">Disconnected</div>
-    <div style="color:#aaa;font-size:16px;margin-bottom:24px">Could not reconnect to server.</div>
-    <button onclick="location.reload()" style="padding:10px 28px;font-size:16px;background:#4ecdc4;color:#1a1a2e;border:none;border-radius:4px;cursor:pointer;font-family:monospace">Back to Lobby</button>
+    <div class="overlay-title" style="font-size:32px;color:${COLORS.player2};margin-bottom:16px">Disconnected</div>
+    <div class="overlay-sub" style="color:${COLORS.textMuted};font-size:16px;margin-bottom:24px">Could not reconnect to server.</div>
+    <button onclick="location.reload()" class="btn overlay-action" style="background:${COLORS.accent};color:${COLORS.background}">Back to Lobby</button>
   `;
   document.body.appendChild(disconnectOverlay);
   sessionStorage.removeItem('hexarSession');
@@ -232,6 +284,13 @@ function updateState(newState: GameState) {
     const tp = player?.tp ?? 0;
     updateHUD(hud, myPlayerId, gold, hexCount, income, maintenance, tp, tpRate, player?.vanguardTimer ?? 0);
 
+    // Trigger gold floaters on economy hexes (throttled inside renderer to 1 per 2s per hex)
+    for (const [, hex] of state.hexes) {
+      if (hex.owner === myPlayerId && hex.building === BUILDING_GOLD) {
+        renderer.addFloater(hex.q, hex.r, `+${hexIncome(hex, player).toFixed(1)}`);
+      }
+    }
+
     if (player) {
       techTreePanel.update(player);
     }
@@ -261,7 +320,7 @@ function updateState(newState: GameState) {
         const isEnemy = current.owner !== 0 && current.owner !== myPlayerId;
         const atkPwr = bestAdjacentPower(state, myPlayerId, current, player);
         const battle = state.battles.find(b => b.dq === current.q && b.dr === current.r) ?? null;
-        buildMenu.updateWithActions(current, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
+        sidebar.updateContext(current, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
       }
     }
   }
@@ -275,6 +334,15 @@ function onSnapshot(msg: SnapshotMsg) {
 
 function onDelta(msg: DeltaMsg) {
   if (!state) return;
+  // Trigger capture flash for hex ownership changes
+  if (msg.hexChanges) {
+    for (const hex of msg.hexChanges) {
+      if (hex.owner > 0 && hex.previousOwner !== undefined && hex.previousOwner !== hex.owner) {
+        const flashColor = hex.owner === 1 ? COLORS.player1 : COLORS.player2;
+        renderer.addCaptureFlash(hex.q, hex.r, flashColor);
+      }
+    }
+  }
   updateState(applyDelta(state, msg));
 }
 
@@ -345,15 +413,39 @@ setupInput(
     if (!hex) {
       selectedHex = null;
       renderer.setSelected(null);
-      buildMenu.hide();
+      sidebar.hide();
       return;
     }
 
+    // If tool is selected and hex is valid target, apply tool
+    // Skip tool if hex is under active battle — counter-spend must take priority
+    const hexBattle = state.battles.find(b => b.dq === q && b.dr === r);
+    if (selectedTool && hex.owner === myPlayerId && hex.building === 0 && !hexBattle) {
+      let building: string | undefined;
+      switch (selectedTool) {
+        case 'economy':
+          building = 'gold';
+          break;
+        case 'power':
+          building = 'power';
+          break;
+        case 'research':
+          building = 'research';
+          break;
+      }
+      if (building) {
+        connection?.send({ type: 'action', action: 'upgrade', q, r, building });
+        // Tool stays selected for batch operations
+        return;
+      }
+    }
+
+    // No tool selected or invalid target → normal hex interaction
     if (hex.owner === 0) {
       connection?.send({ type: 'action', action: 'claim', q, r });
       selectedHex = null;
       renderer.setSelected(null);
-      buildMenu.hide();
+      sidebar.hide();
       return;
     }
 
@@ -380,7 +472,7 @@ setupInput(
     const isOwn = hex.owner === myPlayerId;
     const isEnemy = hex.owner !== 0 && hex.owner !== myPlayerId;
     const atkPwr = bestAdjacentPower(state, myPlayerId, hex, player);
-    buildMenu.updateWithActions(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
+    sidebar.updateContext(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
   }
 );
 

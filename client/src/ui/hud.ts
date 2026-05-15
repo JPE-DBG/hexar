@@ -1,9 +1,9 @@
-import { BASE_INCOME_PER_SEC, MAINTENANCE_TIER1, MAINTENANCE_TIER2, MAINTENANCE_TIER3, MAINTENANCE_TIER1_CAP, MAINTENANCE_TIER2_CAP, SUPPLY_LINES_TIER1, SUPPLY_LINES_TIER2, SUPPLY_LINES_TIER3, TECH_SUPPLY_LINES } from '../constants';
+import { BASE_INCOME_PER_SEC, MAINTENANCE_TIER1, MAINTENANCE_TIER2, MAINTENANCE_TIER3, MAINTENANCE_TIER1_CAP, MAINTENANCE_TIER2_CAP, SUPPLY_LINES_TIER1, SUPPLY_LINES_TIER2, SUPPLY_LINES_TIER3, TECH_SUPPLY_LINES, COLORS } from '../constants';
 import { PlayerDTO } from '../state/state';
 
 const PLAYER_COLORS: Record<number, string> = {
-  1: '#4ecdc4',
-  2: '#ff6b6b',
+  1: COLORS.player1,
+  2: COLORS.player2,
 };
 
 export function updateHUD(
@@ -21,18 +21,31 @@ export function updateHUD(
   const netSign = net >= 0 ? '+' : '';
   const tpSign = tpRate >= 0 ? '+' : '';
   const color = PLAYER_COLORS[playerId] ?? '#e0e0e0';
+  const netColor = net >= 0 ? '#7bed9f' : '#ff6b81';
 
-  let vanguardIndicator = '';
+  let vanguardBox = '';
   if (vanguardTimer > 0) {
-    vanguardIndicator = ` | <span style="color:#fa0">⚡Vanguard ${vanguardTimer.toFixed(1)}s</span>`;
+    vanguardBox = `<div class="hud-vanguard">⚡ Vanguard ${vanguardTimer.toFixed(1)}s</div>`;
   }
 
-  el.innerHTML =
-    `<span style="color:${color}">Player ${playerId}</span>` +
-    ` | Gold: ${gold.toFixed(0)} (${netSign}${net.toFixed(1)}/s)` +
-    ` | TP: ${tp.toFixed(0)} (${tpSign}${tpRate.toFixed(2)}/s)` +
-    ` | Hexes: ${hexCount}` +
-    vanguardIndicator;
+  el.innerHTML = `
+    <div class="hud-player" style="color:${color}">Player ${playerId}</div>
+    <div class="hud-row">
+      <span class="hud-label">Gold:</span>
+      <span class="hud-value">${gold.toFixed(0)}</span>
+      <span class="hud-rate" style="color:${netColor}">(${netSign}${net.toFixed(1)}/s)</span>
+    </div>
+    <div class="hud-row">
+      <span class="hud-label">TP:</span>
+      <span class="hud-value">${tp.toFixed(0)}</span>
+      <span class="hud-rate">(${tpSign}${tpRate.toFixed(2)}/s)</span>
+    </div>
+    <div class="hud-row">
+      <span class="hud-label">Hexes:</span>
+      <span class="hud-value">${hexCount}</span>
+    </div>
+    ${vanguardBox}
+  `;
 }
 
 export function calcIncome(hexCount: number): number {
