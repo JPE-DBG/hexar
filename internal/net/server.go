@@ -11,13 +11,15 @@ import (
 )
 
 type Server struct {
-	lobby *lobby.Lobby
-	mux   *http.ServeMux
+	lobby   *lobby.Lobby
+	mux     *http.ServeMux
+	version string
 }
 
-func NewServer(lob *lobby.Lobby, clientDir string) *Server {
-	s := &Server{lobby: lob, mux: http.NewServeMux()}
+func NewServer(lob *lobby.Lobby, clientDir string, version string) *Server {
+	s := &Server{lobby: lob, mux: http.NewServeMux(), version: version}
 	s.mux.Handle("/", http.FileServer(http.Dir(clientDir)))
+	s.mux.HandleFunc("/health", s.handleHealth)
 	s.mux.HandleFunc("/lobby/create", s.handleCreate)
 	s.mux.HandleFunc("/lobby/join", s.handleJoin)
 	s.mux.HandleFunc("/ws", s.handleWS)
@@ -26,6 +28,11 @@ func NewServer(lob *lobby.Lobby, clientDir string) *Server {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
+}
+
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok", "version": s.version})
 }
 
 func (s *Server) handleCreate(w http.ResponseWriter, r *http.Request) {
