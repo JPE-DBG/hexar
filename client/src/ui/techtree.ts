@@ -17,13 +17,6 @@ export class TechTreePanel {
     this.onUnlock = onUnlock;
     this.el = document.createElement('div');
     this.el.id = 'tech-tree';
-    this.el.style.cssText = `
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(10,10,20,0.97); border: 1px solid #4a4a6a; border-radius: 10px;
-      padding: 16px; display: none; flex-direction: column; gap: 8px;
-      font-family: monospace; color: #e0e0e0; font-size: 12px;
-      max-height: 85vh; overflow-y: auto; min-width: 520px; z-index: 100;
-    `;
     parent.appendChild(this.el);
 
     this.el.addEventListener('pointerdown', (e) => {
@@ -37,14 +30,14 @@ export class TechTreePanel {
 
   toggle() {
     this.visible = !this.visible;
-    this.el.style.display = this.visible ? 'flex' : 'none';
+    this.el.classList.toggle('visible', this.visible);
   }
 
   update(player: PlayerDTO) {
     if (!this.visible) return;
     const tp = player.tp;
     let html = `<div style="font-size:14px;font-weight:bold;margin-bottom:4px">Tech Tree <span style="color:#aaa;font-size:11px">[T to close]</span> &nbsp; TP: ${tp.toFixed(0)}</div>`;
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+    html += '<div class="tech-grid">';
     for (const def of TECH_DEFS) {
       html += this.renderCard(def, player.tech?.[def.id] ?? false, tp >= def.cost);
     }

@@ -101,6 +101,7 @@ function calcPower(hex: HexDTO, state?: GameState): number {
 
 export class Sidebar {
   private el: HTMLElement;
+  private destructiveEl: HTMLElement;
   private selectedTool: string | null = null;
   private callbacks: SidebarCallbacks;
   private lastKey = '';
@@ -143,22 +144,26 @@ export class Sidebar {
       </div>
     `;
     parent.appendChild(this.el);
+
+    // Destructive panel lives outside #sidebar so position:fixed is viewport-relative
+    // (backdrop-filter on #sidebar would otherwise make fixed children relative to it)
+    this.destructiveEl = document.createElement('div');
+    this.destructiveEl.id = 'destructive-panel';
+    parent.appendChild(this.destructiveEl);
+
     this.bindEvents();
   }
 
   private bindEvents() {
-    this.el.addEventListener('pointerdown', (e) => {
+    const handleBtn = (e: PointerEvent, root: HTMLElement) => {
       const btn = (e.target as HTMLElement).closest('.sidebar-btn') as HTMLElement | null;
-      if (!btn) return;
+      if (!btn || !root.contains(btn)) return;
       e.preventDefault();
-
       const tool = btn.getAttribute('data-tool');
       const action = btn.getAttribute('data-action');
-
       if (tool) {
         this.selectTool(tool);
       } else if (action) {
-        // Context actions
         switch (action) {
           case 'upgrade': this.callbacks.onUpgrade(); break;
           case 'demolish': this.callbacks.onDemolish(); break;
@@ -169,7 +174,10 @@ export class Sidebar {
           case 'tech-tree': this.callbacks.onTechTree(); break;
         }
       }
-    });
+    };
+
+    this.el.addEventListener('pointerdown', (e) => handleBtn(e, this.el));
+    this.destructiveEl.addEventListener('pointerdown', (e) => handleBtn(e, this.destructiveEl));
   }
 
   selectTool(tool: string | null) {
@@ -209,6 +217,8 @@ export class Sidebar {
         <div class="context-hint">Click a hex to see actions</div>
       `;
       this.el.classList.remove('has-context');
+      this.destructiveEl.innerHTML = '';
+      this.destructiveEl.classList.remove('visible');
       this.lastKey = '';
       return;
     }
@@ -304,8 +314,11 @@ export class Sidebar {
         `;
       }
 
-      // Destructive actions — last so user must scroll past safe actions on mobile
-      html += `
+      // Destructive actions — in context HTML for desktop, in external panel for mobile portrait
+      // CSS controls which is shown: .sidebar-btn--destructive hidden in context on mobile portrait,
+      // #destructive-panel hidden on desktop.
+      let dHtml = '';
+      dHtml += `
         <button class="sidebar-btn sidebar-btn--destructive ${hasBuilding ? '' : 'disabled'}"
                 data-action="demolish"
                 ${hasBuilding ? '' : 'disabled'}>
@@ -315,10 +328,9 @@ export class Sidebar {
           <span class="btn-hotkey">D</span>
         </button>
       `;
-
       if (!hex.capital && !battle) {
         const sellRefund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
-        html += `
+        dHtml += `
           <button class="sidebar-btn sidebar-btn--destructive" data-action="drop-hex">
             <span class="btn-icon">❌</span>
             <span class="btn-label">Sell Hex</span>
@@ -327,7 +339,12 @@ export class Sidebar {
           </button>
         `;
       }
+      html += dHtml; // desktop: destructive buttons in sidebar context flow
+      this.destructiveEl.innerHTML = dHtml; // mobile: external top-left panel
+      this.destructiveEl.classList.add('visible');
     } else if (isEnemy) {
+      this.destructiveEl.innerHTML = '';
+      this.destructiveEl.classList.remove('visible');
       // Attack button
       html += `
         <button class="sidebar-btn ${canAttack ? '' : 'disabled'}"
@@ -358,6 +375,8 @@ export class Sidebar {
       <div class="context-hint">Click a hex to see actions</div>
     `;
     this.el.classList.remove('has-context');
+    this.destructiveEl.innerHTML = '';
+    this.destructiveEl.classList.remove('visible');
     this.lastKey = '';
   }
 }
