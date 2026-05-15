@@ -1,5 +1,7 @@
 # hexar
 
+Game info [here](./CLAUDE.md)
+
 ## Hexar — Fly.io Deployment Guide
 
 ### Prerequisites
