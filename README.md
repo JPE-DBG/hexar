@@ -1,5 +1,7 @@
 # hexar
 
+https://hexar.fly.dev
+
 Game info [here](./CLAUDE.md)
 
 ## Hexar — Fly.io Deployment Guide
