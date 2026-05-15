@@ -193,6 +193,7 @@ export class Sidebar {
         <div class="section-label">SELECT HEX</div>
         <div class="context-hint">Click a hex to see actions</div>
       `;
+      this.el.classList.remove('has-context');
       this.lastKey = '';
       return;
     }
@@ -263,7 +264,8 @@ export class Sidebar {
                 data-action="demolish"
                 ${hasBuilding ? '' : 'disabled'}>
           <span class="btn-icon">🗑</span>
-          <span class="btn-label">Demolish${hasBuilding ? ` (+${Math.floor(refund)}g)` : ''}</span>
+          <span class="btn-label">Demolish</span>
+          ${hasBuilding ? `<span class="btn-cost">+${Math.floor(refund)}g</span>` : ''}
           <span class="btn-hotkey">D</span>
         </button>
       `;
@@ -274,7 +276,8 @@ export class Sidebar {
         html += `
           <button class="sidebar-btn" data-action="drop-hex">
             <span class="btn-icon">❌</span>
-            <span class="btn-label">Sell Hex${sellRefund > 0 ? ` (+${Math.floor(sellRefund)}g)` : ''}</span>
+            <span class="btn-label">Sell Hex</span>
+            ${sellRefund > 0 ? `<span class="btn-cost">+${Math.floor(sellRefund)}g</span>` : ''}
             <span class="btn-hotkey">X</span>
           </button>
         `;
@@ -288,7 +291,8 @@ export class Sidebar {
                   data-action="fortify"
                   ${canFortify ? '' : 'disabled'}>
             <span class="btn-icon">🛡</span>
-            <span class="btn-label">Fortify (${FORTIFY_COST}g)</span>
+            <span class="btn-label">Fortify</span>
+            <span class="btn-cost">${FORTIFY_COST}g</span>
             <span class="btn-hotkey">F</span>
           </button>
         `;
@@ -303,7 +307,8 @@ export class Sidebar {
                   data-action="counter-spend"
                   ${canCounterSpend ? '' : 'disabled'}>
             <span class="btn-icon">💰</span>
-            <span class="btn-label">Counter +1P (${COUNTER_SPEND_COST}g)</span>
+            <span class="btn-label">Counter +1P</span>
+            <span class="btn-cost">${COUNTER_SPEND_COST}g</span>
             <span class="btn-hotkey">C</span>
           </button>
         `;
@@ -315,7 +320,8 @@ export class Sidebar {
                 data-action="attack"
                 ${canAttack ? '' : 'disabled'}>
           <span class="btn-icon">⚔</span>
-          <span class="btn-label">Attack (${effectiveCost}g)</span>
+          <span class="btn-label">Attack</span>
+          <span class="btn-cost">${effectiveCost}g</span>
           <span class="btn-hotkey">A</span>
         </button>
       `;
@@ -327,6 +333,7 @@ export class Sidebar {
       }
     }
 
+    this.el.classList.add('has-context');
     context.innerHTML = html;
   }
 
@@ -336,6 +343,7 @@ export class Sidebar {
       <div class="section-label">SELECT HEX</div>
       <div class="context-hint">Click a hex to see actions</div>
     `;
+    this.el.classList.remove('has-context');
     this.lastKey = '';
   }
 }

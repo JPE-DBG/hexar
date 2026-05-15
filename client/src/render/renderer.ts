@@ -35,6 +35,7 @@ export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private offsetX = 0;
   private offsetY = 0;
+  private dpr = 1;
   private selectedHex: { q: number; r: number } | null = null;
   private state: GameState | null = null;
   private dropMap = new Set<string>();
@@ -58,14 +59,25 @@ export class Renderer {
   }
 
   private resize() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
-    this.offsetX = this.canvas.width / 2;
-    this.offsetY = this.canvas.height / 2;
+    this.dpr = window.devicePixelRatio || 1;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    this.canvas.width = w * this.dpr;
+    this.canvas.height = h * this.dpr;
+    this.canvas.style.width = w + 'px';
+    this.canvas.style.height = h + 'px';
+    this.ctx.scale(this.dpr, this.dpr);
+    this.offsetX = w / 2;
+    this.offsetY = h / 2;
   }
 
   getOffset(): { x: number; y: number } {
     return { x: this.offsetX, y: this.offsetY };
+  }
+
+  pan(dx: number, dy: number) {
+    this.offsetX += dx;
+    this.offsetY += dy;
   }
 
   setSelected(hex: { q: number; r: number } | null) {
@@ -95,7 +107,7 @@ export class Renderer {
   render(state: GameState) {
     const ctx = this.ctx;
     ctx.fillStyle = COLORS.background;
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.fillRect(0, 0, this.canvas.width / this.dpr, this.canvas.height / this.dpr);
 
     // Pass 1: fills + grid borders
     for (const [, hex] of state.hexes) {
