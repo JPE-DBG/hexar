@@ -60,6 +60,13 @@ const sidebar = new Sidebar(document.body, {
     if (!selectedHex || !connection) return;
     connection.send({ type: 'action', action: 'counter-spend', q: selectedHex.q, r: selectedHex.r });
   },
+  onTechTree: () => {
+    techTreePanel.toggle();
+    if (state && myPlayerId > 0) {
+      const player = state.players.get(String(myPlayerId));
+      if (player) techTreePanel.update(player);
+    }
+  },
 });
 
 const techTreePanel = new TechTreePanel(document.body, (techId) => {

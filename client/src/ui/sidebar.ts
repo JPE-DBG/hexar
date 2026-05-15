@@ -22,6 +22,7 @@ export interface SidebarCallbacks {
   onDropHex: () => void;
   onFortify: () => void;
   onCounterSpend: () => void;
+  onTechTree: () => void;
 }
 
 // Enhanced SVG icons (32x32, color-coded)
@@ -39,6 +40,14 @@ const ICON_RESEARCH = `<svg width="32" height="32" viewBox="0 0 32 32">
   <path d="M10,26 L16,6 L22,26" stroke="#45b7d1" stroke-width="2.5" fill="none"/>
   <ellipse cx="16" cy="25" rx="8" ry="3.5" stroke="#45b7d1" stroke-width="2" fill="none"/>
   <line x1="12" y1="17" x2="20" y2="17" stroke="#45b7d1" stroke-width="2"/>
+</svg>`;
+
+const ICON_TECH = `<svg width="32" height="32" viewBox="0 0 32 32">
+  <circle cx="16" cy="7" r="4" fill="none" stroke="#45b7d1" stroke-width="2"/>
+  <circle cx="7" cy="25" r="3.5" fill="none" stroke="#45b7d1" stroke-width="2"/>
+  <circle cx="25" cy="25" r="3.5" fill="none" stroke="#45b7d1" stroke-width="2"/>
+  <line x1="16" y1="11" x2="7" y2="21.5" stroke="#45b7d1" stroke-width="1.5"/>
+  <line x1="16" y1="11" x2="25" y2="21.5" stroke="#45b7d1" stroke-width="1.5"/>
 </svg>`;
 
 const BUILD_COSTS: Record<number, number> = {
@@ -126,6 +135,11 @@ export class Sidebar {
           <span class="btn-cost">80g</span>
           <span class="btn-hotkey">E</span>
         </button>
+        <button class="sidebar-btn sidebar-btn--tech" data-action="tech-tree" data-hotkey="T">
+          ${ICON_TECH}
+          <span class="btn-label">Tech Tree</span>
+          <span class="btn-hotkey">T</span>
+        </button>
       </div>
     `;
     parent.appendChild(this.el);
@@ -152,6 +166,7 @@ export class Sidebar {
           case 'drop-hex': this.callbacks.onDropHex(); break;
           case 'fortify': this.callbacks.onFortify(); break;
           case 'counter-spend': this.callbacks.onCounterSpend(); break;
+          case 'tech-tree': this.callbacks.onTechTree(); break;
         }
       }
     });
@@ -258,31 +273,6 @@ export class Sidebar {
         `;
       }
 
-      // Demolish button
-      html += `
-        <button class="sidebar-btn ${hasBuilding ? '' : 'disabled'}"
-                data-action="demolish"
-                ${hasBuilding ? '' : 'disabled'}>
-          <span class="btn-icon">🗑</span>
-          <span class="btn-label">Demolish</span>
-          ${hasBuilding ? `<span class="btn-cost">+${Math.floor(refund)}g</span>` : ''}
-          <span class="btn-hotkey">D</span>
-        </button>
-      `;
-
-      // Sell hex button (only if not capital and no battle)
-      if (!hex.capital && !battle) {
-        const sellRefund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
-        html += `
-          <button class="sidebar-btn" data-action="drop-hex">
-            <span class="btn-icon">❌</span>
-            <span class="btn-label">Sell Hex</span>
-            ${sellRefund > 0 ? `<span class="btn-cost">+${Math.floor(sellRefund)}g</span>` : ''}
-            <span class="btn-hotkey">X</span>
-          </button>
-        `;
-      }
-
       // Fortify button
       if (player?.tech?.[TECH_FORTIFY] && hex.fortifyTimer <= 0 && !battle) {
         const canFortify = gold >= FORTIFY_COST;
@@ -310,6 +300,30 @@ export class Sidebar {
             <span class="btn-label">Counter +1P</span>
             <span class="btn-cost">${COUNTER_SPEND_COST}g</span>
             <span class="btn-hotkey">C</span>
+          </button>
+        `;
+      }
+
+      // Destructive actions — last so user must scroll past safe actions on mobile
+      html += `
+        <button class="sidebar-btn sidebar-btn--destructive ${hasBuilding ? '' : 'disabled'}"
+                data-action="demolish"
+                ${hasBuilding ? '' : 'disabled'}>
+          <span class="btn-icon">🗑</span>
+          <span class="btn-label">Demolish</span>
+          ${hasBuilding ? `<span class="btn-cost">+${Math.floor(refund)}g</span>` : ''}
+          <span class="btn-hotkey">D</span>
+        </button>
+      `;
+
+      if (!hex.capital && !battle) {
+        const sellRefund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
+        html += `
+          <button class="sidebar-btn sidebar-btn--destructive" data-action="drop-hex">
+            <span class="btn-icon">❌</span>
+            <span class="btn-label">Sell Hex</span>
+            ${sellRefund > 0 ? `<span class="btn-cost">+${Math.floor(sellRefund)}g</span>` : ''}
+            <span class="btn-hotkey">X</span>
           </button>
         `;
       }

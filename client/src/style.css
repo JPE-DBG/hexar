@@ -205,6 +205,21 @@ canvas { display: block; touch-action: none; }
   font-style: italic;
 }
 
+.sidebar-btn--destructive {
+  border-color: rgba(231, 76, 60, 0.45);
+  background: rgba(231, 76, 60, 0.07);
+}
+
+.sidebar-btn--destructive:hover:not(.disabled) {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.18);
+}
+
+.sidebar-btn--tech {
+  border-color: rgba(69, 183, 209, 0.45);
+  margin-top: 6px;
+}
+
 /* Responsive: Mobile Landscape (phones only — max-height excludes desktop windows) */
 @media (max-width: 1024px) and (orientation: landscape) and (max-height: 500px) {
   #sidebar {
