@@ -4,7 +4,7 @@ import { applySnapshot, applyDelta, GameState, SnapshotMsg, DeltaMsg, HexDTO, Pl
 import { Renderer } from './render/renderer';
 import { setupInput } from './input/input';
 import { updateHUD, calcMaintenance } from './ui/hud';
-import { BuildMenu } from './ui/buildmenu';
+import { Sidebar } from './ui/sidebar';
 import { TechTreePanel } from './ui/techtree';
 import { AutoDropPanel } from './ui/autodrop';
 import { LobbyUI } from './ui/lobby';
@@ -28,15 +28,17 @@ let state: GameState | null = null;
 let myPlayerId = 0;
 let roomCode = '';
 let selectedHex: HexDTO | null = null;
+let selectedTool: string | null = null;
 let dropMap = new Set<string>();
 let connection: Connection | null = null;
 
-const buildMenu = new BuildMenu(document.body, {
-  onUpgrade: (building?) => {
+const sidebar = new Sidebar(document.body, {
+  onToolSelect: (tool) => {
+    selectedTool = tool;
+  },
+  onUpgrade: () => {
     if (!selectedHex || !connection) return;
-    const msg: Record<string, unknown> = { type: 'action', action: 'upgrade', q: selectedHex.q, r: selectedHex.r };
-    if (building) msg.building = building;
-    connection.send(msg);
+    connection.send({ type: 'action', action: 'upgrade', q: selectedHex.q, r: selectedHex.r });
   },
   onDemolish: () => {
     if (!selectedHex || !connection) return;
@@ -54,6 +56,10 @@ const buildMenu = new BuildMenu(document.body, {
     if (!selectedHex || !connection) return;
     connection.send({ type: 'action', action: 'fortify', q: selectedHex.q, r: selectedHex.r });
   },
+  onCounterSpend: () => {
+    if (!selectedHex || !connection) return;
+    connection.send({ type: 'action', action: 'counter-spend', q: selectedHex.q, r: selectedHex.r });
+  },
 });
 
 const techTreePanel = new TechTreePanel(document.body, (techId) => {
@@ -63,11 +69,73 @@ const techTreePanel = new TechTreePanel(document.body, (techId) => {
 const autoDropPanel = new AutoDropPanel(document.body);
 
 window.addEventListener('keydown', (e) => {
+  // Don't intercept text input
+  if (e.target instanceof HTMLInputElement) return;
+
+  // Tech tree toggle
   if (e.key === 't' || e.key === 'T') {
     techTreePanel.toggle();
     if (state && myPlayerId > 0) {
       const player = state.players.get(String(myPlayerId));
       if (player) techTreePanel.update(player);
+    }
+    return;
+  }
+
+  // Sidebar tool shortcuts with toggle
+  const key = e.key.toUpperCase();
+  switch (key) {
+    case 'Q':
+      sidebar.selectTool(selectedTool === 'economy' ? null : 'economy');
+      break;
+    case 'W':
+      sidebar.selectTool(selectedTool === 'power' ? null : 'power');
+      break;
+    case 'E':
+      sidebar.selectTool(selectedTool === 'research' ? null : 'research');
+      break;
+    case 'ESCAPE':
+      sidebar.selectTool(null);
+      break;
+  }
+
+  // Context action shortcuts (require selected hex)
+  if (!selectedHex || !state) return;
+
+  switch (key) {
+    case ' ': // Space = upgrade
+      e.preventDefault();
+      if (selectedHex.owner === myPlayerId && selectedHex.building > 0) {
+        connection?.send({ type: 'action', action: 'upgrade', q: selectedHex.q, r: selectedHex.r });
+      }
+      break;
+    case 'A': // Attack
+      if (selectedHex.owner !== myPlayerId && selectedHex.owner > 0) {
+        connection?.send({ type: 'action', action: 'attack', q: selectedHex.q, r: selectedHex.r });
+      }
+      break;
+    case 'D': // Demolish
+      if (selectedHex.owner === myPlayerId && selectedHex.building > 0) {
+        connection?.send({ type: 'action', action: 'demolish', q: selectedHex.q, r: selectedHex.r });
+      }
+      break;
+    case 'X': // Sell hex
+      if (selectedHex.owner === myPlayerId && !selectedHex.capital) {
+        connection?.send({ type: 'action', action: 'drop-hex', q: selectedHex.q, r: selectedHex.r });
+      }
+      break;
+    case 'F': // Fortify
+      if (selectedHex.owner === myPlayerId) {
+        connection?.send({ type: 'action', action: 'fortify', q: selectedHex.q, r: selectedHex.r });
+      }
+      break;
+    case 'C': { // Counter-spend
+      const hex = selectedHex;
+      const battle = state.battles.find(b => b.dq === hex.q && b.dr === hex.r);
+      if (battle && hex.owner === myPlayerId) {
+        connection?.send({ type: 'action', action: 'counter-spend', q: hex.q, r: hex.r });
+      }
+      break;
     }
   }
 });
@@ -252,7 +320,7 @@ function updateState(newState: GameState) {
         const isEnemy = current.owner !== 0 && current.owner !== myPlayerId;
         const atkPwr = bestAdjacentPower(state, myPlayerId, current, player);
         const battle = state.battles.find(b => b.dq === current.q && b.dr === current.r) ?? null;
-        buildMenu.updateWithActions(current, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
+        sidebar.updateContext(current, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
       }
     }
   }
@@ -345,15 +413,37 @@ setupInput(
     if (!hex) {
       selectedHex = null;
       renderer.setSelected(null);
-      buildMenu.hide();
+      sidebar.hide();
       return;
     }
 
+    // If tool is selected and hex is valid target, apply tool
+    if (selectedTool && hex.owner === myPlayerId && hex.building === 0) {
+      let building: string | undefined;
+      switch (selectedTool) {
+        case 'economy':
+          building = 'gold';
+          break;
+        case 'power':
+          building = 'power';
+          break;
+        case 'research':
+          building = 'research';
+          break;
+      }
+      if (building) {
+        connection?.send({ type: 'action', action: 'upgrade', q, r, building });
+        // Tool stays selected for batch operations
+        return;
+      }
+    }
+
+    // No tool selected or invalid target → normal hex interaction
     if (hex.owner === 0) {
       connection?.send({ type: 'action', action: 'claim', q, r });
       selectedHex = null;
       renderer.setSelected(null);
-      buildMenu.hide();
+      sidebar.hide();
       return;
     }
 
@@ -380,7 +470,7 @@ setupInput(
     const isOwn = hex.owner === myPlayerId;
     const isEnemy = hex.owner !== 0 && hex.owner !== myPlayerId;
     const atkPwr = bestAdjacentPower(state, myPlayerId, hex, player);
-    buildMenu.updateWithActions(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
+    sidebar.updateContext(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
   }
 );
 

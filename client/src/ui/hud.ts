@@ -21,18 +21,31 @@ export function updateHUD(
   const netSign = net >= 0 ? '+' : '';
   const tpSign = tpRate >= 0 ? '+' : '';
   const color = PLAYER_COLORS[playerId] ?? '#e0e0e0';
+  const netColor = net >= 0 ? '#7bed9f' : '#ff6b81';
 
-  let vanguardIndicator = '';
+  let vanguardBox = '';
   if (vanguardTimer > 0) {
-    vanguardIndicator = ` | <span style="color:#fa0">⚡Vanguard ${vanguardTimer.toFixed(1)}s</span>`;
+    vanguardBox = `<div class="hud-vanguard">⚡ Vanguard ${vanguardTimer.toFixed(1)}s</div>`;
   }
 
-  el.innerHTML =
-    `<span style="color:${color}">Player ${playerId}</span>` +
-    ` | Gold: ${gold.toFixed(0)} (${netSign}${net.toFixed(1)}/s)` +
-    ` | TP: ${tp.toFixed(0)} (${tpSign}${tpRate.toFixed(2)}/s)` +
-    ` | Hexes: ${hexCount}` +
-    vanguardIndicator;
+  el.innerHTML = `
+    <div class="hud-player" style="color:${color}">Player ${playerId}</div>
+    <div class="hud-row">
+      <span class="hud-label">Gold:</span>
+      <span class="hud-value">${gold.toFixed(0)}</span>
+      <span class="hud-rate" style="color:${netColor}">(${netSign}${net.toFixed(1)}/s)</span>
+    </div>
+    <div class="hud-row">
+      <span class="hud-label">TP:</span>
+      <span class="hud-value">${tp.toFixed(0)}</span>
+      <span class="hud-rate">(${tpSign}${tpRate.toFixed(2)}/s)</span>
+    </div>
+    <div class="hud-row">
+      <span class="hud-label">Hexes:</span>
+      <span class="hud-value">${hexCount}</span>
+    </div>
+    ${vanguardBox}
+  `;
 }
 
 export function calcIncome(hexCount: number): number {
