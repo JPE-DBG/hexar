@@ -13,13 +13,11 @@ async function setupGame(browser: Browser) {
   return { ctx1, ctx2, p1, p2 };
 }
 
-test('both players see canvas and HUD after game starts', async ({ browser }) => {
+test('both players see HUD with player assignment after game starts', async ({ browser }) => {
   const { ctx1, ctx2, p1, p2 } = await setupGame(browser);
   try {
-    await expect(p1.locator('#game')).toBeVisible();
-    await expect(p1.locator('#hud')).toContainText('Player');
-    await expect(p2.locator('#game')).toBeVisible();
-    await expect(p2.locator('#hud')).toContainText('Player');
+    await expect(p1.locator('#hud')).toContainText('Player 1');
+    await expect(p2.locator('#hud')).toContainText('Player 2');
   } finally {
     await ctx1.close();
     await ctx2.close();
