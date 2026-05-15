@@ -1,4 +1,4 @@
-.PHONY: server client dev build clean count
+.PHONY: server client dev build clean count test test-e2e
 
 # Run Go server (serves on :8080)
 server:
@@ -24,3 +24,11 @@ clean:
 
 count:
 	git ls-files | grep -P ".*(go|ts)" | xargs wc -l
+
+# Run Go unit tests
+test:
+	go test ./...
+
+# Run Playwright E2E tests (starts both servers automatically)
+test-e2e:
+	npx playwright test
