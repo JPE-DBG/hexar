@@ -693,6 +693,7 @@ Goal: Build confidence before exposing to real users; catch regressions as the v
 | `lobby.spec.ts` | Create shows 4-char code; join with bad code shows error; waiting overlay appears; HUD activates when P2 joins |
 | `gameplay.spec.ts` | Canvas + HUD visible after both connect; gold counter increases over time; sidebar visible |
 | `connection.spec.ts` | Duplicate tab shows "Already Connected"; URL hash reconnects after tab close; pause banner appears on opponent disconnect |
+| `responsive.spec.ts` | Desktop (1280×800): sidebar on left, destructive panel hidden; Mobile portrait (390×844): sidebar at bottom, destructive panel at top-left when context active; Mobile landscape (896×414): sidebar + HUD visible |
 
 **Setup:**
 ```bash
