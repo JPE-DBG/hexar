@@ -123,6 +123,11 @@ export class Renderer {
       this.drawBattle(battle);
     }
 
+    // Pass 3: labels always on top of fills, rings, and battles
+    for (const [, hex] of state.hexes) {
+      this.drawHexLabel(hex);
+    }
+
     // Effects always last — on top of everything
     this.drawEffects();
   }
@@ -152,14 +157,10 @@ export class Renderer {
     const baseColor = this.hexColor(hex);
     if (hex.owner > 0) {
       const grad = ctx.createRadialGradient(px, py, 0, px, py, HEX_SIZE * 0.85);
-      grad.addColorStop(0, lighten(baseColor, hex.capital ? 0.08 : 0.15));
-      grad.addColorStop(1, darken(baseColor, hex.capital ? 0.35 : 0.2));
+      grad.addColorStop(0, lighten(baseColor, hex.capital ? 0.12 : 0.22));
+      grad.addColorStop(1, darken(baseColor, hex.capital ? 0.45 : 0.35));
       ctx.fillStyle = grad;
-      ctx.save();
-      ctx.shadowColor = baseColor;
-      ctx.shadowBlur = 8;
       ctx.fill();
-      ctx.restore();
     } else {
       const grad = ctx.createRadialGradient(px, py, 0, px, py, HEX_SIZE * 0.85);
       grad.addColorStop(0, lighten(baseColor, 0.04));
@@ -170,8 +171,16 @@ export class Renderer {
     ctx.strokeStyle = COLORS.grid;
     ctx.lineWidth = 1;
     ctx.stroke();
+    ctx.restore();
+  }
 
-    // Capital icon on empty capital hexes
+  private drawHexLabel(hex: HexDTO) {
+    const ctx = this.ctx;
+    ctx.save();
+    const { x, y } = hexToPixel({ q: hex.q, r: hex.r });
+    const px = x + this.offsetX;
+    const py = y + this.offsetY;
+
     if (hex.capital && hex.building === 0) {
       ctx.beginPath();
       ctx.moveTo(px, py - 8);
@@ -189,7 +198,6 @@ export class Renderer {
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-
       if (hex.building === BUILDING_POWER && hex.owner > 0 && this.state) {
         const ownerPlayer = this.state.players.get(String(hex.owner));
         const capitalBonus = hex.capital ? CAPITAL_POWER : 0;
@@ -200,7 +208,6 @@ export class Renderer {
       }
     }
 
-    // Small yellow power badge for non-Power owned hexes that have power > 0
     if (hex.owner > 0 && hex.building !== BUILDING_POWER && this.state) {
       const ownerPlayer = this.state.players.get(String(hex.owner));
       let powerBadge = 0;
@@ -214,11 +221,13 @@ export class Renderer {
         ctx.fillText(`${powerBadge}`, px, py + HEX_SIZE * 0.45);
       }
     }
+
     ctx.restore();
   }
 
   private drawHexRings(hex: HexDTO) {
     const ctx = this.ctx;
+    ctx.save();
     const { x, y } = hexToPixel({ q: hex.q, r: hex.r });
     const px = x + this.offsetX;
     const py = y + this.offsetY;
@@ -253,6 +262,7 @@ export class Renderer {
       const hasBattle = this.state?.battles.some(b => b.dq === hex.q && b.dr === hex.r) ?? false;
       this.drawFortifySegments(px, py, hex.fortifyTimer / FORTIFY_DURATION, hasBattle);
     }
+    ctx.restore();
   }
 
   private drawFortifySegments(px: number, py: number, fraction: number, dimmed = false) {
@@ -266,35 +276,40 @@ export class Renderer {
       corners.push({ x: px + HEX_SIZE * Math.cos(angle), y: py + HEX_SIZE * Math.sin(angle) });
     }
 
-    // Clockwise from top (i=5): 5→0→1→2→3→4
     const cwOrder = [5, 0, 1, 2, 3, 4];
-    const totalSides = fraction * 6;
+    const clamped = Math.min(fraction, 1);
+    const totalSides = clamped * 6;
     const fullSides = Math.floor(totalSides);
     const partial = totalSides - fullSides;
 
     ctx.strokeStyle = '#c8ff70';
     ctx.lineWidth = dimmed ? 1.5 : 3;
     ctx.lineCap = 'round';
-    if (dimmed) ctx.globalAlpha = 0.4;
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = dimmed ? 0.4 : 1.0;
 
-    for (let i = 0; i <= fullSides && i < 6; i++) {
-      const from = corners[cwOrder[i]];
+    ctx.beginPath();
+    ctx.moveTo(corners[cwOrder[0]].x, corners[cwOrder[0]].y);
+    for (let i = 0; i < fullSides && i < 6; i++) {
       const to = corners[cwOrder[(i + 1) % 6]];
-      ctx.beginPath();
-      ctx.moveTo(from.x, from.y);
-      if (i < fullSides) {
-        ctx.lineTo(to.x, to.y);
-      } else if (partial > 0) {
-        ctx.lineTo(from.x + (to.x - from.x) * partial, from.y + (to.y - from.y) * partial);
-      }
-      ctx.stroke();
+      ctx.lineTo(to.x, to.y);
     }
+    if (partial > 0 && fullSides < 6) {
+      const from = corners[cwOrder[fullSides]];
+      const to = corners[cwOrder[(fullSides + 1) % 6]];
+      ctx.lineTo(
+        from.x + (to.x - from.x) * partial,
+        from.y + (to.y - from.y) * partial,
+      );
+    }
+    ctx.stroke();
 
     ctx.restore();
   }
 
   private drawBattle(battle: BattleDTO) {
     const ctx = this.ctx;
+    ctx.save();
     const { x, y } = hexToPixel({ q: battle.dq, r: battle.dr });
     const px = x + this.offsetX;
     const py = y + this.offsetY;
@@ -342,6 +357,7 @@ export class Renderer {
         ctx.stroke();
       }
     }
+    ctx.restore();
   }
 
   private drawEffects() {

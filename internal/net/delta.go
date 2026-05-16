@@ -35,6 +35,13 @@ func hexChanged(prev, curr *HexDTO) bool {
 		prev.Building != curr.Building ||
 		prev.Level != curr.Level ||
 		prev.Capital != curr.Capital ||
-		prev.FortifyTimer != curr.FortifyTimer ||
+		fortifyChanged(prev.FortifyTimer, curr.FortifyTimer) ||
 		prev.PreviousOwner != curr.PreviousOwner
+}
+
+func fortifyChanged(prev, curr float64) bool {
+	if (prev > 0) != (curr > 0) {
+		return true
+	}
+	return int(prev) != int(curr)
 }
