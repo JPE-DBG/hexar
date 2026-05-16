@@ -425,6 +425,17 @@ T=5 min+:  Border warfare begins in earnest
 | Auth | None (MVP) | OAuth when accounts added |
 | Testing | Go `testing` (headless) + manual browser | Playwright |
 
+### Milestone Tracking & Testing Policy
+
+**Milestones:** CLAUDE.md (this file) is the single source of truth for milestone specs (M1–M9). Do **not** maintain a separate `milestones.md` — it duplicates content and drifts. If tracking which PR addresses which milestone is valuable, add milestone info in git commit messages instead.
+
+**Testing strategy for Hexar:**
+- **Game logic** (`internal/game/`): table-driven unit tests via Go `testing` package. Pure functions, zero mocks, zero I/O.
+- **Integration** (`internal/room/`): minimal-setup goroutine tests (use `time.Sleep` sparingly, only for tick boundaries).
+- **E2E (Playwright):** Add `e2e/*.spec.ts` when implementing decision-critical features (e.g., new tech, new action, new economy rule). Focus on happy path + one key edge case per spec. Not every feature needs E2E — only those where player behavior changes or where client-server sync is critical. Lean tests, not comprehensive coverage.
+
+When adding a new feature: update CLAUDE.md first (design spec), implement the feature, add the test. This order ensures tests validate the spec, not the implementation.
+
 ### Session & Connection Behaviour (implemented post-M6)
 
 **Lobby flow:**
@@ -489,6 +500,8 @@ Phase 6: DELTA — diff vs previous tick, broadcast to clients
 | Same player opens duplicate tab | Server closes new WS with code 4001; client shows "Already Connected" overlay, no retry |
 | Both players not yet connected | Game loop does not start; `state.Waiting = true`; loop starts only when all player slots filled for first time |
 | Game over by forfeit vs capital | `state.WinReason`: `"forfeit"` or `"capital"` — victory screen shows distinct subtitle |
+| Demolish while hex selected | Hex is deselected after demolish completes — sidebar clears context so stale upgrade/attack buttons don't remain |
+| Capture flash trigger | Compare incoming delta `hex.owner` against current `state.hexes` owner — **never** use `hex.previousOwner` from the wire. Server sets `PreviousOwner` on capture and never resets it; any future delta for that hex (e.g. fortifyTimer tick) would re-fire the flash spuriously every second |
 
 ### Project Structure
 
@@ -632,8 +645,8 @@ Goal: Make the game look modern and appealing to retain real players. Every visu
 
 **Sequencing within M7:**
 1. **Palette consolidation** — `constants.ts` as single source of truth for all colors; matching CSS file for DOM overlays; remove all inline `style.cssText` strings; no CSS variables that can drift from TS constants
-2. **Hex renderer polish** — radial gradient fill (center lighten → edge darken) + ownership glow (`ctx.shadowBlur`); capital hex distinct icon; ~60 lines in `renderer.ts:drawHexFill()`
-3. **Effects layer** — `Effect[]` array in existing rAF loop; `addCaptureFlash(hex, color)` and `addFloater(hex, text)` called from `applyDelta` on ownership change; effects are client-side only, never in game state
+2. **Hex renderer polish** — ~~radial gradient fill~~ **flat fill kept intentionally** (gradient tried and reverted; hex fill will be replaced with sprite-based 3D/material look in a future pass — `drawHexFill` is intentionally minimal until then); capital hex distinct icon; labels drawn in a separate Pass 3 (after rings and battles) so they render on top of fortify segments
+3. **Effects layer** — `Effect[]` array in existing rAF loop; `addCaptureFlash(hex, color)` and `addFloater(hex, text)` called from `applyDelta`; capture flash compares incoming `hex.owner` against current `state.hexes` owner (not `previousOwner` from wire); effects are client-side only, never in game state
 4. **Sidebar with sticky tools** — New `sidebar.ts` replaces `buildmenu.ts`; left-edge 180px; 3 sections (BUILD/MANAGE/CONTEXT); toggle-to-deselect behavior; Q/W/E/D/X/Space/A/F/C/ESC hotkeys; responsive layouts for mobile
 5. **HUD polish** — Structured layout with monospace `tabular-nums` font; color-coded rates (green=positive, red=negative); visual hierarchy with labels/values/rates
 6. **Overlay + lobby screens** — CSS for pause/victory/waiting/lobby; room code large and copyable on waiting screen; styled victory/forfeit distinction
@@ -705,6 +718,23 @@ Goal: Make the game accessible to real players outside localhost.
 6. `fly deploy` → post-deploy: load lobby, create game, join from second browser, verify `wss://` in DevTools Network tab
 
 **Known limitation (document in lobby UI):** Rooms are in-memory — a server restart ends all active games. Future fix: SQLite via `modernc.org/sqlite` (pure Go, no CGO) persisting room state as JSON blob. Not needed for initial deployment.
+
+**Post-M9 fixes (discovered after deployment):**
+
+| Fix | Trigger |
+|---|---|
+| Mobile button layout — destructive actions (Sell Hex, Demolish) moved to top-left corner | On mobile, context action buttons at the bottom bar were obscured or mis-tapped; destructive icons repositioned away from the main build bar |
+| Deselect on demolish | After demolishing a building the hex remained selected, leaving stale context buttons (upgrade, attack) visible |
+| Fortify timer flickering fix | Hex would briefly fill with player color every 1s when fortified after capture — root cause: `previousOwner` is set on capture and never reset by server, so any delta for that hex (fortifyTimer tick) re-fired `addCaptureFlash`; fixed by comparing `hex.owner` vs current `state.hexes` owner in `onDelta`, not against `previousOwner` from wire |
+| Delta quantization for FortifyTimer | `fortifyTimer` changed every 100ms tick, causing fortified hexes to appear in every delta; now only sent when timer crosses a 1-second boundary (`int(prev) != int(curr)`) |
+| Keyboard shortcut deselect (D/X) | After pressing D (Demolish) or X (Sell Hex), selected hex was not cleared — stale context buttons remained; fixed by adding `selectedHex = null; renderer.setSelected(null); sidebar.hide()` to both keyboard handlers in `main.ts` (mirrors sidebar callback logic) |
+
+**Known potential issues (not blocking, document before touching):**
+
+| Issue | Location | Risk |
+|---|---|---|
+| Destructive DOM duplication | `sidebar.ts` — `this.destructiveEl.innerHTML` mirrors button HTML from `html()` | Demolish/Sell buttons exist twice in the DOM simultaneously; CSS controls visibility. If code queries by `data-action` attribute, it finds two nodes. Refactor before adding more destructive actions or complex event routing. |
+| Mobile CSS transparency | `style.css` — portrait mode sets sidebar background to `transparent` | No backdrop-filter, no border; relies on canvas fill for contrast. Light-colored hexes behind build buttons may cause readability issues on some map states. |
 
 ### Rejected Alternatives
 - **Node.js server:** Go developer, worse concurrency model for tick loops

@@ -205,6 +205,67 @@ canvas { display: block; touch-action: none; }
   font-style: italic;
 }
 
+/* Destructive button style (red tint) */
+.sidebar-btn--destructive {
+  border-color: rgba(231, 76, 60, 0.45);
+  background: rgba(231, 76, 60, 0.07);
+}
+
+.sidebar-btn--destructive:hover:not(.disabled) {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.18);
+}
+
+/* Tech tree toggle button style */
+.sidebar-btn--tech {
+  border-color: rgba(69, 183, 209, 0.45);
+  margin-top: 6px;
+}
+
+/* === Destructive panel (Demolish / Sell Hex) — lives outside #sidebar === */
+/* Hidden everywhere except mobile portrait, where it shows at top-left */
+#destructive-panel {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  font-family: monospace;
+  z-index: 50;
+}
+
+/* #destructive-panel.visible only takes effect inside the mobile portrait media query below */
+
+/* === Tech Tree panel === */
+#tech-tree {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10,10,20,0.97);
+  border: 1px solid #4a4a6a;
+  border-radius: 10px;
+  padding: 16px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  font-family: monospace;
+  color: #e0e0e0;
+  font-size: 12px;
+  max-height: 85vh;
+  overflow-y: auto;
+  min-width: 520px;
+  z-index: 100;
+}
+
+#tech-tree.visible {
+  display: flex;
+}
+
+.tech-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
 /* Responsive: Mobile Landscape (phones only — max-height excludes desktop windows) */
 @media (max-width: 1024px) and (orientation: landscape) and (max-height: 500px) {
   #sidebar {
@@ -216,6 +277,9 @@ canvas { display: block; touch-action: none; }
     flex-direction: row;
     padding: 6px;
     overflow-x: auto;
+    background: transparent;
+    backdrop-filter: none;
+    border-right: none;
   }
 
   .sidebar-section {
@@ -259,6 +323,10 @@ canvas { display: block; touch-action: none; }
     padding: 4px;
     gap: 4px;
     overflow: visible; /* allow context panel to extend above the bar */
+    background: transparent;
+    backdrop-filter: none;
+    border-right: none;
+    border-top: none;
   }
 
   .sidebar-section {
@@ -278,11 +346,10 @@ canvas { display: block; touch-action: none; }
     letter-spacing: 0;
   }
 
-  /* Remove the context-only cost override — cost now shows everywhere */
-
   /* Show context as floating panel above bottom bar when a hex is selected.
      position:absolute (not fixed) because backdrop-filter on #sidebar makes it
-     the containing block for fixed children, and overflow clips them. */
+     the containing block for fixed children, and overflow clips them.
+     Transparent background so map shows through. */
   #sidebar.has-context .sidebar-context {
     display: flex;
     flex-direction: row;
@@ -293,20 +360,23 @@ canvas { display: block; touch-action: none; }
     left: 0;
     right: 0;
     min-height: 0; /* override desktop min-height: 260px */
-    background: rgba(18, 18, 18, 0.95);
-    border-top: 1px solid #333;
+    background: transparent;
+    border-top: none;
     padding: 6px 8px;
     gap: 6px;
     overflow-x: auto;
   }
 
-  /* Context action buttons: compact row layout matching build buttons */
+  /* Hide destructive buttons from the context strip — they're in the top-left panel */
+  #sidebar.has-context .sidebar-context .sidebar-btn--destructive {
+    display: none;
+  }
+
+  /* Context action buttons: fixed width matching 1 of 4 build buttons */
   #sidebar.has-context .sidebar-context .sidebar-btn {
-    flex: 1;
-    flex-shrink: 0;
+    flex: 0 0 calc(25vw - 8px);
     height: 42px;
-    min-width: 60px;
-    max-width: 100px;
+    min-width: 0;
     align-self: auto;
   }
 
@@ -322,5 +392,40 @@ canvas { display: block; touch-action: none; }
 
   .btn-hotkey {
     display: none;
+  }
+
+  /* Destructive panel: top-left of screen, vertical stack, away from build bar */
+  #destructive-panel.visible {
+    display: flex;
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    flex-direction: column;
+    gap: 4px;
+    background: none;
+    width: auto;
+    padding: 0;
+  }
+
+  #destructive-panel .sidebar-btn {
+    height: 42px;
+    min-width: 60px;
+    max-width: 80px;
+    flex: none;
+  }
+
+  /* Tech tree: full-screen panel, single column */
+  #tech-tree {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 58px;
+    transform: none;
+    min-width: unset;
+    border-radius: 8px;
+  }
+
+  .tech-grid {
+    grid-template-columns: 1fr;
   }
 }

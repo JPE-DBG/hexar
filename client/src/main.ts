@@ -43,6 +43,9 @@ const sidebar = new Sidebar(document.body, {
   onDemolish: () => {
     if (!selectedHex || !connection) return;
     connection.send({ type: 'action', action: 'demolish', q: selectedHex.q, r: selectedHex.r });
+    selectedHex = null;
+    renderer.setSelected(null);
+    sidebar.hide();
   },
   onAttack: () => {
     if (!selectedHex || !connection) return;
@@ -51,6 +54,9 @@ const sidebar = new Sidebar(document.body, {
   onDropHex: () => {
     if (!selectedHex || !connection) return;
     connection.send({ type: 'action', action: 'drop-hex', q: selectedHex.q, r: selectedHex.r });
+    selectedHex = null;
+    renderer.setSelected(null);
+    sidebar.hide();
   },
   onFortify: () => {
     if (!selectedHex || !connection) return;
@@ -59,6 +65,13 @@ const sidebar = new Sidebar(document.body, {
   onCounterSpend: () => {
     if (!selectedHex || !connection) return;
     connection.send({ type: 'action', action: 'counter-spend', q: selectedHex.q, r: selectedHex.r });
+  },
+  onTechTree: () => {
+    techTreePanel.toggle();
+    if (state && myPlayerId > 0) {
+      const player = state.players.get(String(myPlayerId));
+      if (player) techTreePanel.update(player);
+    }
   },
 });
 
@@ -117,11 +130,17 @@ window.addEventListener('keydown', (e) => {
     case 'D': // Demolish
       if (selectedHex.owner === myPlayerId && selectedHex.building > 0) {
         connection?.send({ type: 'action', action: 'demolish', q: selectedHex.q, r: selectedHex.r });
+        selectedHex = null;
+        renderer.setSelected(null);
+        sidebar.hide();
       }
       break;
     case 'X': // Sell hex
       if (selectedHex.owner === myPlayerId && !selectedHex.capital) {
         connection?.send({ type: 'action', action: 'drop-hex', q: selectedHex.q, r: selectedHex.r });
+        selectedHex = null;
+        renderer.setSelected(null);
+        sidebar.hide();
       }
       break;
     case 'F': // Fortify
@@ -334,10 +353,14 @@ function onSnapshot(msg: SnapshotMsg) {
 
 function onDelta(msg: DeltaMsg) {
   if (!state) return;
-  // Trigger capture flash for hex ownership changes
+  // Trigger capture flash only when ownership *actually changes* in this delta.
+  // Using previousOwner from the wire is wrong — the server never resets it, so
+  // any delta for a previously-captured hex (e.g. fortifyTimer tick) would fire
+  // a spurious flash that fills the whole hex every second.
   if (msg.hexChanges) {
     for (const hex of msg.hexChanges) {
-      if (hex.owner > 0 && hex.previousOwner !== undefined && hex.previousOwner !== hex.owner) {
+      const prev = state.hexes.get(`${hex.q},${hex.r}`);
+      if (hex.owner > 0 && prev && prev.owner !== hex.owner) {
         const flashColor = hex.owner === 1 ? COLORS.player1 : COLORS.player2;
         renderer.addCaptureFlash(hex.q, hex.r, flashColor);
       }

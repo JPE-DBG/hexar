@@ -22,6 +22,7 @@ export interface SidebarCallbacks {
   onDropHex: () => void;
   onFortify: () => void;
   onCounterSpend: () => void;
+  onTechTree: () => void;
 }
 
 // Enhanced SVG icons (32x32, color-coded)
@@ -36,9 +37,18 @@ const ICON_POWER = `<svg width="32" height="32" viewBox="0 0 32 32">
 </svg>`;
 
 const ICON_RESEARCH = `<svg width="32" height="32" viewBox="0 0 32 32">
-  <path d="M10,26 L16,6 L22,26" stroke="#45b7d1" stroke-width="2.5" fill="none"/>
-  <ellipse cx="16" cy="25" rx="8" ry="3.5" stroke="#45b7d1" stroke-width="2" fill="none"/>
-  <line x1="12" y1="17" x2="20" y2="17" stroke="#45b7d1" stroke-width="2"/>
+  <line x1="11" y1="4" x2="21" y2="4" stroke="#45b7d1" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M13,4 L13,14 L5,26 Q4,28 6,28 L26,28 Q28,28 27,26 L19,14 L19,4"
+        stroke="#45b7d1" stroke-width="2.5" fill="#45b7d133" stroke-linejoin="round"/>
+  <line x1="8" y1="21" x2="24" y2="21" stroke="#45b7d1" stroke-width="2"/>
+</svg>`;
+
+const ICON_TECH = `<svg width="32" height="32" viewBox="0 0 32 32">
+  <circle cx="16" cy="7" r="4" fill="none" stroke="#45b7d1" stroke-width="2"/>
+  <circle cx="7" cy="25" r="3.5" fill="none" stroke="#45b7d1" stroke-width="2"/>
+  <circle cx="25" cy="25" r="3.5" fill="none" stroke="#45b7d1" stroke-width="2"/>
+  <line x1="16" y1="11" x2="7" y2="21.5" stroke="#45b7d1" stroke-width="1.5"/>
+  <line x1="16" y1="11" x2="25" y2="21.5" stroke="#45b7d1" stroke-width="1.5"/>
 </svg>`;
 
 const BUILD_COSTS: Record<number, number> = {
@@ -92,6 +102,7 @@ function calcPower(hex: HexDTO, state?: GameState): number {
 
 export class Sidebar {
   private el: HTMLElement;
+  private destructiveEl: HTMLElement;
   private selectedTool: string | null = null;
   private callbacks: SidebarCallbacks;
   private lastKey = '';
@@ -126,25 +137,34 @@ export class Sidebar {
           <span class="btn-cost">80g</span>
           <span class="btn-hotkey">E</span>
         </button>
+        <button class="sidebar-btn sidebar-btn--tech" data-action="tech-tree" data-hotkey="T">
+          ${ICON_TECH}
+          <span class="btn-label">Tech Tree</span>
+          <span class="btn-hotkey">T</span>
+        </button>
       </div>
     `;
     parent.appendChild(this.el);
+
+    // Destructive panel lives outside #sidebar so position:fixed is viewport-relative
+    // (backdrop-filter on #sidebar would otherwise make fixed children relative to it)
+    this.destructiveEl = document.createElement('div');
+    this.destructiveEl.id = 'destructive-panel';
+    parent.appendChild(this.destructiveEl);
+
     this.bindEvents();
   }
 
   private bindEvents() {
-    this.el.addEventListener('pointerdown', (e) => {
+    const handleBtn = (e: PointerEvent, root: HTMLElement) => {
       const btn = (e.target as HTMLElement).closest('.sidebar-btn') as HTMLElement | null;
-      if (!btn) return;
+      if (!btn || !root.contains(btn)) return;
       e.preventDefault();
-
       const tool = btn.getAttribute('data-tool');
       const action = btn.getAttribute('data-action');
-
       if (tool) {
         this.selectTool(tool);
       } else if (action) {
-        // Context actions
         switch (action) {
           case 'upgrade': this.callbacks.onUpgrade(); break;
           case 'demolish': this.callbacks.onDemolish(); break;
@@ -152,9 +172,13 @@ export class Sidebar {
           case 'drop-hex': this.callbacks.onDropHex(); break;
           case 'fortify': this.callbacks.onFortify(); break;
           case 'counter-spend': this.callbacks.onCounterSpend(); break;
+          case 'tech-tree': this.callbacks.onTechTree(); break;
         }
       }
-    });
+    };
+
+    this.el.addEventListener('pointerdown', (e) => handleBtn(e, this.el));
+    this.destructiveEl.addEventListener('pointerdown', (e) => handleBtn(e, this.destructiveEl));
   }
 
   selectTool(tool: string | null) {
@@ -194,6 +218,8 @@ export class Sidebar {
         <div class="context-hint">Click a hex to see actions</div>
       `;
       this.el.classList.remove('has-context');
+      this.destructiveEl.innerHTML = '';
+      this.destructiveEl.classList.remove('visible');
       this.lastKey = '';
       return;
     }
@@ -258,31 +284,6 @@ export class Sidebar {
         `;
       }
 
-      // Demolish button
-      html += `
-        <button class="sidebar-btn ${hasBuilding ? '' : 'disabled'}"
-                data-action="demolish"
-                ${hasBuilding ? '' : 'disabled'}>
-          <span class="btn-icon">🗑</span>
-          <span class="btn-label">Demolish</span>
-          ${hasBuilding ? `<span class="btn-cost">+${Math.floor(refund)}g</span>` : ''}
-          <span class="btn-hotkey">D</span>
-        </button>
-      `;
-
-      // Sell hex button (only if not capital and no battle)
-      if (!hex.capital && !battle) {
-        const sellRefund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
-        html += `
-          <button class="sidebar-btn" data-action="drop-hex">
-            <span class="btn-icon">❌</span>
-            <span class="btn-label">Sell Hex</span>
-            ${sellRefund > 0 ? `<span class="btn-cost">+${Math.floor(sellRefund)}g</span>` : ''}
-            <span class="btn-hotkey">X</span>
-          </button>
-        `;
-      }
-
       // Fortify button
       if (player?.tech?.[TECH_FORTIFY] && hex.fortifyTimer <= 0 && !battle) {
         const canFortify = gold >= FORTIFY_COST;
@@ -313,7 +314,38 @@ export class Sidebar {
           </button>
         `;
       }
+
+      // Destructive actions — in context HTML for desktop, in external panel for mobile portrait
+      // CSS controls which is shown: .sidebar-btn--destructive hidden in context on mobile portrait,
+      // #destructive-panel hidden on desktop.
+      let dHtml = '';
+      dHtml += `
+        <button class="sidebar-btn sidebar-btn--destructive ${hasBuilding ? '' : 'disabled'}"
+                data-action="demolish"
+                ${hasBuilding ? '' : 'disabled'}>
+          <span class="btn-icon">🗑</span>
+          <span class="btn-label">Demolish</span>
+          ${hasBuilding ? `<span class="btn-cost">+${Math.floor(refund)}g</span>` : ''}
+          <span class="btn-hotkey">D</span>
+        </button>
+      `;
+      if (!hex.capital && !battle) {
+        const sellRefund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
+        dHtml += `
+          <button class="sidebar-btn sidebar-btn--destructive" data-action="drop-hex">
+            <span class="btn-icon">❌</span>
+            <span class="btn-label">Sell Hex</span>
+            ${sellRefund > 0 ? `<span class="btn-cost">+${Math.floor(sellRefund)}g</span>` : ''}
+            <span class="btn-hotkey">X</span>
+          </button>
+        `;
+      }
+      html += dHtml; // desktop: destructive buttons in sidebar context flow
+      this.destructiveEl.innerHTML = dHtml; // mobile: external top-left panel
+      this.destructiveEl.classList.add('visible');
     } else if (isEnemy) {
+      this.destructiveEl.innerHTML = '';
+      this.destructiveEl.classList.remove('visible');
       // Attack button
       html += `
         <button class="sidebar-btn ${canAttack ? '' : 'disabled'}"
@@ -344,6 +376,8 @@ export class Sidebar {
       <div class="context-hint">Click a hex to see actions</div>
     `;
     this.el.classList.remove('has-context');
+    this.destructiveEl.innerHTML = '';
+    this.destructiveEl.classList.remove('visible');
     this.lastKey = '';
   }
 }
