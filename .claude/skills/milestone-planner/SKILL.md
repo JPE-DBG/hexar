@@ -1,96 +1,108 @@
 ---
 name: milestone-planner
-description: "Use when: breaking Hexar design into buildable milestones, defining MVP scope, sequencing features, or deciding what to cut from first build"
+description: "Use when: planning the next feature or post-MVP addition to Hexar, sequencing work, estimating scope, or deciding what to build vs defer"
 type: skill
 ---
 
-# Milestone Planner Skill — Hexar Build Sequence
+# Milestone Planner Skill — Hexar Feature Planning
 
-Breaks the current CLAUDE.md design into ordered, testable milestones. Each milestone is shippable, validates a core assumption, and unlocks the next.
+Plans and sequences future Hexar features. M1–M9 are complete and deployed. This skill is for evaluating and ordering post-MVP work.
 
-**Prerequisites:** Run `/tech-stack` and `/architect` first — milestone sequencing depends on knowing what you're building with and how systems connect.
+**Prerequisites:** Read CLAUDE.md "Open Questions & Future Work" and "Current Status" sections first.
+
+---
+
+## Context: Current State
+
+- M1–M9 complete and deployed to Fly.io
+- Stack: Go server + TypeScript client, WebSocket, Fly.io deployment, GitHub Actions CI/CD
+- Tests: 3 layers — Go unit tests (`internal/game/`), room integration (`internal/room/`), Playwright E2E (`e2e/`)
+- All decisions and architecture are documented in CLAUDE.md
+
+**Source of truth:** CLAUDE.md (this file). Do not create a separate MILESTONES.md — it duplicates content and drifts. Record milestone info in git commit messages if tracking is valuable.
+
+---
 
 ## Workflow
 
-### 1. Inventory All Features (from CLAUDE.md)
-- Read CLAUDE.md fresh. Extract every distinct mechanic as a discrete feature.
-- Tag each: `core-loop` / `balance` / `win-condition` / `ui` / `networking` / `polish`
-- A "feature" is buildable and testable in isolation (if it's not, break it down further)
+### 1. Load Context from CLAUDE.md
 
-### 2. Map Dependencies
-For each feature, ask:
-- What other features must exist before this one can work?
-- What can be stubbed? (e.g., hardcoded map before procedural generation)
-- What must be tested early because it's high-risk? (most likely to surface a design flaw)
+- Read "Open Questions & Future Work" — what's already identified as next
+- Read "Known Issues" — are there blockers that need fixing before new features?
+- Read "Balance Rules" and "Game Rules" for the mechanic context of any feature being added
+- Check "Rejected Alternatives" — don't re-litigate settled decisions
 
-### 3. Group into Milestones
-- Each milestone = 1-2 weeks of work for one developer
+### 2. Define the Feature Clearly
+
+Before estimating or sequencing:
+- What is the observable player-facing change?
+- What new server state is needed (if any)?
+- What new client state/rendering is needed?
+- Does this need a new test file or extend an existing one?
+- Does CLAUDE.md need updating first? (Policy: update CLAUDE.md before implementing)
+
+### 3. Map Dependencies
+
+- What existing system does this touch? (`internal/game/`, `internal/room/`, `client/src/ui/`, etc.)
+- What must exist before this works?
+- What can be stubbed for a first pass?
+- What's the testing seam? (Can it be unit tested? Integration? E2E?)
+
+### 4. Estimate and Sequence
+
+Group by milestone (1–2 weeks of solo work):
 - Each milestone ends with something **playable or demonstrably testable**
-- Rule: never more than 2 milestones without a playable checkpoint
-- Separate "validation milestones" (prove the design works) from "feature milestones" (add content)
+- Validate risky assumptions early (design, balance) before polish
+- Playtesting feedback often invalidates assumptions — keep milestones short
 
-### 4. Define Acceptance Criteria
-For each milestone:
-- **Done when:** concrete observable behavior, not "code is written"
-- **Design risk:** what CLAUDE.md assumption might break here?
-- **If it breaks:** what's the fallback or redesign path?
+### 5. Define Acceptance Criteria
 
-### 5. Identify What Gets Cut
-- Tag features as MVP-required vs post-MVP
-- If total milestone count > 6, something needs to move to post-MVP
-- Post-MVP features should not block any MVP milestone
+- **Done when:** concrete observable behavior (not "code is written")
+- **Balance risk:** what CLAUDE.md assumption might this break?
+- **Test coverage:** which new tests are required?
 
 ---
 
 ## Milestone Design Principles
 
-**Validate risky assumptions first:**
-- The economy tick loop is the highest-risk system (does stepped maintenance *feel* right?)
-- Combat resolution is second-highest (does the battle timer create tension or frustration?)
-- Network sync is a known hard problem but well-understood — defer after local play works
+**Short milestones beat long ones.** Balance flaws found at week 1 are 10x cheaper than at week 4.
 
-**Local before networked:**
-- All game logic works in local 1v1 before adding network layer
-- Network bugs are 10x harder to debug than logic bugs
-- Design flaws found locally cost 1/10th to fix vs found after networking is built
+**Update CLAUDE.md before implementing.** Design spec first, then code, then tests. Tests validate the spec, not the implementation.
 
-**Stubbing strategy:**
-- Map generation → use a hardcoded test map (fixed layout, known hex positions)
-- AI opponent → use a second player on same machine, or simple scripted behavior
-- UI polish → placeholder rectangles/text until gameplay validates
+**Don't re-plan completed work.** M1–M9 history is in git. Focus on what's next.
+
+**Post-MVP sequencing priorities:**
+1. Balance/playtesting gaps first (these can invalidate subsequent features)
+2. Known issues that block player experience
+3. Tech debt that creates friction for future features
+4. New mechanics that expand archetypes
 
 ---
 
 ## Output Format
 
 ```
-## Feature Inventory
-[Table of features extracted from CLAUDE.md, tagged by category]
-
-## Dependency Graph
-[Which features depend on which — text format, not visual]
-
-## Milestone Plan
-
-### M[N] — [Name] (~[time estimate])
-**Goal:** [What assumption/system this validates]
-**Features:** [List from inventory]
-**Stubbed:** [What's faked in this milestone]
+## Feature: [Name]
+**What it is:** [One-sentence player-facing description]
+**CLAUDE.md section to update:** [Where to write the spec first]
+**Files affected:** [List]
+**Testing approach:** [Unit / Integration / E2E — which layer and why]
 **Done when:** [Observable acceptance criteria]
-**Design risk:** [What might break and what to do if it does]
+**Balance risk:** [What could unexpectedly break]
 
-...repeat for each milestone...
+## Sequence Recommendation
+[Ordered list of features if multiple were requested]
+**Why this order:** [Dependencies or risk that drives the sequence]
 
-## Post-MVP (deferred)
-[Features that don't make it into the initial build sequence]
+## Deferred (and why)
+[Features that should wait]
 ```
 
 ---
 
 ## Rules
 
-- **MILESTONES.md is the source of truth.** Read it first. Update it rather than regenerating from scratch — milestones accumulate real history (scope changes, done dates, deferred features) that a fresh generation would lose.
-- **No milestone without a "done when."** If you can't define acceptance criteria, the milestone is too vague.
-- **Shortest path to playable.** The first playable checkpoint should be ≤ 3 milestones in.
-- **Mark risks honestly.** Every milestone should name what could go wrong.
-- **Scope expands in practice.** When a "stubbed" feature gets built early, update the milestone notes to reflect what actually happened rather than leaving it as "stubbed".
+- **No milestone without "done when."** If you can't define acceptance criteria, the feature is too vague.
+- **Mark risks honestly.** Every feature should name what could go wrong.
+- **CLAUDE.md first.** If a feature changes game rules, write the spec in CLAUDE.md before writing code.
+- **One test layer per feature.** Don't add Playwright for something fully covered by Go unit tests.

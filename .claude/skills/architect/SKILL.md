@@ -1,137 +1,142 @@
 ---
 name: architect
-description: "Use when: designing server/client split, game loop, state sync model, data model, or system boundaries for Hexar before coding starts"
+description: "Use when: understanding the existing Hexar architecture, evaluating a proposed structural change, adding a new system, or debugging a cross-layer issue"
 type: skill
 ---
 
-# Architect Skill — Hexar System Design
+# Architect Skill — Hexar System Reference
 
-Designs the technical architecture for Hexar by asking the right questions, then deriving answers from CLAUDE.md mechanics and tech-stack decisions.
+Reference guide for Hexar's implemented architecture. Use when evaluating structural changes, adding new systems, or understanding how components connect.
 
-**Prerequisites:** Run `/tech-stack` first — architecture depends on chosen language, framework, and networking layer.
-
-## Workflow
-
-### 1. Load Constraints from CLAUDE.md (MANDATORY)
-- Read CLAUDE.md fresh. Extract all timing-sensitive mechanics (tick intervals, battle durations, grace periods).
-- Note what must be tamper-proof (gold, Power, victory checks).
-- Identify real-time requirements (what players see updating live).
-
-### 2. Determine Authority Model
-Answer for each mechanic in CLAUDE.md:
-- **Must be server-authoritative?** (Can cheating here ruin the game?)
-- **Can be client-predicted?** (Would latency make this feel bad without prediction?)
-- **Pure client-side?** (Only affects local display, no gameplay impact?)
-
-### 3. Design Game Loop
-- What happens each tick? (Derive from CLAUDE.md economy/combat/victory rules)
-- What is event-driven vs tick-driven? (e.g., "claim hex" = event; "income accrual" = tick)
-- What's the tick rate? (Trade-off: precision vs bandwidth vs CPU)
-
-### 4. Design State Model
-- What is the minimal canonical state the server must hold?
-- What does each client need to render the game? (Subset of server state + local UI)
-- What delta format minimizes bandwidth while keeping clients in sync?
-
-### 5. Define Module Boundaries
-For each module, define: responsibility, inputs, outputs, and what Hexar-specific concern makes it non-trivial.
-
-Key questions:
-- Where does hex adjacency validation live? (Used by expansion AND attack — shared)
-- Where does battle state live? (Server owns timer; client renders countdown)
-- How are simultaneous actions handled? (Two attacks on same hex? Race conditions?)
-- How does reconnection work? (Full state dump or replay from last known?)
-
-### 6. Document Decisions
-- Write architecture to CLAUDE.md Implementation Notes (or a dedicated ARCHITECTURE.md)
-- Record decisions as ADRs (Architecture Decision Records): decision + context + consequences
+**The architecture is implemented.** This skill is not for designing from scratch — it's for navigating and changing what exists.
 
 ---
 
-## Architecture Questions Checklist
+## Architecture Overview
 
-### Server Authority
-- [ ] Which game actions require server validation before being applied?
-- [ ] What's the latency budget? (How stale can client state be before it feels wrong?)
-- [ ] How is clock synchronization handled? (Battle timers must agree between players)
-
-### Game Loop
-- [ ] What tick rate? (Consider: economy updates, battle timer resolution, bandwidth)
-- [ ] What operations run every tick vs only on events?
-- [ ] What order do operations execute within a tick? (Economy before victory check? Matters.)
-
-### State Sync
-- [ ] Full state on connect, deltas after — or replay-based?
-- [ ] What's in a delta message? (Minimum fields to reconstruct state change)
-- [ ] How does the client handle out-of-order or missed deltas?
-
-### Data Model
-- [ ] What entities exist? (Hexes, players, buildings, battles, tech unlocks)
-- [ ] What are the relationships? (Hex → owner, hex → building, player → techs)
-- [ ] What indexes are needed for fast queries? (Hex neighbors, player hex list)
-
-### Module Boundaries
-- [ ] What shared logic do server and client both need? (Hex math, constants, validation)
-- [ ] What's the testing seam? (Can you run game logic without rendering? Without network?)
-- [ ] What's the deployment unit? (Monorepo? Separate server/client packages?)
-
-### Edge Cases
-- [ ] Player disconnects mid-battle — what happens?
-- [ ] Two players attack same hex simultaneously — who wins?
-- [ ] Player's capital is attacked while they're attacking elsewhere — priority?
-
----
-
-## Output Format
+**Pattern:** Server-authoritative, tick-based, delta state sync
 
 ```
-## Architecture Decision: [Topic]
-**Question:** [What needed deciding]
-**Context:** [Relevant CLAUDE.md constraints and tech-stack choices]
-**Decision:** [What was chosen]
-**Consequences:** [What this enables and what it prevents]
-**Alternative rejected:** [What else was considered and why not]
+Client (TypeScript)          Server (Go)
+─────────────────           ─────────────
+Canvas hex grid    ←─────── delta/snapshot (WebSocket JSON)
+DOM overlays       ─────────→ actions (WebSocket JSON)
+applyDelta/Snapshot          RunTick(state, dt) — 100ms
+state.ts (mirror)            internal/game/ (pure functions)
+```
 
-## Module: [Name]
-**Responsibility:** [What it owns — one sentence]
-**Inputs:** [What it receives]
-**Outputs:** [What it emits]
-**Hexar-specific concern:** [Why this is non-trivial for THIS game]
+**Authority model:**
+- Server owns all game state — gold, Power, hex ownership, battle timers, tech unlocks
+- Client never modifies game state — only sends intentions (actions)
+- Client maintains a mirror of server state via snapshot+delta sync
+- Effects (capture flash, gold floaters) are client-side only, never in game state
+
+---
+
+## Key Invariants
+
+These must be preserved across any change:
+
+1. **`internal/game/` zero external imports.** `RunTick(state, dt)` is a pure function. No I/O, no goroutines, no network. Fully testable with `go test` alone.
+
+2. **One goroutine per room.** Actions arrive via WebSocket, queued into a channel, processed at the next tick boundary.
+
+3. **Delta packets < 500 bytes at idle.** Tech field diffed (only send when changed); battles omitempty; FortifyTimer quantized to 1-second boundaries.
+
+4. **Reverting PlayerDTO fields always sent.** `AutoDropActive`, `AutoDropGrace`, `VanguardTimer` can go back to zero/false — they must never be omitempty or the client's delta merge spread will retain stale values.
+
+5. **Canvas + DOM split preserved.** Hex grid on Canvas, UI overlays as DOM. backdrop-filter on `#sidebar` makes `position: fixed` children relative to it — `#destructive-panel` lives outside `#sidebar` to avoid this.
+
+6. **Capture flash compares against client state, not wire data.** `previousOwner` is set on capture and never reset by server — any future delta for that hex would re-fire the flash spuriously if you compare against it.
+
+---
+
+## Tick Execution Order (6 phases, strict sequence)
+
+```
+Phase 1: PROCESS ACTIONS — drain queued player intentions, validate, apply
+Phase 2: ECONOMY      — accrue gold/TP (×0.1 per tick)
+Phase 3: BATTLES      — decrement timers 0.1s, resolve expired
+Phase 4: AUTO-DROP    — check negative income, manage grace, drop if expired
+Phase 5: VICTORY      — check capital capture, unclaim loser hexes
+Phase 6: DELTA        — diff vs previous tick, broadcast
+```
+
+**Why this order matters:** Counter-spend (Phase 1) runs before battles resolve (Phase 3). Economy accrues before victory check. Phase order is not changeable without careful analysis of phase interactions.
+
+---
+
+## State Sync Model
+
+**Snapshot:** Full state dump. Sent on initial connect and reconnect (`prevSnapshot = nil`).
+
+**Delta:** Only what changed. Built by `buildDelta(prev, curr)` in `internal/net/delta.go`.
+
+Delta merge on client (`state/state.ts`):
+```typescript
+// Players: spread preserves fields not in delta; explicit tech fallback
+players.set(id, { ...(existing ?? {}), ...p, tech: p.tech ?? existing?.tech ?? [] });
+// Battles: null-coalesce to preserve active battles when field omitted
+battles: msg.battles ?? state.battles
 ```
 
 ---
 
-## Quick Reference (verify against CLAUDE.md — these may be outdated)
+## Module Responsibilities
 
-```
-Timing-sensitive mechanics:
-  Economy tick: every 100ms (server-dependent)
-  Battle duration: 6-15 seconds (formula: 5 + (Attacker Power + Defender Power) / 2)
-  Counter-spend window: real-time during battle countdown (capped at +3 or seconds remaining)
-  Auto-drop grace period: 10 seconds (20s with Resilience tech)
-  Instant takeover: when Power diff > 3 (enemy hexes only)
+| Module | Owns | Does not own |
+|---|---|---|
+| `internal/game/` | Game rules, state transitions, validation | Network, goroutines, I/O |
+| `internal/room/` | Room lifecycle, tick goroutine, pause/forfeit | Game rules |
+| `internal/net/` | WebSocket, HTTP, JSON serialization, delta building | Game rules |
+| `client/src/state/` | Client state mirror, apply delta/snapshot | Rendering, UI |
+| `client/src/render/` | Canvas drawing, effects | Game state mutation |
+| `client/src/ui/` | DOM: HUD, sidebar, tech tree, overlays | Canvas |
 
-State that must be server-authoritative:
-  Gold/TP balances, hex ownership, building levels, Power values,
-  battle timers, capital hex location, tech unlocks, maintenance calculations
+---
 
-Events (not ticks):
-  Claim hex, build/upgrade/demolish, initiate attack, unlock tech,
-  counter-spend activation, auto-drop choice, capital capture
+## Adding a New Game Feature (Checklist)
 
-Entities:
-  Hex: {id, owner, building_type, building_level, power, is_capital}
-  Player: {id, gold, tp, techs_unlocked[], hex_count, capital_hex_id}
-  Battle: {hex_id, attacker_id, timer_remaining, attacker_power, defender_power, counter_spend_used}
-  Victory: Capital capture → immediate game over, all loser hexes become unclaimed
-```
+1. **Update CLAUDE.md first** — write the design spec before code
+2. **`internal/game/constants.go`** — add numeric constants
+3. **`client/src/constants.ts`** — mirror the constants
+4. **`internal/game/state.go`** — add fields to `GameState`, `Player`, or `Hex` as needed
+5. **`internal/game/`** — implement the mechanic (action validation, tick phase, economy)
+6. **`internal/net/messages.go`** — add/update DTO fields; check omitempty safety
+7. **`internal/net/delta.go`** — add diffing for new fields that shouldn't be sent every tick
+8. **`client/src/state/state.ts`** — update DTOs; update `applyDelta` if new fields need special merge
+9. **`client/src/ui/sidebar.ts`** or other UI files — expose the new action in the UI
+10. **Tests** — game logic unit test in `internal/game/`, room test if session behavior changes, Playwright if player flow changes
+
+---
+
+## Adding a New Tech
+
+A tech touches several files. Reference the Iron Grip or Garrison implementation as a model:
+1. Add constant in `constants.go` / `constants.ts`
+2. Add tech index in `tech.go` (unlock validation uses the index)
+3. Add effect in the relevant phase (economy, combat, or action validation)
+4. Update `sidebar.ts` if the tech enables new UI buttons (like Fortify)
+5. Add test case to `tech_test.go`
+6. Document in CLAUDE.md Tech Tree table
+
+---
+
+## Common Pitfalls
+
+| Pitfall | Where | How to avoid |
+|---|---|---|
+| Adding omitempty to a reverting field | `messages.go` | Only omitempty fields that are one-directional (e.g., tech: false→true never reverts) |
+| Capture flash using `previousOwner` from wire | `main.ts` / `applyDelta` | Compare `hex.owner` vs current `state.hexes` owner |
+| Querying `data-action` attribute for destructive buttons | `sidebar.ts` | Demolish/Sell buttons exist twice in DOM — queries find both nodes |
+| Adding goroutines in `internal/game/` | Any game logic | Package must remain pure; goroutines live in `internal/room/` |
+| Importing non-stdlib packages in `internal/game/` | Go import | Zero external imports; use stdlib only |
 
 ---
 
 ## Rules
 
-- **Derive, don't assume.** Every architectural choice must trace back to a CLAUDE.md requirement or a tech-stack decision.
-- **No premature optimization.** Design for 1v1 first. "But what about 100 concurrent games" is not an MVP question.
-- **Testability first.** If you can't run the game loop in a unit test without a browser, the architecture is wrong.
-- **Name the unknowns.** If a decision can't be made without prototyping, say so — don't guess.
-- **Quick reference is orientation only.** If it conflicts with CLAUDE.md, CLAUDE.md wins.
+- **Derive, don't assume.** Every architectural change must trace to a CLAUDE.md requirement.
+- **Testability is a constraint.** If you can't test it without a browser or goroutine, the architecture boundary is wrong.
+- **Shortest path.** Don't add abstraction layers unless the current pattern actively creates bugs.
+- **CLAUDE.md wins.** If the quick reference above conflicts with CLAUDE.md, CLAUDE.md is authoritative.
