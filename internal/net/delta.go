@@ -12,8 +12,15 @@ func buildDelta(prev, curr *SnapshotMsg) *DeltaMsg {
 		PauseTimeLeft: curr.PauseTimeLeft,
 	}
 
-	for _, p := range curr.Players {
-		delta.Players = append(delta.Players, p)
+	for key, p := range curr.Players {
+		prevP, ok := prev.Players[key]
+		if ok && techEqual(prevP.Tech, p.Tech) {
+			stripped := *p
+			stripped.Tech = nil
+			delta.Players = append(delta.Players, &stripped)
+		} else {
+			delta.Players = append(delta.Players, p)
+		}
 	}
 
 	delta.Battles = curr.Battles
@@ -26,6 +33,18 @@ func buildDelta(prev, curr *SnapshotMsg) *DeltaMsg {
 	}
 
 	return delta
+}
+
+func techEqual(a, b []bool) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // hexChanged checks all mutable HexDTO fields. Coordinates (Q, R) are immutable.

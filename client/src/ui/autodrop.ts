@@ -22,7 +22,7 @@ export class AutoDropPanel {
     }
     this.el.innerHTML = `
       <div style="color:#ff8888;font-weight:bold">Income Negative</div>
-      <div style="color:#ffcccc">Auto-drop in ${player.autoDropGrace.toFixed(1)}s</div>
+      <div style="color:#ffcccc">Auto-drop in ${(player.autoDropGrace ?? 0).toFixed(1)}s</div>
       <div style="color:#aaa;font-size:11px">Click a red hex to drop it</div>`;
     this.el.style.display = 'flex';
   }

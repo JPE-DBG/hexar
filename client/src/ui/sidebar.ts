@@ -73,7 +73,7 @@ function effectiveAttackCost(player: PlayerDTO | null, targetHex: HexDTO): numbe
   if (player.tech?.[TECH_RECLAMATION] && targetHex.previousOwner === player.id) {
     cost -= RECLAMATION_ATTACK_COST;
   }
-  if (player.tech?.[TECH_VANGUARD] && player.vanguardTimer > 0) {
+  if (player.tech?.[TECH_VANGUARD] && (player.vanguardTimer ?? 0) > 0) {
     cost -= VANGUARD_ATTACK_COST;
   }
   return Math.max(0, cost);
