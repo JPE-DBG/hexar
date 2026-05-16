@@ -1,16 +1,12 @@
 package game
 
-import (
-	"testing"
-)
+import "testing"
 
-// TestAutoDropGracePeriodTriggered verifies grace period is activated on negative income
 func TestAutoDropGracePeriodTriggered(t *testing.T) {
 	state := NewGameState()
 	pid := PlayerID(1)
 	state.Players[pid] = &Player{ID: pid, Gold: 1000}
 
-	// Create 31 hexes: net negative income
 	for i := 0; i < 31; i++ {
 		state.Hexes[Hex{Q: i, R: 0}] = &HexState{Owner: pid}
 	}
@@ -25,13 +21,11 @@ func TestAutoDropGracePeriodTriggered(t *testing.T) {
 	}
 }
 
-// TestAutoDropGracePeriodClears verifies grace is cleared when income becomes positive
 func TestAutoDropGracePeriodClears(t *testing.T) {
 	state := NewGameState()
 	pid := PlayerID(1)
 	state.Players[pid] = &Player{ID: pid, Gold: 1000}
 
-	// Start with 31 hexes (negative income)
 	for i := 0; i < 31; i++ {
 		state.Hexes[Hex{Q: i, R: 0}] = &HexState{Owner: pid}
 	}
@@ -41,22 +35,21 @@ func TestAutoDropGracePeriodClears(t *testing.T) {
 		t.Fatal("auto-drop should be active with negative income")
 	}
 
-	// Add enough hexes to make income positive again
-	for i := 31; i < 55; i++ {
-		state.Hexes[Hex{Q: i, R: 0}] = &HexState{Owner: pid}
+	// Remove hexes until income is positive (keep 10: net +10/sec)
+	for i := 10; i < 31; i++ {
+		delete(state.Hexes, Hex{Q: i, R: 0})
 	}
 
 	RunTick(state, TickDt, nil)
 
-	// With positive income, grace should be cleared
-	income := float64(len(state.Hexes)) * 2.0
-	maintenance := CalcMaintenance(len(state.Hexes))
-	if income > maintenance && state.Players[pid].AutoDropActive {
-		t.Logf("auto-drop still active despite positive income (%.1f > %.1f)", income, maintenance)
+	if state.Players[pid].AutoDropActive {
+		t.Error("expected AutoDropActive=false when income is positive")
+	}
+	if state.Players[pid].AutoDropGrace != 0 {
+		t.Errorf("expected AutoDropGrace=0, got %.2f", state.Players[pid].AutoDropGrace)
 	}
 }
 
-// TestAutoDropProtectsCapital verifies capital is never dropped
 func TestAutoDropProtectsCapital(t *testing.T) {
 	state := NewGameState()
 	pid := PlayerID(1)
@@ -68,7 +61,6 @@ func TestAutoDropProtectsCapital(t *testing.T) {
 		state.Hexes[Hex{Q: i, R: 0}] = &HexState{Owner: pid}
 	}
 
-	// Run many ticks to trigger auto-drop
 	for i := 0; i < 200; i++ {
 		RunTick(state, TickDt, nil)
 	}
@@ -78,7 +70,6 @@ func TestAutoDropProtectsCapital(t *testing.T) {
 	}
 }
 
-// TestAutoDropProtectsBattleHexes verifies hexes in battle are not dropped
 func TestAutoDropProtectsBattleHexes(t *testing.T) {
 	state := NewGameState()
 	pid := PlayerID(1)
@@ -92,10 +83,11 @@ func TestAutoDropProtectsBattleHexes(t *testing.T) {
 		state.Hexes[Hex{Q: i, R: 0}] = &HexState{Owner: pid}
 	}
 
-	// Mark one hex as in battle
 	battleHex := Hex{Q: 30, R: 0}
+	attackerHex := Hex{Q: 31, R: 0}
+	state.Hexes[attackerHex] = &HexState{Owner: pid2}
 	state.Battles = append(state.Battles, Battle{
-		AttackerHex: battleHex,
+		AttackerHex: attackerHex,
 		DefenderHex: battleHex,
 		Attacker:    pid2,
 		Defender:    pid,
@@ -111,39 +103,32 @@ func TestAutoDropProtectsBattleHexes(t *testing.T) {
 	}
 }
 
-// TestAutoDropSelectionAlgorithm verifies drop selection follows lowest-income then lowest-invested
 func TestAutoDropSelectionAlgorithm(t *testing.T) {
 	state := NewGameState()
 	pid := PlayerID(1)
-	state.Players[pid] = &Player{ID: pid, Gold: 10000}
+	state.Players[pid] = &Player{ID: pid, Gold: 0}
 
-	// Base: 31 hexes with no buildings (low income)
 	capital := Hex{Q: 0, R: 0}
 	state.Hexes[capital] = &HexState{Owner: pid, Capital: true}
-	for i := 1; i < 31; i++ {
-		state.Hexes[Hex{Q: i, R: 0}] = &HexState{Owner: pid}
+
+	// Two power hexes: same income (2/sec), different investment
+	powerL1 := Hex{Q: 1, R: 0}
+	state.Hexes[powerL1] = &HexState{Owner: pid, Building: BuildingPower, Level: 1} // invested 60
+
+	powerL2 := Hex{Q: 2, R: 0}
+	state.Hexes[powerL2] = &HexState{Owner: pid, Building: BuildingPower, Level: 2} // invested 180
+
+	// Call autoDropLowestHex directly: capital is protected, powerL1 (60) < powerL2 (180)
+	autoDropLowestHex(state, pid)
+
+	if state.Hexes[powerL1].Owner == pid {
+		t.Error("expected powerL1 (lower investment) to be dropped, not powerL2")
 	}
-
-	// Two hex buildings with same income but different investment
-	// Power L1: income 2, invested 60
-	// Power L2: income 2, invested 180
-	powerL1 := Hex{Q: 100, R: 0}
-	state.Hexes[powerL1] = &HexState{Owner: pid, Building: BuildingPower, Level: 1}
-
-	powerL2 := Hex{Q: 101, R: 0}
-	state.Hexes[powerL2] = &HexState{Owner: pid, Building: BuildingPower, Level: 2}
-
-	for i := 0; i < 200; i++ {
-		RunTick(state, TickDt, nil)
-	}
-
-	// Lower-invested hex should be dropped first
-	if state.Hexes[powerL1].Owner != 0 && state.Hexes[powerL2].Owner != pid {
-		t.Error("expected lowest-invested hex (Power L1) to be dropped before highest-invested (Power L2)")
+	if state.Hexes[powerL2].Owner != pid {
+		t.Error("expected powerL2 (higher investment) to be retained")
 	}
 }
 
-// TestAutoDropRefund verifies refund is applied on drop
 func TestAutoDropRefund(t *testing.T) {
 	state := NewGameState()
 	pid := PlayerID(1)
@@ -151,28 +136,22 @@ func TestAutoDropRefund(t *testing.T) {
 
 	capital := Hex{Q: 0, R: 0}
 	state.Hexes[capital] = &HexState{Owner: pid, Capital: true}
-	for i := 1; i < 31; i++ {
-		state.Hexes[Hex{Q: i, R: 0}] = &HexState{Owner: pid}
-	}
 
-	// Add a hex with building
-	dropHex := Hex{Q: 100, R: 0}
+	dropHex := Hex{Q: 1, R: 0}
 	state.Hexes[dropHex] = &HexState{Owner: pid, Building: BuildingGold, Level: 1}
 
 	goldBefore := state.Players[pid].Gold
-	hexCountBefore := len(state.Hexes)
+	autoDropLowestHex(state, pid)
 
-	for i := 0; i < 200; i++ {
-		RunTick(state, TickDt, nil)
+	expectedRefund := TotalInvested(BuildingGold, 1) * AutoDropRefund // 60 * 0.5 = 30
+	if state.Players[pid].Gold != goldBefore+expectedRefund {
+		t.Errorf("gold = %.2f, want %.2f (refund=%.2f)", state.Players[pid].Gold, goldBefore+expectedRefund, expectedRefund)
 	}
-
-	// If hex was dropped, gold should have increased from refund
-	if len(state.Hexes) < hexCountBefore {
-		t.Logf("hex dropped: gold %.2f → %.2f, refund applied", goldBefore, state.Players[pid].Gold)
+	if state.Hexes[dropHex].Owner != NoPlayer {
+		t.Error("expected dropped hex to be unclaimed")
 	}
 }
 
-// TestAutoDropResilienceTech verifies Resilience tech extends grace and increases refund
 func TestAutoDropResilienceTech(t *testing.T) {
 	state := NewGameState()
 	pid := PlayerID(1)
@@ -186,8 +165,24 @@ func TestAutoDropResilienceTech(t *testing.T) {
 
 	RunTick(state, TickDt, nil)
 
-	// With Resilience, grace should be 20s instead of 10s
-	if player.Tech[TechResilience] && state.Players[pid].AutoDropGrace > 0 {
-		t.Logf("Resilience tech: grace period will be extended to ~20s")
+	// Grace period should be ResilienceGracePeriod (20s), not AutoDropGracePeriod (10s)
+	if state.Players[pid].AutoDropGrace != ResilienceGracePeriod {
+		t.Errorf("expected AutoDropGrace=%.1f with Resilience, got %.2f", ResilienceGracePeriod, state.Players[pid].AutoDropGrace)
+	}
+
+	// Verify 70% refund: use a fresh state with only capital + building hex
+	state2 := NewGameState()
+	state2.Players[pid] = &Player{ID: pid, Gold: 100}
+	state2.Players[pid].Tech[TechResilience] = true
+	state2.Hexes[Hex{Q: 0, R: 0}] = &HexState{Owner: pid, Capital: true}
+	dropHex := Hex{Q: 1, R: 0}
+	state2.Hexes[dropHex] = &HexState{Owner: pid, Building: BuildingGold, Level: 1}
+
+	goldBefore := state2.Players[pid].Gold
+	autoDropLowestHex(state2, pid)
+
+	expectedRefund := TotalInvested(BuildingGold, 1) * ResilienceDropRefund // 60 * 0.7 = 42
+	if state2.Players[pid].Gold != goldBefore+expectedRefund {
+		t.Errorf("Resilience refund: gold = %.2f, want %.2f (refund=%.2f)", state2.Players[pid].Gold, goldBefore+expectedRefund, expectedRefund)
 	}
 }
