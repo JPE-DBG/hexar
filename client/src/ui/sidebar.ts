@@ -37,9 +37,10 @@ const ICON_POWER = `<svg width="32" height="32" viewBox="0 0 32 32">
 </svg>`;
 
 const ICON_RESEARCH = `<svg width="32" height="32" viewBox="0 0 32 32">
-  <path d="M10,26 L16,6 L22,26" stroke="#45b7d1" stroke-width="2.5" fill="none"/>
-  <ellipse cx="16" cy="25" rx="8" ry="3.5" stroke="#45b7d1" stroke-width="2" fill="none"/>
-  <line x1="12" y1="17" x2="20" y2="17" stroke="#45b7d1" stroke-width="2"/>
+  <line x1="11" y1="4" x2="21" y2="4" stroke="#45b7d1" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M13,4 L13,14 L5,26 Q4,28 6,28 L26,28 Q28,28 27,26 L19,14 L19,4"
+        stroke="#45b7d1" stroke-width="2.5" fill="#45b7d133" stroke-linejoin="round"/>
+  <line x1="8" y1="21" x2="24" y2="21" stroke="#45b7d1" stroke-width="2"/>
 </svg>`;
 
 const ICON_TECH = `<svg width="32" height="32" viewBox="0 0 32 32">

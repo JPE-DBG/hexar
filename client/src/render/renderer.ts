@@ -142,6 +142,7 @@ export class Renderer {
 
   private drawHexFill(hex: HexDTO) {
     const ctx = this.ctx;
+    ctx.save();
     const { x, y } = hexToPixel({ q: hex.q, r: hex.r });
     const px = x + this.offsetX;
     const py = y + this.offsetY;
@@ -154,16 +155,18 @@ export class Renderer {
       grad.addColorStop(0, lighten(baseColor, hex.capital ? 0.08 : 0.15));
       grad.addColorStop(1, darken(baseColor, hex.capital ? 0.35 : 0.2));
       ctx.fillStyle = grad;
+      ctx.save();
       ctx.shadowColor = baseColor;
       ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.restore();
     } else {
       const grad = ctx.createRadialGradient(px, py, 0, px, py, HEX_SIZE * 0.85);
       grad.addColorStop(0, lighten(baseColor, 0.04));
       grad.addColorStop(1, baseColor);
       ctx.fillStyle = grad;
+      ctx.fill();
     }
-    ctx.fill();
-    ctx.shadowBlur = 0;
     ctx.strokeStyle = COLORS.grid;
     ctx.lineWidth = 1;
     ctx.stroke();
@@ -211,6 +214,7 @@ export class Renderer {
         ctx.fillText(`${powerBadge}`, px, py + HEX_SIZE * 0.45);
       }
     }
+    ctx.restore();
   }
 
   private drawHexRings(hex: HexDTO) {
@@ -254,6 +258,7 @@ export class Renderer {
   private drawFortifySegments(px: number, py: number, fraction: number, dimmed = false) {
     if (fraction <= 0) return;
     const ctx = this.ctx;
+    ctx.save();
 
     const corners: { x: number; y: number }[] = [];
     for (let i = 0; i < 6; i++) {
@@ -285,7 +290,7 @@ export class Renderer {
       ctx.stroke();
     }
 
-    if (dimmed) ctx.globalAlpha = 1.0;
+    ctx.restore();
   }
 
   private drawBattle(battle: BattleDTO) {
