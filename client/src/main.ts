@@ -347,10 +347,14 @@ function onSnapshot(msg: SnapshotMsg) {
 
 function onDelta(msg: DeltaMsg) {
   if (!state) return;
-  // Trigger capture flash for hex ownership changes
+  // Trigger capture flash only when ownership *actually changes* in this delta.
+  // Using previousOwner from the wire is wrong — the server never resets it, so
+  // any delta for a previously-captured hex (e.g. fortifyTimer tick) would fire
+  // a spurious flash that fills the whole hex every second.
   if (msg.hexChanges) {
     for (const hex of msg.hexChanges) {
-      if (hex.owner > 0 && hex.previousOwner !== undefined && hex.previousOwner !== hex.owner) {
+      const prev = state.hexes.get(`${hex.q},${hex.r}`);
+      if (hex.owner > 0 && prev && prev.owner !== hex.owner) {
         const flashColor = hex.owner === 1 ? COLORS.player1 : COLORS.player2;
         renderer.addCaptureFlash(hex.q, hex.r, flashColor);
       }

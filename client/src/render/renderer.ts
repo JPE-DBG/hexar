@@ -12,14 +12,6 @@ function darken(color: string, amount: number): string {
   return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
 }
 
-function lighten(color: string, amount: number): string {
-  const n = parseInt(color.slice(1), 16);
-  const r = Math.min(255, (n >> 16) + Math.round(amount * 255));
-  const g = Math.min(255, ((n >> 8) & 0xff) + Math.round(amount * 255));
-  const b = Math.min(255, (n & 0xff) + Math.round(amount * 255));
-  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
-}
-
 interface Effect {
   type: 'flash' | 'floater';
   q: number;
@@ -147,31 +139,15 @@ export class Renderer {
 
   private drawHexFill(hex: HexDTO) {
     const ctx = this.ctx;
-    ctx.save();
     const { x, y } = hexToPixel({ q: hex.q, r: hex.r });
     const px = x + this.offsetX;
     const py = y + this.offsetY;
-
     this.hexPath(px, py);
-
-    const baseColor = this.hexColor(hex);
-    if (hex.owner > 0) {
-      const grad = ctx.createRadialGradient(px, py, 0, px, py, HEX_SIZE * 0.85);
-      grad.addColorStop(0, lighten(baseColor, hex.capital ? 0.12 : 0.22));
-      grad.addColorStop(1, darken(baseColor, hex.capital ? 0.45 : 0.35));
-      ctx.fillStyle = grad;
-      ctx.fill();
-    } else {
-      const grad = ctx.createRadialGradient(px, py, 0, px, py, HEX_SIZE * 0.85);
-      grad.addColorStop(0, lighten(baseColor, 0.04));
-      grad.addColorStop(1, baseColor);
-      ctx.fillStyle = grad;
-      ctx.fill();
-    }
+    ctx.fillStyle = hex.capital ? darken(this.hexColor(hex), 0.25) : this.hexColor(hex);
+    ctx.fill();
     ctx.strokeStyle = COLORS.grid;
     ctx.lineWidth = 1;
     ctx.stroke();
-    ctx.restore();
   }
 
   private drawHexLabel(hex: HexDTO) {
