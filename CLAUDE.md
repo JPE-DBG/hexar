@@ -425,6 +425,17 @@ T=5 min+:  Border warfare begins in earnest
 | Auth | None (MVP) | OAuth when accounts added |
 | Testing | Go `testing` (headless) + manual browser | Playwright |
 
+### Milestone Tracking & Testing Policy
+
+**Milestones:** CLAUDE.md (this file) is the single source of truth for milestone specs (M1–M9). Do **not** maintain a separate `milestones.md` — it duplicates content and drifts. If tracking which PR addresses which milestone is valuable, add milestone info in git commit messages instead.
+
+**Testing strategy for Hexar:**
+- **Game logic** (`internal/game/`): table-driven unit tests via Go `testing` package. Pure functions, zero mocks, zero I/O.
+- **Integration** (`internal/room/`): minimal-setup goroutine tests (use `time.Sleep` sparingly, only for tick boundaries).
+- **E2E (Playwright):** Add `e2e/*.spec.ts` when implementing decision-critical features (e.g., new tech, new action, new economy rule). Focus on happy path + one key edge case per spec. Not every feature needs E2E — only those where player behavior changes or where client-server sync is critical. Lean tests, not comprehensive coverage.
+
+When adding a new feature: update CLAUDE.md first (design spec), implement the feature, add the test. This order ensures tests validate the spec, not the implementation.
+
 ### Session & Connection Behaviour (implemented post-M6)
 
 **Lobby flow:**
