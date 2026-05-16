@@ -665,22 +665,26 @@ Goal: Build confidence before exposing to real users; catch regressions as the v
 | File | Test cases |
 |---|---|
 | `testhelpers_test.go` | `twoPlayerState()`, `runTicks(n, actions...)`, adjacent hex builder — shared by all game tests |
+| `action_test.go` | Action validation and processing; build action constraints |
+| `building_test.go` | Building upgrade mechanics, costs, demolish refunds |
 | `economy_test.go` | Gold accrues at 2/s per hex; stepped maintenance triggers at 10/20 hex boundaries; Prosperity + Compound Growth formula matches CLAUDE.md math |
 | `combat_test.go` | Attack validation: insufficient power, insufficient gold, hex already in battle; battle resolution: winner at timer expiry, loser retains on tie (unless Siege Mastery); instant takeover when diff > 3 |
-| `victory_test.go` | Capital capture sets `WinReason = "capital"`, all loser hexes unclaimed; `ForfeitPlayer` sets `WinReason = "forfeit"` |
 | `tech_test.go` | Tech unlock deducts TP and sets bool; Reclamation + Vanguard both active + conditions met = 0g attack cost |
-| `autodrop_test.go` | Negative net income triggers 10s grace; forced drop when grace expires; 50% refund on dropped hex |
+| `victory_test.go` | Capital capture sets `WinReason = "capital"`, all loser hexes unclaimed; `ForfeitPlayer` sets `WinReason = "forfeit"` |
+| `autodrop_test.go` | Negative net income triggers 10s grace; forced drop when grace expires; 50% refund on dropped hex; Resilience tech extends grace to 20s and increases refund to 70%; selection by lowest income then lowest invested; capital and battle-active hexes protected |
 
 **Layer 2: Room/lobby integration** (`internal/room/`) — real goroutines, minimal `time.Sleep` (1–2 tick durations):
 
 | Test | Asserts |
 |---|---|
-| `TestWaitingState` | Loop does not start until 2nd player connects; P1 gold unchanged while waiting |
-| `TestPauseOnDisconnect` | `state.Paused = true` immediately; remaining client receives snapshot |
-| `TestUnpauseOnReconnect` | `state.Paused = false`; remaining grace saved to `remainingGrace[pid]` |
-| `TestCumulativeGrace` | Second disconnect starts from remaining budget, not 120s |
-| `TestForfeitEnqueued` | `PauseTimeLeft` hits 0 → `ActionForfeit` processed next tick |
-| `TestDuplicateConnect` | `IsConnected` returns true; second connection replaces first cleanly |
+| `TestWaitingState` | `Waiting=true` until 2nd player connects; game loop doesn't start with 1 player; `Waiting=false` and loop starts when 2nd player connects |
+| `TestWaitingStateNoGoldAccrual` | Player 1's gold unchanged while waiting (loop not running) |
+| `TestPauseOnDisconnect` | `state.Paused=true` immediately; `PauseTimeLeft` initialized to ~120s; remaining client receives pause snapshot |
+| `TestUnpauseOnReconnect` | `state.Paused=false` on reconnect; `PauseTimeLeft=0`; grace time saved to `remainingGrace` for next disconnect |
+| `TestCumulativeGrace` | 2nd disconnect after reconnect uses saved grace (doesn't reset to 120s); grace decrements cumulatively |
+| `TestForfeitEnqueued` | `PauseTimeLeft` → 0 enqueues `ActionForfeit`; next tick processes forfeit, sets `WinReason="forfeit"`, game ends |
+| `TestDuplicateConnectRejected` | 2nd connection attempt for same player is closed; original connection stays active |
+| `TestDuplicateConnectDuringPause` | Reconnect during pause state succeeds (not treated as duplicate) |
 
 **Layer 3: Playwright E2E** (`e2e/`) — runs locally via `make test-e2e`; no deployment needed. Playwright's `webServer` config auto-starts both the Go server (`:8080`) and the Vite dev server (`:5173`) before the suite runs. Multi-player scenarios use two `BrowserContext` objects in one test process.
 
