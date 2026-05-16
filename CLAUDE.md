@@ -727,6 +727,14 @@ Goal: Make the game accessible to real players outside localhost.
 | Deselect on demolish | After demolishing a building the hex remained selected, leaving stale context buttons (upgrade, attack) visible |
 | Fortify timer flickering fix | Hex would briefly fill with player color every 1s when fortified after capture — root cause: `previousOwner` is set on capture and never reset by server, so any delta for that hex (fortifyTimer tick) re-fired `addCaptureFlash`; fixed by comparing `hex.owner` vs current `state.hexes` owner in `onDelta`, not against `previousOwner` from wire |
 | Delta quantization for FortifyTimer | `fortifyTimer` changed every 100ms tick, causing fortified hexes to appear in every delta; now only sent when timer crosses a 1-second boundary (`int(prev) != int(curr)`) |
+| Keyboard shortcut deselect (D/X) | After pressing D (Demolish) or X (Sell Hex), selected hex was not cleared — stale context buttons remained; fixed by adding `selectedHex = null; renderer.setSelected(null); sidebar.hide()` to both keyboard handlers in `main.ts` (mirrors sidebar callback logic) |
+
+**Known potential issues (not blocking, document before touching):**
+
+| Issue | Location | Risk |
+|---|---|---|
+| Destructive DOM duplication | `sidebar.ts` — `this.destructiveEl.innerHTML` mirrors button HTML from `html()` | Demolish/Sell buttons exist twice in the DOM simultaneously; CSS controls visibility. If code queries by `data-action` attribute, it finds two nodes. Refactor before adding more destructive actions or complex event routing. |
+| Mobile CSS transparency | `style.css` — portrait mode sets sidebar background to `transparent` | No backdrop-filter, no border; relies on canvas fill for contrast. Light-colored hexes behind build buttons may cause readability issues on some map states. |
 
 ### Rejected Alternatives
 - **Node.js server:** Go developer, worse concurrency model for tick loops

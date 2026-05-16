@@ -130,11 +130,17 @@ window.addEventListener('keydown', (e) => {
     case 'D': // Demolish
       if (selectedHex.owner === myPlayerId && selectedHex.building > 0) {
         connection?.send({ type: 'action', action: 'demolish', q: selectedHex.q, r: selectedHex.r });
+        selectedHex = null;
+        renderer.setSelected(null);
+        sidebar.hide();
       }
       break;
     case 'X': // Sell hex
       if (selectedHex.owner === myPlayerId && !selectedHex.capital) {
         connection?.send({ type: 'action', action: 'drop-hex', q: selectedHex.q, r: selectedHex.r });
+        selectedHex = null;
+        renderer.setSelected(null);
+        sidebar.hide();
       }
       break;
     case 'F': // Fortify
