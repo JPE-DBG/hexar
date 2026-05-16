@@ -23,7 +23,7 @@ Hexar is a fast-paced, real-time multiplayer hex strategy game inspired by Antiy
 
 - **Unclaimed:** No owner, Power 0, free to claim for 10 gold (instant if Attacker Power ≥ 1)
 - **Owned:** Controlled by a player; generates 2 gold/sec base income; can hold one building
-- **Capital:** Each player starts with one capital hex. Innate Power 1 (no building needed). Losing it ends the game.
+- **Capital:** Each player starts with one capital hex. Innate Power 1 (no building needed). Losing it ends the game. Power buildings stack on top of innate Power (e.g., capital + Power L1 = Power 2 total).
 
 **Maintenance costs (stepped):**
 | Hex range | Cost/sec each |
@@ -106,6 +106,9 @@ Winner determined when timer reaches 0 — whoever has higher Power at that mome
 - Cap: `min(+3, seconds remaining)` — time pressure limits how much defender can buy
 - **Garrison tech:** Each adjacent owned hex adds +1 passive (cap +2). Garrison and counter-spend share the +3 total cap.
 - **Siege Mastery** (attacker): Timers 40% shorter, compressing defender's reaction window
+- Example: Battle at 7s, losing 3 vs 5 — spend 150g over 3s → Power 6, win
+- Example: 1s left in battle → max +1 Power boost (50g), regardless of gold available
+- Example with Garrison: 2 adjacent owned hexes give +2 passive (cap reached) → counter-spend max is +1 (total cap +3)
 
 **Power diff > 3 → instant takeover** (enemy hexes only; unclaimed hexes always instant)
 
@@ -488,7 +491,7 @@ All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, d
 | Delta quantization for FortifyTimer | Timer changed every 100ms tick → fortified hexes in every delta; now only sent when timer crosses a 1-second boundary |
 | Keyboard shortcut deselect (D/X) | After D (Demolish) or X (Sell Hex), hex stayed selected; fixed by adding `selectedHex = null; renderer.setSelected(null); sidebar.hide()` to both keyboard handlers |
 | Delta packet size optimization | Idle game sent 526 bytes/tick (>500 limit); fixed by diffing `Tech []bool` in `buildDelta` (omit when unchanged) and making `Battles` omitempty |
-| omitempty on reverting PlayerDTO fields | `AutoDropActive/Grace/VanguardTimer` with omitempty caused client to preserve stale nonzero values via delta spread when fields went to zero; removed omitempty, always send these fields |
+| omitempty safety on reverting PlayerDTO fields | Caught in review: `AutoDropActive/Grace/VanguardTimer` must never be omitempty — they revert to zero/false and the delta spread would preserve stale client values. Documented in State Sync; added defensive optional types on client with `?? 0` null coalescing |
 | CI/CD path filters | Pipeline ran on every commit including doc-only changes; added `paths:` filter + `[skip deploy]` convention |
 
 ### Open Questions (Playtesting)
