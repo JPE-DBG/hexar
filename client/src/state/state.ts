@@ -13,10 +13,10 @@ export interface PlayerDTO {
   id: number;
   gold: number;
   tp: number;
-  tech: boolean[];
-  autoDropActive: boolean;
-  autoDropGrace: number;
-  vanguardTimer: number;
+  tech?: boolean[];
+  autoDropActive?: boolean;
+  autoDropGrace?: number;
+  vanguardTimer?: number;
 }
 
 export interface BattleDTO {
@@ -88,7 +88,8 @@ export function applySnapshot(msg: SnapshotMsg): GameState {
 export function applyDelta(state: GameState, msg: DeltaMsg): GameState {
   const players = new Map(state.players);
   for (const p of msg.players) {
-    players.set(String(p.id), p);
+    const existing = players.get(String(p.id));
+    players.set(String(p.id), { ...(existing ?? {}), ...p, tech: p.tech ?? existing?.tech ?? [] });
   }
 
   const hexes = new Map(state.hexes);
@@ -96,5 +97,5 @@ export function applyDelta(state: GameState, msg: DeltaMsg): GameState {
     hexes.set(`${hex.q},${hex.r}`, hex);
   }
 
-  return { hexes, players, battles: msg.battles, elapsed: msg.elapsed, over: msg.over, winner: msg.winner, winReason: msg.winReason, waiting: msg.waiting, paused: msg.paused, pauseTimeLeft: msg.pauseTimeLeft };
+  return { hexes, players, battles: msg.battles ?? state.battles, elapsed: msg.elapsed, over: msg.over, winner: msg.winner, winReason: msg.winReason, waiting: msg.waiting, paused: msg.paused, pauseTimeLeft: msg.pauseTimeLeft };
 }

@@ -17,7 +17,7 @@ const (
 type DeltaMsg struct {
 	Type          MsgType      `json:"type"`
 	Players       []*PlayerDTO `json:"players"`
-	Battles       []*BattleDTO `json:"battles"`
+	Battles       []*BattleDTO `json:"battles,omitempty"`
 	Elapsed       float64      `json:"elapsed"`
 	Over          bool         `json:"over"`
 	Winner        int          `json:"winner,omitempty"`
@@ -69,10 +69,10 @@ type PlayerDTO struct {
 	ID             int     `json:"id"`
 	Gold           float64 `json:"gold"`
 	TP             float64 `json:"tp"`
-	Tech           []bool  `json:"tech"`
-	AutoDropActive bool    `json:"autoDropActive"`
-	AutoDropGrace  float64 `json:"autoDropGrace"`
-	VanguardTimer  float64 `json:"vanguardTimer"`
+	Tech           []bool  `json:"tech,omitempty"`
+	AutoDropActive bool    `json:"autoDropActive,omitempty"`
+	AutoDropGrace  float64 `json:"autoDropGrace,omitempty"`
+	VanguardTimer  float64 `json:"vanguardTimer,omitempty"`
 }
 
 type BattleDTO struct {
@@ -88,10 +88,10 @@ type BattleDTO struct {
 
 func BuildSnapshot(state *game.GameState) *SnapshotMsg {
 	msg := &SnapshotMsg{
-		Type:    MsgSnapshot,
-		Hexes:   make(map[string]*HexDTO, len(state.Hexes)),
-		Players: make(map[string]*PlayerDTO, len(state.Players)),
-		Battles: make([]*BattleDTO, 0, len(state.Battles)),
+		Type:          MsgSnapshot,
+		Hexes:         make(map[string]*HexDTO, len(state.Hexes)),
+		Players:       make(map[string]*PlayerDTO, len(state.Players)),
+		Battles:       make([]*BattleDTO, 0, len(state.Battles)),
 		Elapsed:       state.Elapsed,
 		Over:          state.Over,
 		Winner:        int(state.Winner),
