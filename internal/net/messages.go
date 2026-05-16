@@ -70,9 +70,9 @@ type PlayerDTO struct {
 	Gold           float64 `json:"gold"`
 	TP             float64 `json:"tp"`
 	Tech           []bool  `json:"tech,omitempty"`
-	AutoDropActive bool    `json:"autoDropActive,omitempty"`
-	AutoDropGrace  float64 `json:"autoDropGrace,omitempty"`
-	VanguardTimer  float64 `json:"vanguardTimer,omitempty"`
+	AutoDropActive bool    `json:"autoDropActive"`
+	AutoDropGrace  float64 `json:"autoDropGrace"`
+	VanguardTimer  float64 `json:"vanguardTimer"`
 }
 
 type BattleDTO struct {

@@ -664,8 +664,7 @@ Goal: Build confidence before exposing to real users; catch regressions as the v
 
 | File | Test cases |
 |---|---|
-| `testhelpers_test.go` | `twoPlayerState()`, `runTicks(n, actions...)`, adjacent hex builder — shared by all game tests |
-| `action_test.go` | Action validation and processing; build action constraints |
+| `action_test.go` | Counter-spend cap/time-cap/flip; tech unlock via action deducts TP; TP accumulation from Research buildings; voluntary drop action clears auto-drop flag |
 | `building_test.go` | Building upgrade mechanics, costs, demolish refunds |
 | `economy_test.go` | Gold accrues at 2/s per hex; stepped maintenance triggers at 10/20 hex boundaries; Prosperity + Compound Growth formula matches CLAUDE.md math |
 | `combat_test.go` | Attack validation: insufficient power, insufficient gold, hex already in battle; battle resolution: winner at timer expiry, loser retains on tie (unless Siege Mastery); instant takeover when diff > 3 |
@@ -683,7 +682,7 @@ Goal: Build confidence before exposing to real users; catch regressions as the v
 | `TestUnpauseOnReconnect` | `state.Paused=false` on reconnect; `PauseTimeLeft=0`; grace time saved to `remainingGrace` for next disconnect |
 | `TestCumulativeGrace` | 2nd disconnect after reconnect uses saved grace (doesn't reset to 120s); grace decrements cumulatively |
 | `TestForfeitEnqueued` | `PauseTimeLeft` → 0 enqueues `ActionForfeit`; next tick processes forfeit, sets `WinReason="forfeit"`, game ends |
-| `TestDuplicateConnectRejected` | 2nd connection attempt for same player is closed; original connection stays active |
+| `TestDuplicateConnectReplaces` | 2nd `OnConnect` for same player replaces the old client (evicts original from activeClients, new client receives snapshot) |
 | `TestDuplicateConnectDuringPause` | Reconnect during pause state succeeds (not treated as duplicate) |
 
 **Layer 3: Playwright E2E** (`e2e/`) — runs locally via `make test-e2e`; no deployment needed. Playwright's `webServer` config auto-starts both the Go server (`:8080`) and the Vite dev server (`:5173`) before the suite runs. Multi-player scenarios use two `BrowserContext` objects in one test process.
