@@ -343,15 +343,17 @@ players.set(String(p.id), { ...(existing ?? {}), ...p, tech: p.tech ?? existing?
 **Keyboard shortcuts:**
 | Key | Action |
 |---|---|
-| Q / W / E | Select Economy / Power / Research (toggle) |
+| Q / W / E | Smart ON + mouse over own empty hex → build immediately; Smart OFF or no valid target → toggle tool mode |
 | T | Open Tech Tree |
-| Space | Upgrade selected hex |
-| A | Attack selected hex |
-| F | Fortify selected hex (requires Fortify tech) |
-| C | Counter-spend during battle |
-| D | Demolish selected hex → deselects hex |
-| X | Sell Hex → deselects hex |
+| Space | Upgrade hex under mouse (Smart ON) or selected hex |
+| A | Attack hex under mouse (Smart ON) or selected hex |
+| F | Fortify hex under mouse (Smart ON) or selected hex (requires Fortify tech) |
+| C | Counter-spend during battle on hex under mouse (Smart ON) or selected hex |
+| D | Demolish hex under mouse (Smart ON) or selected hex → deselects hex |
+| X | Sell Hex under mouse (Smart ON) or selected hex → deselects hex |
 | ESC | Deselect tool |
+
+**Smart build toggle:** Sidebar BUILD section — "Smart OFF/ON" chip. Default: OFF. When ON, all hotkeys execute on the hex currently under the mouse cursor (LoL-style). When OFF, hotkeys require a click-selected hex.
 
 **Battle restrictions:** No building placement or upgrade on hexes under active battle (server enforces `ErrBattleInProgress`). Demolish allowed — defender may recover gold for counter-spend.
 
@@ -544,9 +546,13 @@ All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, d
 | ✅ | Sidebar: hex position on same line as info | Move `[q,r]` to muted second line | Coords are secondary info; shouldn't compete with building name |
 | ✅ | Buttons: context vs build different sizes | Standardize all `.sidebar-btn` and icon sizes | Visual inconsistency; unpredictable hit areas |
 | ✅ | Buttons: icons different sizes | Standardize all SVG icons to 20×20 | Same as above |
-| ✅ | Smart building: Q/W/E on selected hex | When hex selected + owned + empty, Q/W/E builds immediately; falls back to tool toggle when no hex selected | Experienced players wanted faster building flow (LoL-style); all other hotkeys (Space/A/D/X/F/C) act on hovered hex, falling back to selected hex |
+| ✅ | Smart building: Q/W/E on selected hex | All hotkeys act on hex under mouse cursor (LoL-style); Q/W/E fall back to tool toggle when no valid hover target; toggle chip in BUILD section (default OFF) | Experienced players wanted faster flow without clicking first; toggle lets new players keep familiar click-select behavior |
 | ✅ | Attack preview: Garrison not shown in power req | Show breakdown `Pwr > base + Garrison = total` when Garrison active | Testers misclicked attacks that failed due to hidden Garrison bonus |
 | ✅ | Tech tree: no close button | Add ✕ button top-right | Standard modal UX; ESC-only was not discoverable |
 | ✅ | Empty hex: Demolish/Sell show no feedback | Show `0g` + disable buttons when hex has no building | Buttons appeared active but did nothing — misleading |
+| ✅ | HUD: Research label misaligns numeric values | Increased `.hud-label` min-width 50px → 70px | "Research:" longer than "Gold:"/"Hexes:" broke column alignment |
+| ✅ | Sidebar: context buttons jump position | Wrap hex info in fixed-height `hex-info-block` (36px) | Variable lines (0–2) between power label and buttons caused layout shift |
+| ✅ | Sidebar: Pwr:0 shown on empty hexes | Only render power label when `defPower > 0` | Zero power is noise — no combat relevance for own empty hexes |
+| ✅ | Sidebar: building level shown as "L2" | Changed to `(Level 2)` | Shorthand was unclear to new players |
 
 **Legend:** ⬜ Planned · 🔄 In Progress · ✅ Done · ❌ Rejected
