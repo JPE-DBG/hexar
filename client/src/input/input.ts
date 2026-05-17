@@ -7,6 +7,7 @@ export function setupInput(
   getOffset: () => { x: number; y: number },
   onHexClick: (q: number, r: number) => void,
   onPan: (dx: number, dy: number) => void,
+  onHexHover?: (q: number, r: number) => void,
 ) {
   let dragStart: { x: number; y: number } | null = null;
   let isDragging = false;
@@ -18,6 +19,11 @@ export function setupInput(
   });
 
   canvas.addEventListener('pointermove', (ev) => {
+    const rect = canvas.getBoundingClientRect();
+    const offset = getOffset();
+    const hex = pixelToHex(ev.clientX - rect.left - offset.x, ev.clientY - rect.top - offset.y);
+    onHexHover?.(hex.q, hex.r);
+
     if (!dragStart) return;
     const dx = ev.clientX - dragStart.x;
     const dy = ev.clientY - dragStart.y;
