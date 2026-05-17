@@ -2,10 +2,10 @@
 tester: Tester A (Czech)
 date: 2026-05-17
 feedback_type: UX / Game Mechanics
-status: RAW
+status: PROCESSED
 issues_total: 8
-issues_implemented: 0
-issues_rejected: 0
+issues_implemented: 6
+issues_rejected: 1
 issues_deferred: 0
 ---
 
@@ -65,7 +65,8 @@ issues_deferred: 0
 - **Proposed:** When counter-spend is not needed but there are still pointts left game will do nothing to save gold
 - **Design considerations:**
   - Risk: removes defender agency / tactical bluffing
-- **Status:** ⬜ Open
+- **Status:** ❌ REJECTED
+- **Rejection reason:** Player agency is important. Counter-spend is a tactical decision that benefits from manual control — defenders should decide when and how much to spend based on battle dynamics. Auto-spending (even minimal) reduces strategic depth.
 
 ---
 

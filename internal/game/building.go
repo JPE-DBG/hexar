@@ -34,6 +34,9 @@ func ValidateUpgrade(state *GameState, action Action) error {
 	if hasBattleOnHex(state, action.Target) {
 		return ErrBattleInProgress
 	}
+	if hs.UpgradeTimer > 0 {
+		return ErrUpgradeInProgress
+	}
 	if hs.Level == 0 {
 		if action.Building == BuildingNone {
 			return ErrNoBuilding

@@ -340,6 +340,7 @@ export class Sidebar {
       if (hasBuilding && !battle && !hex.upgradeTimer) {
         const upgCost = upgradeCost(hex.building, hex.level);
         const canUpgrade = gold >= upgCost;
+        const upgradeHotkey = hex.building === BUILDING_GOLD ? 'Q' : hex.building === BUILDING_POWER ? 'W' : 'E';
         html += `
           <button class="sidebar-btn ${canUpgrade ? '' : 'disabled'}"
                   data-action="upgrade"
@@ -347,7 +348,7 @@ export class Sidebar {
             <span class="btn-icon">⬆</span>
             <span class="btn-label">Upgrade L${hex.level + 1}</span>
             <span class="btn-cost">${upgCost}g</span>
-            <span class="btn-hotkey">Space</span>
+            <span class="btn-hotkey">${upgradeHotkey}</span>
           </button>
         `;
       }

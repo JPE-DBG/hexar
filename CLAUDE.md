@@ -566,7 +566,7 @@ All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, d
 | ⬜ | Smart Build ON still enters sticky tool mode | When Smart Build ON, Q/W/E should not enter sticky mode — instant-on-hover only | Two interaction models active simultaneously caused confusion |
 | ⬜ | Build and upgrade via same hotkey | Q/W/E contextual: build on empty hex, upgrade if building present | Separate flows felt redundant; design question on cost display open |
 | ⬜ | Attack by clicking opponent hex directly | Consider click-to-attack (or Smart Build A on hover) instead of select + A | Current select→A flow felt slow; design question on cost preview open |
-| ⬜ | Auto counter-spend: spend only when needed to flip | Auto counter-spend does nothing when already winning; spends minimum to flip when losing | Spending up to cap when already ahead wastes gold for no benefit |
+| ❌ | Auto counter-spend: spend only when needed to flip | Not implemented — player agency prioritized over automation | Manual counter-spend preserves tactical depth and strategic decisions |
 | ⬜ | Buildings should take time to upgrade | 5s construction delay per upgrade (constant); no cancel — demolish/sell only; timer shows like Fortify | Instant upgrades removed tension; delay rewards planning |
 | ⬜ | Mobile: hex info placement | Move hex info below player resource row at top | Bottom-bar hex info obscured / hard to reach on mobile |
 

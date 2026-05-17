@@ -34,6 +34,7 @@ var (
 	ErrNotEnemy          = errors.New("target is not enemy hex")
 	ErrInsufficientPower = errors.New("insufficient power to attack")
 	ErrBattleInProgress  = errors.New("battle already in progress on hex")
+	ErrUpgradeInProgress = errors.New("upgrade already in progress on hex")
 	ErrPlayerNotFound    = errors.New("player not found")
 	ErrNotDefender       = errors.New("player is not the defender")
 	ErrNoBattleOnHex     = errors.New("no active battle on hex")
