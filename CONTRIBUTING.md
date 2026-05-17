@@ -5,7 +5,7 @@ Help us test Hexar by playing and sharing feedback!
 ## Quick Start
 
 1. Go to https://hexar.fly.dev (or run locally)
-2. Play a 25-30 min game (1v1)
+2. Play a 15-30 min game (1v1)
 3. Send feedback (simple format below)
 
 ## What to Report

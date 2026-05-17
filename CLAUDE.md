@@ -477,6 +477,8 @@ jobs:
 
 ## Current Status & Future Work
 
+**🎉 MVP Status: COMPLETE** (Deployed to Fly.io)
+
 ### Status: M1–M9 Complete
 
 All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, delta sync. M7: visual polish + sidebar. M8: testing (Go unit + room integration + Playwright E2E). M9: Fly.io deployment + GitHub Actions CI/CD.
