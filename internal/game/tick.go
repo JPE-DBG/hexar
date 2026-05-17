@@ -32,11 +32,8 @@ func runUpgradeTimers(state *GameState, dt float64) {
 	for _, hs := range state.Hexes {
 		if hs.UpgradeTimer > 0 {
 			hs.UpgradeTimer -= dt
-			if hs.UpgradeTimer < 0 {
+			if hs.UpgradeTimer <= 0 {
 				hs.UpgradeTimer = 0
-			}
-			// When timer expires, increment the level
-			if hs.UpgradeTimer == 0 {
 				hs.Level++
 			}
 		}

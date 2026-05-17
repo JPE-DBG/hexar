@@ -1,5 +1,5 @@
 ---
-name: go-test-writer
+name: test-writer
 description: "Use when: writing or fixing tests for Hexar — Go unit tests (internal/game/), Go room integration tests (internal/room/), TypeScript type checking, or Playwright E2E tests (e2e/). Covers all 3 test layers."
 type: skill
 ---

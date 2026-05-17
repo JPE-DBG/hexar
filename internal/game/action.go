@@ -226,6 +226,7 @@ func ApplyDropHex(state *GameState, action Action) {
 	hs.Building = BuildingNone
 	hs.Level = 0
 	hs.Capital = false
+	hs.UpgradeTimer = 0
 	player.AutoDropActive = false
 }
 

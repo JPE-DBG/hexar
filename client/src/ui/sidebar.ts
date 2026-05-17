@@ -74,8 +74,7 @@ function buildingOutputLine(building: number, level: number, player: PlayerDTO |
     return capitalInnate ? `${output}  Pwr: 1` : output;
   }
   if (building === BUILDING_POWER) {
-    const output = `Pwr: ${level}`;
-    return capitalInnate ? `${output}  Pwr: 1` : output;
+    return capitalInnate ? `Pwr: ${level + CAPITAL_POWER}` : `Pwr: ${level}`;
   }
   if (building === BUILDING_RESEARCH) {
     const output = `+${(RESEARCH_PER_LEVEL * level).toFixed(1)} Research/s`;

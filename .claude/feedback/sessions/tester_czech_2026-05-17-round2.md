@@ -16,7 +16,7 @@ issues_deferred: 0
 - **Observation:** Unclaimed hexes have no label in the sidebar — selecting one shows nothing meaningful
 - **Suggestion:** Give them a display name, e.g. "Empty Field", "Unclaimed", or "Wilderness"
 - **Design question:** What name fits the game tone? "Unclaimed Hex" is functional; "Empty Field" is more evocative
-- **Status:** ⬜ Open
+- **Status:** ✅ Done
 
 ---
 
@@ -24,7 +24,7 @@ issues_deferred: 0
 - **Type:** UX / Layout
 - **Observation:** Capital hex shows `Pwr: 1` above the building name in the sidebar — but capitals can simultaneously have a Power, Economy, or Research building on top of the innate Power 1
 - **Expected:** Power label should appear below building info (not above), consistent with how other hexes render it; innate capital power should included from building-added power. i.e. in case capital have gold mine it should show "+x g/s Pwr: 1" under hex name.
-- **Status:** ⬜ Open
+- **Status:** ✅ Done
 
 ---
 
@@ -33,7 +33,7 @@ issues_deferred: 0
 - **Observation:** With Smart Build ON, pressing Q/W/E still enters the sticky tool mode (highlights button, waits for click). This creates two competing interaction models active at the same time.
 - **Expected:** When Smart Build is ON, Q/W/E should only execute instantly on the hovered hex (or do nothing if no valid target) — sticky tool mode should be fully disabled; toggling the tool by pressing hotkey twice would be confusing when Smart is ON
 - **Related:** Smart Build toggle in BUILD section (current: OFF by default)
-- **Status:** ⬜ Open
+- **Status:** ✅ Done
 
 ---
 
@@ -45,7 +45,7 @@ issues_deferred: 0
   - Own hex with Economy L1 + press Q → upgrade to L2
   - Own hex with non-Economy building + press Q → no action (or show error)
 - **Design question:** How to communicate the cost? Build cost (60g) vs upgrade cost (120g, 240g…) need to be visible before the hotkey fires. Sidebar context area or tooltip on the hex could show the pending cost.
-- **Status:** ⬜ Open
+- **Status:** ✅ Done
 
 ---
 
@@ -54,7 +54,7 @@ issues_deferred: 0
 - **Observation:** Current flow: select own hex → select enemy hex → press A. Tester expects: hover enemy hex → click it to attack (when attacker has sufficient power)
 - **Design question:** Attack cost (100g) and power diff preview need to be visible before committing. Without an explicit A key confirmation step, the UI must show cost/result in a hover tooltip or the sidebar must update on hover (not just on click-select).
 - **Alternative:** Keep A key but make it fire on hovered enemy hex when Smart Build is ON, consistent with the Smart Build model
-- **Status:** ⬜ Open
+- **Status:** ✅ Done
 
 ---
 
@@ -80,7 +80,7 @@ issues_deferred: 0
   - Needs timer visualization (hex timer, same pattern as Fortify?)
   - Interacts with battle: can you upgrade while defending? While attacking from that hex?
   - Significant mechanic change — needs playtesting to validate 5s constant feels right across all levels
-- **Status:** ⬜ Open
+- **Status:** ✅ Done
 
 ---
 
@@ -89,4 +89,4 @@ issues_deferred: 0
 - **Observation:** On mobile, hex info (building name, power, output) is hard to reach or obscured in the current bottom-bar layout
 - **Suggestion:** Move hex info to below the player resource info (gold/hexes/research counters) at the top of the screen
 - **Design question:** Does this conflict with HUD layout on small screens? Portrait vs landscape may need different treatments.
-- **Status:** ⬜ Open
+- **Status:** ✅ Done

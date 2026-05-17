@@ -25,8 +25,17 @@ func TestUpgradeFromEmptyEconomy(t *testing.T) {
 	if state.Hexes[hex].Building != BuildingGold {
 		t.Error("expected Economy building")
 	}
+	if state.Hexes[hex].Level != 0 {
+		t.Errorf("level = %d during timer, want 0", state.Hexes[hex].Level)
+	}
+
+	// Tick through upgrade delay (+ 1 extra for float accumulation error)
+	for range int(UpgradeDelay/TickDt) + 1 {
+		runUpgradeTimers(state, TickDt)
+	}
+
 	if state.Hexes[hex].Level != 1 {
-		t.Errorf("level = %d, want 1", state.Hexes[hex].Level)
+		t.Errorf("level = %d after timer, want 1", state.Hexes[hex].Level)
 	}
 
 	// Verify income: (2 + 1*0.6) * 1.5 = 3.9/sec
@@ -45,8 +54,16 @@ func TestUpgradeFromEmptyDefense(t *testing.T) {
 
 	ApplyUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex, Building: BuildingPower})
 
+	if state.Hexes[hex].Level != 0 {
+		t.Errorf("level = %d during timer, want 0", state.Hexes[hex].Level)
+	}
+
+	for range int(UpgradeDelay/TickDt) + 1 {
+		runUpgradeTimers(state, TickDt)
+	}
+
 	if state.Hexes[hex].Level != 1 {
-		t.Errorf("level = %d, want 1", state.Hexes[hex].Level)
+		t.Errorf("level = %d after timer, want 1", state.Hexes[hex].Level)
 	}
 	if state.Hexes[hex].Power() != 1 {
 		t.Errorf("power = %d, want 1 (defense level 1)", state.Hexes[hex].Power())
@@ -90,14 +107,83 @@ func TestUpgradeIncreasesLevel(t *testing.T) {
 
 	ApplyUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex})
 
-	if state.Hexes[hex].Level != 2 {
-		t.Errorf("level = %d, want 2", state.Hexes[hex].Level)
+	if state.Hexes[hex].Level != 1 {
+		t.Errorf("level = %d during timer, want 1", state.Hexes[hex].Level)
 	}
 	if state.Players[pid].Gold != 380 {
 		t.Errorf("gold = %.1f, want 380 (500 - 120)", state.Players[pid].Gold)
 	}
+
+	for range int(UpgradeDelay/TickDt) + 1 {
+		runUpgradeTimers(state, TickDt)
+	}
+
+	if state.Hexes[hex].Level != 2 {
+		t.Errorf("level = %d after timer, want 2", state.Hexes[hex].Level)
+	}
 	if state.Hexes[hex].Power() != 2 {
 		t.Errorf("power = %d, want 2", state.Hexes[hex].Power())
+	}
+}
+
+func TestUpgradeTimerBlocksDoubleUpgrade(t *testing.T) {
+	state := NewGameState()
+	pid := PlayerID(1)
+	state.Players[pid] = &Player{ID: pid, Gold: 500}
+	hex := Hex{Q: 0, R: 0}
+	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingGold, Level: 1}
+
+	ApplyUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex})
+
+	err := ValidateUpgrade(state, Action{Type: ActionUpgrade, Player: pid, Target: hex})
+	if err != ErrUpgradeInProgress {
+		t.Errorf("expected ErrUpgradeInProgress, got: %v", err)
+	}
+}
+
+func TestUpgradeTimerResetOnCapture(t *testing.T) {
+	state := NewGameState()
+	p1, p2 := PlayerID(1), PlayerID(2)
+	state.Players[p1] = &Player{ID: p1, Gold: 500}
+	state.Players[p2] = &Player{ID: p2, Gold: 500}
+	hex := Hex{Q: 0, R: 0}
+	state.Hexes[hex] = &HexState{Owner: p1, Building: BuildingGold, Level: 1, UpgradeTimer: 3.0}
+
+	transferHex(state, hex, p2)
+
+	if state.Hexes[hex].UpgradeTimer != 0 {
+		t.Errorf("UpgradeTimer = %.1f after capture, want 0", state.Hexes[hex].UpgradeTimer)
+	}
+	if state.Hexes[hex].Level != 0 {
+		t.Errorf("Level = %d after capture, want 0", state.Hexes[hex].Level)
+	}
+}
+
+func TestUpgradeTimerResetOnDemolish(t *testing.T) {
+	state := NewGameState()
+	pid := PlayerID(1)
+	state.Players[pid] = &Player{ID: pid, Gold: 500}
+	hex := Hex{Q: 0, R: 0}
+	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingGold, Level: 1, UpgradeTimer: 3.0}
+
+	ApplyDemolish(state, Action{Type: ActionDemolish, Player: pid, Target: hex})
+
+	if state.Hexes[hex].UpgradeTimer != 0 {
+		t.Errorf("UpgradeTimer = %.1f after demolish, want 0", state.Hexes[hex].UpgradeTimer)
+	}
+}
+
+func TestUpgradeTimerResetOnDrop(t *testing.T) {
+	state := NewGameState()
+	pid := PlayerID(1)
+	state.Players[pid] = &Player{ID: pid, Gold: 500}
+	hex := Hex{Q: 0, R: 0}
+	state.Hexes[hex] = &HexState{Owner: pid, Building: BuildingGold, Level: 1, UpgradeTimer: 3.0}
+
+	ApplyDropHex(state, Action{Type: ActionDropHex, Player: pid, Target: hex})
+
+	if state.Hexes[hex].UpgradeTimer != 0 {
+		t.Errorf("UpgradeTimer = %.1f after drop, want 0", state.Hexes[hex].UpgradeTimer)
 	}
 }
 
