@@ -34,6 +34,9 @@ func ValidateUpgrade(state *GameState, action Action) error {
 	if hasBattleOnHex(state, action.Target) {
 		return ErrBattleInProgress
 	}
+	if hs.UpgradeTimer > 0 {
+		return ErrUpgradeInProgress
+	}
 	if hs.Level == 0 {
 		if action.Building == BuildingNone {
 			return ErrNoBuilding
@@ -63,7 +66,7 @@ func ApplyUpgrade(state *GameState, action Action) {
 		hs.Building = action.Building
 	}
 	state.Players[action.Player].Gold -= UpgradeCost(hs.Building, hs.Level)
-	hs.Level++
+	hs.UpgradeTimer = UpgradeDelay
 }
 
 func ValidateDemolish(state *GameState, action Action) error {
@@ -86,4 +89,5 @@ func ApplyDemolish(state *GameState, action Action) {
 	state.Players[action.Player].Gold += refund
 	hs.Building = BuildingNone
 	hs.Level = 0
+	hs.UpgradeTimer = 0
 }

@@ -556,3 +556,18 @@ All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, d
 | ✅ | Sidebar: building level shown as "L2" | Changed to `(Level 2)` | Shorthand was unclear to new players |
 
 **Legend:** ⬜ Planned · 🔄 In Progress · ✅ Done · ❌ Rejected
+
+### Beta Cycle 1 — Round 2 (May 2026) — [Czech Tester](.claude/feedback/sessions/tester_czech_2026-05-17-round2.md)
+
+| Status | Issue | Change | Reasoning |
+|--------|-------|--------|-----------|
+| ✅ | Empty hex has no name | Added "Unclaimed Territory" (unowned) and "Empty Field" (owned) labels in sidebar | Selecting unclaimed hex showed nothing meaningful |
+| ✅ | Capital: Pwr label above building name | Power label moved below building info; building output + innate Pwr merged (e.g. `+3.9 g/s  Pwr: 1`); Power building on capital shows combined total (e.g. `Pwr: 3`) | Capital can have both innate power and a building; order showed them out of sequence |
+| ✅ | Smart Build ON still enters sticky tool mode | When Smart Build ON, Q/W/E fire instantly on hovered hex — sticky mode never entered | Two interaction models active simultaneously caused confusion |
+| ✅ | Build and upgrade via same hotkey | Q/W/E: build on empty hex, upgrade if matching building present; cost visible in sidebar context | Separate flows felt redundant |
+| ✅ | Attack by clicking opponent hex directly | Smart Build ON: clicking enemy hex attacks directly; sidebar updates on hover to show cost/power diff | Current select→A flow felt slow |
+| ❌ | Auto counter-spend: spend only when needed to flip | Not implemented — player agency prioritized over automation | Manual counter-spend preserves tactical depth and strategic decisions |
+| ✅ | Buildings should take time to upgrade | 5s construction delay per upgrade; blue timer ring (like Fortify); sidebar shows "Upgrading... Xs"; captured/dropped hexes reset timer | Instant upgrades removed tension; delay rewards planning |
+| ✅ | Mobile: hex info placement | Hex info block fixed top-right below HUD; context buttons remain in bottom bar | Bottom-bar hex info obscured / hard to reach on mobile |
+
+**Legend:** ⬜ Planned · 🔄 In Progress · ✅ Done · ❌ Rejected

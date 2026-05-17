@@ -165,6 +165,7 @@ func transferHex(state *GameState, target Hex, newOwner PlayerID) {
 	hs.Level = 0
 	hs.Capital = false
 	hs.FortifyTimer = 0
+	hs.UpgradeTimer = 0
 
 	if pl := state.Players[newOwner]; pl != nil && pl.Tech[TechWarChest] && oldOwner != NoPlayer {
 		pl.Gold += WarChestRefund

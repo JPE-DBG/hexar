@@ -9,6 +9,7 @@ func RunTick(state *GameState, dt float64, actions []Action) {
 		return
 	}
 	RunEconomy(state, dt)
+	runUpgradeTimers(state, dt)
 	RunBattles(state, dt)
 	RunAutoDropPhase(state, dt)
 	runFortifyTimers(state, dt)
@@ -22,6 +23,18 @@ func runFortifyTimers(state *GameState, dt float64) {
 			hs.FortifyTimer -= dt
 			if hs.FortifyTimer < 0 {
 				hs.FortifyTimer = 0
+			}
+		}
+	}
+}
+
+func runUpgradeTimers(state *GameState, dt float64) {
+	for _, hs := range state.Hexes {
+		if hs.UpgradeTimer > 0 {
+			hs.UpgradeTimer -= dt
+			if hs.UpgradeTimer <= 0 {
+				hs.UpgradeTimer = 0
+				hs.Level++
 			}
 		}
 	}

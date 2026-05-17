@@ -425,6 +425,35 @@ canvas { display: block; touch-action: none; }
     overflow-x: auto;
   }
 
+  /* Hex info block: move to top-right, below HUD */
+  #sidebar.has-context .hex-info-block {
+    position: fixed;
+    top: 130px;
+    right: 8px;
+    left: auto;
+    max-width: 160px;
+    height: auto;
+    overflow: visible;
+    background: rgba(22,33,62,0.9);
+    padding: 8px 10px;
+    border-radius: 4px;
+    z-index: 100;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  #sidebar.has-context .hex-coord {
+    position: fixed;
+    top: 215px;
+    right: 8px;
+    left: auto;
+    max-width: 140px;
+    font-size: 10px;
+    color: #999;
+  }
+
   /* Hide destructive buttons from the context strip — they're in the top-left panel */
   #sidebar.has-context .sidebar-context .sidebar-btn--destructive {
     display: none;
