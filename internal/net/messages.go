@@ -62,6 +62,7 @@ type HexDTO struct {
 	Level         int     `json:"level"`
 	Capital       bool    `json:"capital"`
 	FortifyTimer  float64 `json:"fortifyTimer"`
+	UpgradeTimer  float64 `json:"upgradeTimer"`
 	PreviousOwner int     `json:"previousOwner"`
 }
 
@@ -111,6 +112,7 @@ func BuildSnapshot(state *game.GameState) *SnapshotMsg {
 			Level:         hs.Level,
 			Capital:       hs.Capital,
 			FortifyTimer:  hs.FortifyTimer,
+			UpgradeTimer:  hs.UpgradeTimer,
 			PreviousOwner: int(hs.PreviousOwner),
 		}
 	}

@@ -1,5 +1,5 @@
 import { hexToPixel } from '../hexmath';
-import { HEX_SIZE, COLORS, BUILDING_POWER, CAPITAL_POWER, FORTIFY_DURATION, TECH_IRON_GRIP, COUNTER_SPEND_CAP } from '../constants';
+import { HEX_SIZE, COLORS, BUILDING_POWER, CAPITAL_POWER, FORTIFY_DURATION, UPGRADE_DELAY, TECH_IRON_GRIP, COUNTER_SPEND_CAP } from '../constants';
 import { GameState, HexDTO, BattleDTO } from '../state/state';
 
 const BUILDING_LABELS: Record<number, string> = { 1: 'G', 2: 'P', 3: 'R' };
@@ -238,6 +238,12 @@ export class Renderer {
       const hasBattle = this.state?.battles.some(b => b.dq === hex.q && b.dr === hex.r) ?? false;
       this.drawFortifySegments(px, py, hex.fortifyTimer / FORTIFY_DURATION, hasBattle);
     }
+
+    // Upgrade timer: shrinking blue border segments (clockwise from top)
+    if (hex.upgradeTimer > 0) {
+      const hasBattle = this.state?.battles.some(b => b.dq === hex.q && b.dr === hex.r) ?? false;
+      this.drawUpgradeSegments(px, py, hex.upgradeTimer / UPGRADE_DELAY, hasBattle);
+    }
     ctx.restore();
   }
 
@@ -259,6 +265,48 @@ export class Renderer {
     const partial = totalSides - fullSides;
 
     ctx.strokeStyle = '#c8ff70';
+    ctx.lineWidth = dimmed ? 1.5 : 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = dimmed ? 0.4 : 1.0;
+
+    ctx.beginPath();
+    ctx.moveTo(corners[cwOrder[0]].x, corners[cwOrder[0]].y);
+    for (let i = 0; i < fullSides && i < 6; i++) {
+      const to = corners[cwOrder[(i + 1) % 6]];
+      ctx.lineTo(to.x, to.y);
+    }
+    if (partial > 0 && fullSides < 6) {
+      const from = corners[cwOrder[fullSides]];
+      const to = corners[cwOrder[(fullSides + 1) % 6]];
+      ctx.lineTo(
+        from.x + (to.x - from.x) * partial,
+        from.y + (to.y - from.y) * partial,
+      );
+    }
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  private drawUpgradeSegments(px: number, py: number, fraction: number, dimmed = false) {
+    if (fraction <= 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+
+    const corners: { x: number; y: number }[] = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 180) * (60 * i - 30);
+      corners.push({ x: px + HEX_SIZE * Math.cos(angle), y: py + HEX_SIZE * Math.sin(angle) });
+    }
+
+    const cwOrder = [5, 0, 1, 2, 3, 4];
+    const clamped = Math.min(fraction, 1);
+    const totalSides = clamped * 6;
+    const fullSides = Math.floor(totalSides);
+    const partial = totalSides - fullSides;
+
+    ctx.strokeStyle = '#70c8ff';  // Blue, different from Fortify's lime
     ctx.lineWidth = dimmed ? 1.5 : 3;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';

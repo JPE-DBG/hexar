@@ -54,6 +54,7 @@ const (
 	WarChestRefund     = 30.0
 	FortifyCost        = 40.0
 	FortifyDuration    = 90.0
+	UpgradeDelay       = 5.0
 	GarrisonMaxBoost   = 2
 
 	SiegeMasteryMult   = 0.6

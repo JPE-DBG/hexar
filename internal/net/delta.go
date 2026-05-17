@@ -55,10 +55,18 @@ func hexChanged(prev, curr *HexDTO) bool {
 		prev.Level != curr.Level ||
 		prev.Capital != curr.Capital ||
 		fortifyChanged(prev.FortifyTimer, curr.FortifyTimer) ||
+		upgradeTimerChanged(prev.UpgradeTimer, curr.UpgradeTimer) ||
 		prev.PreviousOwner != curr.PreviousOwner
 }
 
 func fortifyChanged(prev, curr float64) bool {
+	if (prev > 0) != (curr > 0) {
+		return true
+	}
+	return int(prev) != int(curr)
+}
+
+func upgradeTimerChanged(prev, curr float64) bool {
 	if (prev > 0) != (curr > 0) {
 		return true
 	}

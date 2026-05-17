@@ -105,23 +105,69 @@ window.addEventListener('keydown', (e) => {
     ? (state?.hexes.get(`${hoveredQ},${hoveredR}`) ?? null)
     : null;
 
-  const trySmartBuild = (building: string) => {
-    if (!target || !state) return false;
-    if (target.owner !== myPlayerId || target.building !== 0) return false;
+  // Map numeric building type → wire string name (server expects string)
+  const BUILDING_NAMES_WIRE: Record<number, string> = {
+    [BUILDING_GOLD]: 'gold',
+    [BUILDING_POWER]: 'power',
+    [BUILDING_RESEARCH]: 'research',
+  };
+
+  // Try smart build/upgrade on the target hex (when Smart is ON)
+  const trySmartBuild = (buildingType: number) => {
+    if (!target || !state || target.owner !== myPlayerId) return false;
     if (state.battles.find(b => b.dq === target.q && b.dr === target.r)) return false;
-    connection?.send({ type: 'action', action: 'upgrade', q: target.q, r: target.r, building });
-    return true;
+
+    if (target.building === 0) {
+      connection?.send({ type: 'action', action: 'upgrade', q: target.q, r: target.r, building: BUILDING_NAMES_WIRE[buildingType] });
+      return true;
+    } else if (target.building === buildingType) {
+      connection?.send({ type: 'action', action: 'upgrade', q: target.q, r: target.r, building: BUILDING_NAMES_WIRE[buildingType] });
+      return true;
+    }
+    return false;
+  };
+
+  // Handle Q/W/E: contextual build/upgrade (both Smart and non-Smart)
+  const tryBuildOrUpgrade = (buildingType: number, tool: string) => {
+    const hex = target ?? selectedHex;
+    if (!hex || !state || hex.owner !== myPlayerId) {
+      sidebar.selectTool(selectedTool === tool ? null : tool);
+      return;
+    }
+    if (state.battles.find(b => b.dq === hex.q && b.dr === hex.r)) {
+      return;
+    }
+
+    if (hex.building === 0) {
+      connection?.send({ type: 'action', action: 'upgrade', q: hex.q, r: hex.r, building: BUILDING_NAMES_WIRE[buildingType] });
+    } else if (hex.building === buildingType) {
+      connection?.send({ type: 'action', action: 'upgrade', q: hex.q, r: hex.r, building: BUILDING_NAMES_WIRE[buildingType] });
+    } else {
+      sidebar.selectTool(selectedTool === tool ? null : tool);
+    }
   };
 
   switch (key) {
     case 'Q':
-      if (!trySmartBuild('gold')) sidebar.selectTool(selectedTool === 'economy' ? null : 'economy');
+      if (smartBuildEnabled) {
+        trySmartBuild(BUILDING_GOLD);
+      } else {
+        tryBuildOrUpgrade(BUILDING_GOLD, 'economy');
+      }
       break;
     case 'W':
-      if (!trySmartBuild('power')) sidebar.selectTool(selectedTool === 'power' ? null : 'power');
+      if (smartBuildEnabled) {
+        trySmartBuild(BUILDING_POWER);
+      } else {
+        tryBuildOrUpgrade(BUILDING_POWER, 'power');
+      }
       break;
     case 'E':
-      if (!trySmartBuild('research')) sidebar.selectTool(selectedTool === 'research' ? null : 'research');
+      if (smartBuildEnabled) {
+        trySmartBuild(BUILDING_RESEARCH);
+      } else {
+        tryBuildOrUpgrade(BUILDING_RESEARCH, 'research');
+      }
       break;
     case 'ESCAPE':
       sidebar.selectTool(null);
@@ -458,8 +504,9 @@ setupInput(
 
     // If tool is selected and hex is valid target, apply tool
     // Skip tool if hex is under active battle — counter-spend must take priority
+    // Skip tool if Smart Build is ON — sticky tool mode is disabled in that mode
     const hexBattle = state.battles.find(b => b.dq === q && b.dr === r);
-    if (selectedTool && hex.owner === myPlayerId && hex.building === 0 && !hexBattle) {
+    if (!smartBuildEnabled && selectedTool && hex.owner === myPlayerId && hex.building === 0 && !hexBattle) {
       let building: string | undefined;
       switch (selectedTool) {
         case 'economy':
@@ -485,6 +532,12 @@ setupInput(
       selectedHex = null;
       renderer.setSelected(null);
       sidebar.hide();
+      return;
+    }
+
+    // Smart Build attack: direct attack on enemy hex when Smart is ON (Issue 5)
+    if (smartBuildEnabled && hex.owner !== 0 && hex.owner !== myPlayerId) {
+      connection?.send({ type: 'action', action: 'attack', q, r });
       return;
     }
 
@@ -514,8 +567,38 @@ setupInput(
     sidebar.updateContext(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
   },
   (dx, dy) => renderer.pan(dx, dy),
-  (q, r) => { hoveredQ = q; hoveredR = r; },
-  () => { hoveredQ = null; hoveredR = null; },
+  (q, r) => {
+    hoveredQ = q;
+    hoveredR = r;
+    // Update sidebar on hover when Smart Build is ON (Issues 4 & 5)
+    if (smartBuildEnabled && state) {
+      const key = `${q},${r}`;
+      const hex = state.hexes.get(key);
+      if (hex) {
+        const player = state.players.get(String(myPlayerId));
+        const gold = player?.gold ?? 0;
+        const isOwn = hex.owner === myPlayerId;
+        const isEnemy = hex.owner !== 0 && hex.owner !== myPlayerId;
+        const atkPwr = isOwn ? 0 : bestAdjacentPower(state, myPlayerId, hex, player);
+        const battle = state.battles.find(b => b.dq === q && b.dr === r) ?? null;
+        sidebar.updateContext(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
+      }
+    }
+  },
+  () => {
+    hoveredQ = null;
+    hoveredR = null;
+    // When Smart Build is ON, revert sidebar to selected hex (if any)
+    if (smartBuildEnabled && selectedHex && state) {
+      const player = state.players.get(String(myPlayerId));
+      const gold = player?.gold ?? 0;
+      const isOwn = selectedHex.owner === myPlayerId;
+      const isEnemy = selectedHex.owner !== 0 && selectedHex.owner !== myPlayerId;
+      const atkPwr = isOwn ? 0 : bestAdjacentPower(state, myPlayerId, selectedHex, player);
+      const battle = state.battles.find(b => b.dq === selectedHex.q && b.dr === selectedHex.r) ?? null;
+      sidebar.updateContext(selectedHex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
+    }
+  },
 );
 
 // Try to reconnect from sessionStorage first, then URL hash, else show lobby

@@ -20,6 +20,7 @@ type HexState struct {
 	Capital       bool         `json:"capital"`
 	PreviousOwner PlayerID     `json:"previousOwner"`
 	FortifyTimer  float64      `json:"fortifyTimer"`
+	UpgradeTimer  float64      `json:"upgradeTimer"`
 }
 
 func (h *HexState) Power() int {

@@ -6,6 +6,7 @@ export interface HexDTO {
   level: number;
   capital: boolean;
   fortifyTimer: number;
+  upgradeTimer: number;
   previousOwner: number;
 }
 

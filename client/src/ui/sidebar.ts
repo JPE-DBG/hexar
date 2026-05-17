@@ -65,15 +65,22 @@ const BUILDING_NAMES: Record<number, string> = {
   [BUILDING_RESEARCH]: 'Laboratory',
 };
 
-function buildingOutputLine(building: number, level: number, player: PlayerDTO | null): string {
+function buildingOutputLine(building: number, level: number, player: PlayerDTO | null, capitalInnate: boolean = false): string {
   if (building === BUILDING_GOLD) {
     let income = (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * level) * GOLD_BONUS_MULTIPLIER;
     if (player?.tech?.[TECH_COMPOUND_GROWTH]) income *= COMPOUND_GROWTH_MULTIPLIER;
     if (player?.tech?.[TECH_PROSPERITY]) income += PROSPERITY_BONUS;
-    return `+${income.toFixed(1)} g/s`;
+    const output = `+${income.toFixed(1)} g/s`;
+    return capitalInnate ? `${output}  Pwr: 1` : output;
   }
-  if (building === BUILDING_POWER) return `Pwr: ${level}`;
-  if (building === BUILDING_RESEARCH) return `+${(RESEARCH_PER_LEVEL * level).toFixed(1)} Research/s`;
+  if (building === BUILDING_POWER) {
+    const output = `Pwr: ${level}`;
+    return capitalInnate ? `${output}  Pwr: 1` : output;
+  }
+  if (building === BUILDING_RESEARCH) {
+    const output = `+${(RESEARCH_PER_LEVEL * level).toFixed(1)} Research/s`;
+    return capitalInnate ? `${output}  Pwr: 1` : output;
+  }
   return '';
 }
 
@@ -290,16 +297,34 @@ export class Sidebar {
 
     let powerStr = '';
     if (defPower > 0 && hex.building !== BUILDING_POWER) {
-      powerStr = `Pwr:${defPower}`;
-      if (garrisonBonus > 0) powerStr += ` +${garrisonBonus} def`;
+      // Capital innate power is shown inline in hexInfoHtml; only show powerStr for garrison bonus on top
+      if (!hex.capital) {
+        powerStr = `Pwr:${defPower}`;
+        if (garrisonBonus > 0) powerStr += ` +${garrisonBonus} def`;
+      } else if (garrisonBonus > 0) {
+        powerStr = `Pwr:${defPower} +${garrisonBonus} def`;
+      }
     }
 
     let hexInfoHtml = '';
-    if (hex.capital && hex.building === 0) {
-      hexInfoHtml = `<div class="hex-building-name">Capital</div><div class="hex-building-output">Pwr: 1 (innate)</div>`;
-    } else if (hex.building !== 0) {
+    if (hex.building === 0) {
+      // No building case
+      if (hex.capital) {
+        hexInfoHtml = `<div class="hex-building-name">Capital</div><div class="hex-building-output">Pwr: 1 (innate)</div>`;
+      } else if (hex.owner === 0) {
+        hexInfoHtml = `<div class="hex-building-name">Unclaimed Territory</div><div class="hex-building-output">No building</div>`;
+      } else {
+        hexInfoHtml = `<div class="hex-building-name">Empty Field</div><div class="hex-building-output">No building</div>`;
+      }
+    } else if (hex.upgradeTimer > 0) {
+      // Building is upgrading
       const name = BUILDING_NAMES[hex.building] ?? 'Building';
-      const output = buildingOutputLine(hex.building, hex.level, isOwn ? player : null);
+      const timeLeft = Math.ceil(hex.upgradeTimer);
+      hexInfoHtml = `<div class="hex-building-name">${name} (Level ${hex.level})</div><div class="hex-building-output">Upgrading... ${timeLeft}s</div>`;
+    } else {
+      // Building exists and not upgrading
+      const name = BUILDING_NAMES[hex.building] ?? 'Building';
+      const output = buildingOutputLine(hex.building, hex.level, isOwn ? player : null, hex.capital);
       hexInfoHtml = `<div class="hex-building-name">${name} (Level ${hex.level})</div><div class="hex-building-output">${output}</div>`;
     }
 
@@ -312,7 +337,7 @@ export class Sidebar {
       const refund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
 
       // Upgrade button
-      if (hasBuilding && !battle) {
+      if (hasBuilding && !battle && !hex.upgradeTimer) {
         const upgCost = upgradeCost(hex.building, hex.level);
         const canUpgrade = gold >= upgCost;
         html += `
