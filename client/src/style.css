@@ -432,7 +432,8 @@ canvas { display: block; touch-action: none; }
     right: 8px;
     left: auto;
     max-width: 160px;
-    min-height: 55px;
+    height: auto;
+    overflow: visible;
     background: rgba(22,33,62,0.9);
     padding: 8px 10px;
     border-radius: 4px;
