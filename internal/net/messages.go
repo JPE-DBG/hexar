@@ -17,7 +17,7 @@ const (
 type DeltaMsg struct {
 	Type          MsgType      `json:"type"`
 	Players       []*PlayerDTO `json:"players"`
-	Battles       []*BattleDTO `json:"battles,omitempty"`
+	Battles       []*BattleDTO `json:"battles"`
 	Elapsed       float64      `json:"elapsed"`
 	Over          bool         `json:"over"`
 	Winner        int          `json:"winner,omitempty"`

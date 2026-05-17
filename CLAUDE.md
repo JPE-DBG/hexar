@@ -122,7 +122,7 @@ Research buildings generate 0.2 TP/sec per level. Unlock any tech in any order �
 
 | Tech | Cost | Effect | Archetype |
 |------|------|--------|-----------|
-| Blitz | 20 TP | Unclaimed hex claims cost 0g | Aggressor |
+| Blitz | 20 TP | Claiming empty hex is free | Aggressor |
 | Fortify | 20 TP | Spend 40g to prevent instant-takeover on one hex for 90s | Defender |
 | Prosperity | 25 TP | Each Economy building +1/sec flat bonus | Builder |
 | Reclamation | 25 TP | Recapturing a previously owned hex costs 50g | Territorial |
@@ -244,7 +244,7 @@ Actions first = immediate effect. Economy before battles = counter-spend gold de
 - **Snapshot:** Full state on initial connect and reconnect (`prevSnapshot = nil` forces full send)
 - **Delta:** Only changed fields per tick. Target: < 500 bytes/tick at idle
   - `Tech []bool` omitted when unchanged (only goes false→true, never reverts)
-  - `Battles` omitted when empty (client preserves last known battles via `?? state.battles`)
+  - `Battles` always sent — reverts to empty when all battles resolve; omitting would leave client with stale active battles (same class of bug as AutoDropActive/VanguardTimer)
   - `AutoDropActive`, `AutoDropGrace`, `VanguardTimer` always sent — these fields revert to zero/false at runtime; omitting them would leave the client with stale nonzero values via delta merge spread
   - `FortifyTimer` quantized to 1-second boundaries to avoid appearing in every tick
 
@@ -492,6 +492,7 @@ All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, d
 | Keyboard shortcut deselect (D/X) | After D (Demolish) or X (Sell Hex), hex stayed selected; fixed by adding `selectedHex = null; renderer.setSelected(null); sidebar.hide()` to both keyboard handlers |
 | Delta packet size optimization | Idle game sent 526 bytes/tick (>500 limit); fixed by diffing `Tech []bool` in `buildDelta` (omit when unchanged) and making `Battles` omitempty |
 | omitempty safety on reverting PlayerDTO fields | Caught in review: `AutoDropActive/Grace/VanguardTimer` must never be omitempty — they revert to zero/false and the delta spread would preserve stale client values. Documented in State Sync; added defensive optional types on client with `?? 0` null coalescing |
+| Battle stuck in progress after resolution | `Battles` had `omitempty` — when battles cleared to `[]`, field was omitted from delta; client `?? state.battles` fallback preserved stale battles. Fixed by removing `omitempty` from `Battles` in `DeltaMsg` and removing the `??` fallback in `applyDelta` |
 | CI/CD path filters | Pipeline ran on every commit including doc-only changes; added `paths:` filter + `[skip deploy]` convention |
 
 ### Open Questions (Playtesting)
