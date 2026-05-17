@@ -556,3 +556,18 @@ All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, d
 | ✅ | Sidebar: building level shown as "L2" | Changed to `(Level 2)` | Shorthand was unclear to new players |
 
 **Legend:** ⬜ Planned · 🔄 In Progress · ✅ Done · ❌ Rejected
+
+### Beta Cycle 1 — Round 2 (May 2026) — [Czech Tester](.claude/feedback/sessions/tester_czech_2026-05-17-round2.md)
+
+| Status | Issue | Change | Reasoning |
+|--------|-------|--------|-----------|
+| ⬜ | Empty hex has no name | TBD — add display name ("Empty Field"?) to sidebar for unclaimed hexes | Selecting unclaimed hex showed nothing meaningful |
+| ⬜ | Capital: Pwr label above building name | Move power label below building info; show building output + innate Pwr together (e.g. `+3.9 g/s  Pwr: 1`) | Capital can have both innate power and a building; order showed them out of sequence |
+| ⬜ | Smart Build ON still enters sticky tool mode | When Smart Build ON, Q/W/E should not enter sticky mode — instant-on-hover only | Two interaction models active simultaneously caused confusion |
+| ⬜ | Build and upgrade via same hotkey | Q/W/E contextual: build on empty hex, upgrade if building present | Separate flows felt redundant; design question on cost display open |
+| ⬜ | Attack by clicking opponent hex directly | Consider click-to-attack (or Smart Build A on hover) instead of select + A | Current select→A flow felt slow; design question on cost preview open |
+| ⬜ | Auto counter-spend: spend only when needed to flip | Auto counter-spend does nothing when already winning; spends minimum to flip when losing | Spending up to cap when already ahead wastes gold for no benefit |
+| ⬜ | Buildings should take time to upgrade | 5s construction delay per upgrade (constant); no cancel — demolish/sell only; timer shows like Fortify | Instant upgrades removed tension; delay rewards planning |
+| ⬜ | Mobile: hex info placement | Move hex info below player resource row at top | Bottom-bar hex info obscured / hard to reach on mobile |
+
+**Legend:** ⬜ Planned · 🔄 In Progress · ✅ Done · ❌ Rejected
