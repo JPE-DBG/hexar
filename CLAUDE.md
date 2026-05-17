@@ -536,5 +536,17 @@ All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, d
 **Purpose:** Track what changed during beta testing and why.
 
 ### Beta Cycle 1 (May 2026)
-- [Tester feedback will be logged here as changes are made]
-- [Format: Issue → Change → Reasoning]
+
+| Status | Issue | Change | Reasoning |
+|--------|-------|--------|-----------|
+| ⬜ | HUD: "TP" label confusing | Rename to "Research" in HUD + Tech Tree display | New players didn't know what TP meant; "Research" ties directly to the building that generates it |
+| ⬜ | Sidebar: selected hex shows no building info | Add building name (Gold Mine/Barracks/Laboratory), level, and output (g/s / Pwr / Research/s) | Testers couldn't tell what was on a hex without guessing from canvas label |
+| ⬜ | Sidebar: hex position on same line as info | Move `[q,r]` to muted second line | Coords are secondary info; shouldn't compete with building name |
+| ⬜ | Buttons: context vs build different sizes | Standardize all `.sidebar-btn` and icon sizes | Visual inconsistency; unpredictable hit areas |
+| ⬜ | Buttons: icons different sizes | Standardize all SVG icons to 20×20 | Same as above |
+| ⬜ | Smart building: Q/W/E on selected hex | When hex selected + owned, Q/W/E builds immediately without second click | Experienced players wanted faster building flow (LoL-style) |
+| ⬜ | Attack preview: Garrison not shown in power req | Show breakdown `Pwr > base + Garrison = total` when Garrison active | Testers misclicked attacks that failed due to hidden Garrison bonus |
+| ⬜ | Tech tree: no close button | Add ✕ button top-right | Standard modal UX; ESC-only was not discoverable |
+| ⬜ | Empty hex: Demolish/Sell show no feedback | Show `0g` + disable buttons when hex has no building | Buttons appeared active but did nothing — misleading |
+
+**Legend:** ⬜ Planned · 🔄 In Progress · ✅ Done · ❌ Rejected
