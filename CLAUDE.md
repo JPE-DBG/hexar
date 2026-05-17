@@ -526,3 +526,13 @@ All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, d
 - **Radial context menu:** Occludes adjacent hexes during battles when Garrison bonuses are visible
 - **Bottom build menu:** 40% slower for batch building (10 actions vs 6 for placing 5 buildings)
 - **Neutral hex state (between unclaimed/owned):** Adds UI complexity with no gameplay benefit; matches Antiyoy's simpler 2-state model
+
+---
+
+## Feedback Log
+
+**Purpose:** Track what changed during beta testing and why.
+
+### Beta Cycle 1 (May 2026)
+- [Tester feedback will be logged here as changes are made]
+- [Format: Issue → Change → Reasoning]
