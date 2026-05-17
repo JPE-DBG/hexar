@@ -537,7 +537,7 @@ All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, d
 
 **Purpose:** Track what changed during beta testing and why.
 
-### Beta Cycle 1 (May 2026)
+### Beta Cycle 1 (May 2026) — [Czech Tester](.claude/feedback/sessions/tester_czech_2026-05-17.md)
 
 | Status | Issue | Change | Reasoning |
 |--------|-------|--------|-----------|
