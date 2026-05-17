@@ -22,7 +22,7 @@ export class TechTreePanel {
     this.el.addEventListener('pointerdown', (e) => {
       if ((e.target as HTMLElement).id === 'tech-tree-close') {
         e.preventDefault();
-        this.toggle();
+        this.hide();
         return;
       }
       const btn = (e.target as HTMLElement).closest('button[data-tech-id]') as HTMLElement | null;
@@ -36,6 +36,11 @@ export class TechTreePanel {
   toggle() {
     this.visible = !this.visible;
     this.el.classList.toggle('visible', this.visible);
+  }
+
+  hide() {
+    this.visible = false;
+    this.el.classList.remove('visible');
   }
 
   update(player: PlayerDTO) {

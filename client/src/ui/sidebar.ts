@@ -375,7 +375,7 @@ export class Sidebar {
       if (!hex.capital && !battle) {
         const sellRefund = hasBuilding ? demolishRefund(hex.building, hex.level) : 0;
         dHtml += `
-          <button class="sidebar-btn sidebar-btn--destructive ${hasBuilding ? '' : 'disabled'}" data-action="drop-hex" ${hasBuilding ? '' : 'disabled'}>
+          <button class="sidebar-btn sidebar-btn--destructive" data-action="drop-hex">
             <span class="btn-icon">❌</span>
             <span class="btn-label">Sell Hex</span>
             <span class="btn-cost">${sellRefund > 0 ? `+${Math.floor(sellRefund)}g` : '0g'}</span>

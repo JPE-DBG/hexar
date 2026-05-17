@@ -28,7 +28,8 @@ let state: GameState | null = null;
 let myPlayerId = 0;
 let roomCode = '';
 let selectedHex: HexDTO | null = null;
-let hoveredHex: HexDTO | null = null;
+let hoveredQ: number | null = null;
+let hoveredR: number | null = null;
 let smartBuildEnabled = false;
 let selectedTool: string | null = null;
 let dropMap = new Set<string>();
@@ -100,33 +101,28 @@ window.addEventListener('keydown', (e) => {
 
   // Sidebar tool shortcuts with toggle — smart build/action on hovered hex (LoL style)
   const key = e.key.toUpperCase();
-  const target = smartBuildEnabled ? hoveredHex : null;
+  const target = smartBuildEnabled && hoveredQ !== null
+    ? (state?.hexes.get(`${hoveredQ},${hoveredR}`) ?? null)
+    : null;
+
+  const trySmartBuild = (building: string) => {
+    if (!target || !state) return false;
+    if (target.owner !== myPlayerId || target.building !== 0) return false;
+    if (state.battles.find(b => b.dq === target.q && b.dr === target.r)) return false;
+    connection?.send({ type: 'action', action: 'upgrade', q: target.q, r: target.r, building });
+    return true;
+  };
 
   switch (key) {
-    case 'Q': {
-      if (target && state && target.owner === myPlayerId && target.building === 0) {
-        const battle = state.battles.find(b => b.dq === target.q && b.dr === target.r);
-        if (!battle) { connection?.send({ type: 'action', action: 'upgrade', q: target.q, r: target.r, building: 'gold' }); break; }
-      }
-      sidebar.selectTool(selectedTool === 'economy' ? null : 'economy');
+    case 'Q':
+      if (!trySmartBuild('gold')) sidebar.selectTool(selectedTool === 'economy' ? null : 'economy');
       break;
-    }
-    case 'W': {
-      if (target && state && target.owner === myPlayerId && target.building === 0) {
-        const battle = state.battles.find(b => b.dq === target.q && b.dr === target.r);
-        if (!battle) { connection?.send({ type: 'action', action: 'upgrade', q: target.q, r: target.r, building: 'power' }); break; }
-      }
-      sidebar.selectTool(selectedTool === 'power' ? null : 'power');
+    case 'W':
+      if (!trySmartBuild('power')) sidebar.selectTool(selectedTool === 'power' ? null : 'power');
       break;
-    }
-    case 'E': {
-      if (target && state && target.owner === myPlayerId && target.building === 0) {
-        const battle = state.battles.find(b => b.dq === target.q && b.dr === target.r);
-        if (!battle) { connection?.send({ type: 'action', action: 'upgrade', q: target.q, r: target.r, building: 'research' }); break; }
-      }
-      sidebar.selectTool(selectedTool === 'research' ? null : 'research');
+    case 'E':
+      if (!trySmartBuild('research')) sidebar.selectTool(selectedTool === 'research' ? null : 'research');
       break;
-    }
     case 'ESCAPE':
       sidebar.selectTool(null);
       break;
@@ -518,7 +514,8 @@ setupInput(
     sidebar.updateContext(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
   },
   (dx, dy) => renderer.pan(dx, dy),
-  (q, r) => { hoveredHex = state?.hexes.get(`${q},${r}`) ?? null; },
+  (q, r) => { hoveredQ = q; hoveredR = r; },
+  () => { hoveredQ = null; hoveredR = null; },
 );
 
 // Try to reconnect from sessionStorage first, then URL hash, else show lobby

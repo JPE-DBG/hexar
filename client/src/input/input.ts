@@ -8,6 +8,7 @@ export function setupInput(
   onHexClick: (q: number, r: number) => void,
   onPan: (dx: number, dy: number) => void,
   onHexHover?: (q: number, r: number) => void,
+  onHexLeave?: () => void,
 ) {
   let dragStart: { x: number; y: number } | null = null;
   let isDragging = false;
@@ -52,4 +53,6 @@ export function setupInput(
     dragStart = null;
     isDragging = false;
   });
+
+  canvas.addEventListener('pointerleave', () => onHexLeave?.());
 }
