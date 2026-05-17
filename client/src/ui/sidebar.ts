@@ -289,7 +289,7 @@ export class Sidebar {
     this.lastKey = key;
 
     let powerStr = '';
-    if (defPower > 0) {
+    if (defPower > 0 && hex.building !== BUILDING_POWER) {
       powerStr = `Pwr:${defPower}`;
       if (garrisonBonus > 0) powerStr += ` +${garrisonBonus} def`;
     }
