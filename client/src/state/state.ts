@@ -97,5 +97,5 @@ export function applyDelta(state: GameState, msg: DeltaMsg): GameState {
     hexes.set(`${hex.q},${hex.r}`, hex);
   }
 
-  return { hexes, players, battles: msg.battles ?? state.battles, elapsed: msg.elapsed, over: msg.over, winner: msg.winner, winReason: msg.winReason, waiting: msg.waiting, paused: msg.paused, pauseTimeLeft: msg.pauseTimeLeft };
+  return { hexes, players, battles: msg.battles, elapsed: msg.elapsed, over: msg.over, winner: msg.winner, winReason: msg.winReason, waiting: msg.waiting, paused: msg.paused, pauseTimeLeft: msg.pauseTimeLeft };
 }

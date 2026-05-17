@@ -122,7 +122,7 @@ Research buildings generate 0.2 TP/sec per level. Unlock any tech in any order �
 
 | Tech | Cost | Effect | Archetype |
 |------|------|--------|-----------|
-| Blitz | 20 TP | Unclaimed hex claims cost 0g | Aggressor |
+| Blitz | 20 TP | Claiming empty hex is free | Aggressor |
 | Fortify | 20 TP | Spend 40g to prevent instant-takeover on one hex for 90s | Defender |
 | Prosperity | 25 TP | Each Economy building +1/sec flat bonus | Builder |
 | Reclamation | 25 TP | Recapturing a previously owned hex costs 50g | Territorial |
@@ -244,7 +244,7 @@ Actions first = immediate effect. Economy before battles = counter-spend gold de
 - **Snapshot:** Full state on initial connect and reconnect (`prevSnapshot = nil` forces full send)
 - **Delta:** Only changed fields per tick. Target: < 500 bytes/tick at idle
   - `Tech []bool` omitted when unchanged (only goes false→true, never reverts)
-  - `Battles` omitted when empty (client preserves last known battles via `?? state.battles`)
+  - `Battles` always sent — reverts to empty when all battles resolve; omitting would leave client with stale active battles (same class of bug as AutoDropActive/VanguardTimer)
   - `AutoDropActive`, `AutoDropGrace`, `VanguardTimer` always sent — these fields revert to zero/false at runtime; omitting them would leave the client with stale nonzero values via delta merge spread
   - `FortifyTimer` quantized to 1-second boundaries to avoid appearing in every tick
 
@@ -343,15 +343,17 @@ players.set(String(p.id), { ...(existing ?? {}), ...p, tech: p.tech ?? existing?
 **Keyboard shortcuts:**
 | Key | Action |
 |---|---|
-| Q / W / E | Select Economy / Power / Research (toggle) |
+| Q / W / E | Smart ON + mouse over own empty hex → build immediately; Smart OFF or no valid target → toggle tool mode |
 | T | Open Tech Tree |
-| Space | Upgrade selected hex |
-| A | Attack selected hex |
-| F | Fortify selected hex (requires Fortify tech) |
-| C | Counter-spend during battle |
-| D | Demolish selected hex → deselects hex |
-| X | Sell Hex → deselects hex |
+| Space | Upgrade hex under mouse (Smart ON) or selected hex |
+| A | Attack hex under mouse (Smart ON) or selected hex |
+| F | Fortify hex under mouse (Smart ON) or selected hex (requires Fortify tech) |
+| C | Counter-spend during battle on hex under mouse (Smart ON) or selected hex |
+| D | Demolish hex under mouse (Smart ON) or selected hex → deselects hex |
+| X | Sell Hex under mouse (Smart ON) or selected hex → deselects hex |
 | ESC | Deselect tool |
+
+**Smart build toggle:** Sidebar BUILD section — "Smart OFF/ON" chip. Default: OFF. When ON, all hotkeys execute on the hex currently under the mouse cursor (LoL-style). When OFF, hotkeys require a click-selected hex.
 
 **Battle restrictions:** No building placement or upgrade on hexes under active battle (server enforces `ErrBattleInProgress`). Demolish allowed — defender may recover gold for counter-spend.
 
@@ -477,6 +479,8 @@ jobs:
 
 ## Current Status & Future Work
 
+**🎉 MVP Status: COMPLETE** (Deployed to Fly.io)
+
 ### Status: M1–M9 Complete
 
 All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, delta sync. M7: visual polish + sidebar. M8: testing (Go unit + room integration + Playwright E2E). M9: Fly.io deployment + GitHub Actions CI/CD.
@@ -492,6 +496,7 @@ All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, d
 | Keyboard shortcut deselect (D/X) | After D (Demolish) or X (Sell Hex), hex stayed selected; fixed by adding `selectedHex = null; renderer.setSelected(null); sidebar.hide()` to both keyboard handlers |
 | Delta packet size optimization | Idle game sent 526 bytes/tick (>500 limit); fixed by diffing `Tech []bool` in `buildDelta` (omit when unchanged) and making `Battles` omitempty |
 | omitempty safety on reverting PlayerDTO fields | Caught in review: `AutoDropActive/Grace/VanguardTimer` must never be omitempty — they revert to zero/false and the delta spread would preserve stale client values. Documented in State Sync; added defensive optional types on client with `?? 0` null coalescing |
+| Battle stuck in progress after resolution | `Battles` had `omitempty` — when battles cleared to `[]`, field was omitted from delta; client `?? state.battles` fallback preserved stale battles. Fixed by removing `omitempty` from `Battles` in `DeltaMsg` and removing the `??` fallback in `applyDelta` |
 | CI/CD path filters | Pipeline ran on every commit including doc-only changes; added `paths:` filter + `[skip deploy]` convention |
 
 ### Open Questions (Playtesting)
@@ -525,3 +530,29 @@ All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, d
 - **Radial context menu:** Occludes adjacent hexes during battles when Garrison bonuses are visible
 - **Bottom build menu:** 40% slower for batch building (10 actions vs 6 for placing 5 buildings)
 - **Neutral hex state (between unclaimed/owned):** Adds UI complexity with no gameplay benefit; matches Antiyoy's simpler 2-state model
+
+---
+
+## Feedback Log
+
+**Purpose:** Track what changed during beta testing and why.
+
+### Beta Cycle 1 (May 2026) — [Czech Tester](.claude/feedback/sessions/tester_czech_2026-05-17.md)
+
+| Status | Issue | Change | Reasoning |
+|--------|-------|--------|-----------|
+| ✅ | HUD: "TP" label confusing | Rename to "Research" in HUD + Tech Tree display | New players didn't know what TP meant; "Research" ties directly to the building that generates it |
+| ✅ | Sidebar: selected hex shows no building info | Add building name (Gold Mine/Barracks/Laboratory), level, and output (g/s / Pwr / Research/s) | Testers couldn't tell what was on a hex without guessing from canvas label |
+| ✅ | Sidebar: hex position on same line as info | Move `[q,r]` to muted second line | Coords are secondary info; shouldn't compete with building name |
+| ✅ | Buttons: context vs build different sizes | Standardize all `.sidebar-btn` and icon sizes | Visual inconsistency; unpredictable hit areas |
+| ✅ | Buttons: icons different sizes | Standardize all SVG icons to 20×20 | Same as above |
+| ✅ | Smart building: Q/W/E on selected hex | All hotkeys act on hex under mouse cursor (LoL-style); Q/W/E fall back to tool toggle when no valid hover target; toggle chip in BUILD section (default OFF) | Experienced players wanted faster flow without clicking first; toggle lets new players keep familiar click-select behavior |
+| ✅ | Attack preview: Garrison not shown in power req | Show breakdown `Pwr > base + Garrison = total` when Garrison active | Testers misclicked attacks that failed due to hidden Garrison bonus |
+| ✅ | Tech tree: no close button | Add ✕ button top-right | Standard modal UX; ESC-only was not discoverable |
+| ✅ | Empty hex: Demolish/Sell show no feedback | Show `0g` + disable buttons when hex has no building | Buttons appeared active but did nothing — misleading |
+| ✅ | HUD: Research label misaligns numeric values | Increased `.hud-label` min-width 50px → 70px | "Research:" longer than "Gold:"/"Hexes:" broke column alignment |
+| ✅ | Sidebar: context buttons jump position | Wrap hex info in fixed-height `hex-info-block` (36px) | Variable lines (0–2) between power label and buttons caused layout shift |
+| ✅ | Sidebar: Pwr:0 shown on empty hexes | Only render power label when `defPower > 0` | Zero power is noise — no combat relevance for own empty hexes |
+| ✅ | Sidebar: building level shown as "L2" | Changed to `(Level 2)` | Shorthand was unclear to new players |
+
+**Legend:** ⬜ Planned · 🔄 In Progress · ✅ Done · ❌ Rejected

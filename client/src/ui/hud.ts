@@ -36,7 +36,7 @@ export function updateHUD(
       <span class="hud-rate" style="color:${netColor}">(${netSign}${net.toFixed(1)}/s)</span>
     </div>
     <div class="hud-row">
-      <span class="hud-label">TP:</span>
+      <span class="hud-label">Research:</span>
       <span class="hud-value">${tp.toFixed(0)}</span>
       <span class="hud-rate">(${tpSign}${tpRate.toFixed(2)}/s)</span>
     </div>

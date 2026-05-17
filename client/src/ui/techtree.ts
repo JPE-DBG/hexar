@@ -20,6 +20,11 @@ export class TechTreePanel {
     parent.appendChild(this.el);
 
     this.el.addEventListener('pointerdown', (e) => {
+      if ((e.target as HTMLElement).id === 'tech-tree-close') {
+        e.preventDefault();
+        this.hide();
+        return;
+      }
       const btn = (e.target as HTMLElement).closest('button[data-tech-id]') as HTMLElement | null;
       if (!btn || btn.hasAttribute('disabled')) return;
       e.preventDefault();
@@ -33,10 +38,15 @@ export class TechTreePanel {
     this.el.classList.toggle('visible', this.visible);
   }
 
+  hide() {
+    this.visible = false;
+    this.el.classList.remove('visible');
+  }
+
   update(player: PlayerDTO) {
     if (!this.visible) return;
     const tp = player.tp;
-    let html = `<div style="font-size:14px;font-weight:bold;margin-bottom:4px">Tech Tree <span style="color:#aaa;font-size:11px">[T to close]</span> &nbsp; TP: ${tp.toFixed(0)}</div>`;
+    let html = `<div style="position:relative;font-size:14px;font-weight:bold;margin-bottom:4px">Tech Tree <span style="color:#aaa;font-size:11px">[T to close]</span> &nbsp; Research: ${tp.toFixed(0)}<button id="tech-tree-close" style="position:absolute;top:0;right:0;background:none;border:none;color:#aaa;font-size:16px;cursor:pointer;line-height:1;padding:0 2px">✕</button></div>`;
     html += '<div class="tech-grid">';
     for (const def of TECH_DEFS) {
       html += this.renderCard(def, player.tech?.[def.id] ?? false, tp >= def.cost);
@@ -56,7 +66,7 @@ export class TechTreePanel {
       const btnStyle = canAfford
         ? 'background:#4a4a6a;color:#fff;border:1px solid #6a6a8a;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:monospace;font-size:11px'
         : 'background:#2a2a3a;color:#555;border:1px solid #3a3a4a;padding:3px 8px;border-radius:4px;font-family:monospace;font-size:11px';
-      btnHtml = `<button style="${btnStyle}" data-tech-id="${def.id}" ${canAfford ? '' : 'disabled'}>Unlock (${def.cost} TP)</button>`;
+      btnHtml = `<button style="${btnStyle}" data-tech-id="${def.id}" ${canAfford ? '' : 'disabled'}>Unlock (${def.cost} Research)</button>`;
     }
     return `
       <div style="background:${bg};border:1px solid ${border};border-radius:6px;padding:8px">

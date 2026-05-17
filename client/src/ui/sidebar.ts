@@ -12,6 +12,7 @@ import {
   GARRISON_MAX_BOOST,
   TECH_COMPOUND_GROWTH, TECH_PROSPERITY, TECH_RECLAMATION,
   TECH_VANGUARD, TECH_GARRISON, TECH_FORTIFY, TECH_IRON_GRIP,
+  GOLD_PER_LEVEL, GOLD_BONUS_MULTIPLIER, RESEARCH_PER_LEVEL,
 } from '../constants';
 
 export interface SidebarCallbacks {
@@ -23,27 +24,28 @@ export interface SidebarCallbacks {
   onFortify: () => void;
   onCounterSpend: () => void;
   onTechTree: () => void;
+  onSmartToggle: (enabled: boolean) => void;
 }
 
 // Enhanced SVG icons (32x32, color-coded)
-const ICON_GOLD = `<svg width="32" height="32" viewBox="0 0 32 32">
+const ICON_GOLD = `<svg width="20" height="20" viewBox="0 0 32 32">
   <circle cx="16" cy="16" r="13" fill="#f9ca2422" stroke="#f9ca24" stroke-width="2.5"/>
   <text x="16" y="21" text-anchor="middle" fill="#f9ca24" font-size="14" font-weight="bold" font-family="monospace">G</text>
 </svg>`;
 
-const ICON_POWER = `<svg width="32" height="32" viewBox="0 0 32 32">
+const ICON_POWER = `<svg width="20" height="20" viewBox="0 0 32 32">
   <path d="M16 4 L16 28 M10 20 L22 20" stroke="#e74c3c" stroke-width="3" stroke-linecap="round"/>
   <polygon points="16,2 12,10 20,10" fill="#e74c3c"/>
 </svg>`;
 
-const ICON_RESEARCH = `<svg width="32" height="32" viewBox="0 0 32 32">
+const ICON_RESEARCH = `<svg width="20" height="20" viewBox="0 0 32 32">
   <line x1="11" y1="4" x2="21" y2="4" stroke="#45b7d1" stroke-width="2.5" stroke-linecap="round"/>
   <path d="M13,4 L13,14 L5,26 Q4,28 6,28 L26,28 Q28,28 27,26 L19,14 L19,4"
         stroke="#45b7d1" stroke-width="2.5" fill="#45b7d133" stroke-linejoin="round"/>
   <line x1="8" y1="21" x2="24" y2="21" stroke="#45b7d1" stroke-width="2"/>
 </svg>`;
 
-const ICON_TECH = `<svg width="32" height="32" viewBox="0 0 32 32">
+const ICON_TECH = `<svg width="20" height="20" viewBox="0 0 32 32">
   <circle cx="16" cy="7" r="4" fill="none" stroke="#45b7d1" stroke-width="2"/>
   <circle cx="7" cy="25" r="3.5" fill="none" stroke="#45b7d1" stroke-width="2"/>
   <circle cx="25" cy="25" r="3.5" fill="none" stroke="#45b7d1" stroke-width="2"/>
@@ -56,6 +58,24 @@ const BUILD_COSTS: Record<number, number> = {
   [BUILDING_POWER]: POWER_BUILD_COST,
   [BUILDING_RESEARCH]: RESEARCH_BUILD_COST,
 };
+
+const BUILDING_NAMES: Record<number, string> = {
+  [BUILDING_GOLD]: 'Gold Mine',
+  [BUILDING_POWER]: 'Barracks',
+  [BUILDING_RESEARCH]: 'Laboratory',
+};
+
+function buildingOutputLine(building: number, level: number, player: PlayerDTO | null): string {
+  if (building === BUILDING_GOLD) {
+    let income = (BASE_INCOME_PER_SEC + GOLD_PER_LEVEL * level) * GOLD_BONUS_MULTIPLIER;
+    if (player?.tech?.[TECH_COMPOUND_GROWTH]) income *= COMPOUND_GROWTH_MULTIPLIER;
+    if (player?.tech?.[TECH_PROSPERITY]) income += PROSPERITY_BONUS;
+    return `+${income.toFixed(1)} g/s`;
+  }
+  if (building === BUILDING_POWER) return `Pwr: ${level}`;
+  if (building === BUILDING_RESEARCH) return `+${(RESEARCH_PER_LEVEL * level).toFixed(1)} Research/s`;
+  return '';
+}
 
 function upgradeCost(building: number, level: number): number {
   const base = BUILD_COSTS[building] ?? RESEARCH_BUILD_COST;
@@ -106,6 +126,7 @@ export class Sidebar {
   private selectedTool: string | null = null;
   private callbacks: SidebarCallbacks;
   private lastKey = '';
+  private smartEnabled = false;
 
   constructor(parent: HTMLElement, callbacks: SidebarCallbacks) {
     this.callbacks = callbacks;
@@ -118,7 +139,10 @@ export class Sidebar {
       </div>
 
       <div class="sidebar-section">
-        <div class="section-label">BUILD</div>
+        <div class="section-label build-label">
+          BUILD
+          <button class="smart-toggle smart-toggle--off" id="smart-toggle" title="Smart actions: execute hotkeys on hovered hex">Smart <span class="smart-toggle-state">OFF</span></button>
+        </div>
         <button class="sidebar-btn" data-tool="economy" data-hotkey="Q">
           ${ICON_GOLD}
           <span class="btn-label">Gold</span>
@@ -157,6 +181,17 @@ export class Sidebar {
 
   private bindEvents() {
     const handleBtn = (e: PointerEvent, root: HTMLElement) => {
+      // Smart toggle
+      if ((e.target as HTMLElement).closest('#smart-toggle')) {
+        e.preventDefault();
+        this.smartEnabled = !this.smartEnabled;
+        const stateEl = this.el.querySelector('.smart-toggle-state');
+        if (stateEl) stateEl.textContent = this.smartEnabled ? 'ON' : 'OFF';
+        const toggleBtn = this.el.querySelector('#smart-toggle');
+        toggleBtn?.classList.toggle('smart-toggle--off', !this.smartEnabled);
+        this.callbacks.onSmartToggle(this.smartEnabled);
+        return;
+      }
       const btn = (e.target as HTMLElement).closest('.sidebar-btn') as HTMLElement | null;
       if (!btn || !root.contains(btn)) return;
       e.preventDefault();
@@ -253,16 +288,24 @@ export class Sidebar {
     }
     this.lastKey = key;
 
-    let powerStr = `Pwr:${defPower}`;
-    if (state && hex.owner > 0 && isEnemy) {
-      const ownerPlayer = state.players.get(String(hex.owner));
-      if (ownerPlayer?.tech?.[TECH_GARRISON]) {
-        const gb = Math.min(GARRISON_MAX_BOOST, countAdjacentOwned(hex, state, hex.owner));
-        if (gb > 0) powerStr += ` +${gb} def`;
-      }
+    let powerStr = '';
+    if (defPower > 0 && hex.building !== BUILDING_POWER) {
+      powerStr = `Pwr:${defPower}`;
+      if (garrisonBonus > 0) powerStr += ` +${garrisonBonus} def`;
     }
 
-    let html = `<div class="section-label">[${hex.q},${hex.r}] ${powerStr}</div>`;
+    let hexInfoHtml = '';
+    if (hex.capital && hex.building === 0) {
+      hexInfoHtml = `<div class="hex-building-name">Capital</div><div class="hex-building-output">Pwr: 1 (innate)</div>`;
+    } else if (hex.building !== 0) {
+      const name = BUILDING_NAMES[hex.building] ?? 'Building';
+      const output = buildingOutputLine(hex.building, hex.level, isOwn ? player : null);
+      hexInfoHtml = `<div class="hex-building-name">${name} (Level ${hex.level})</div><div class="hex-building-output">${output}</div>`;
+    }
+
+    let html = '';
+    if (powerStr) html += `<div class="section-label">${powerStr}</div>`;
+    html += `<div class="hex-info-block">${hexInfoHtml}</div><div class="hex-coord">[${hex.q},${hex.r}]</div>`;
 
     if (isOwn) {
       const hasBuilding = hex.building !== 0;
@@ -325,7 +368,7 @@ export class Sidebar {
                 ${hasBuilding ? '' : 'disabled'}>
           <span class="btn-icon">🗑</span>
           <span class="btn-label">Demolish</span>
-          ${hasBuilding ? `<span class="btn-cost">+${Math.floor(refund)}g</span>` : ''}
+          <span class="btn-cost">${hasBuilding ? `+${Math.floor(refund)}g` : '0g'}</span>
           <span class="btn-hotkey">D</span>
         </button>
       `;
@@ -335,7 +378,7 @@ export class Sidebar {
           <button class="sidebar-btn sidebar-btn--destructive" data-action="drop-hex">
             <span class="btn-icon">❌</span>
             <span class="btn-label">Sell Hex</span>
-            ${sellRefund > 0 ? `<span class="btn-cost">+${Math.floor(sellRefund)}g</span>` : ''}
+            <span class="btn-cost">${sellRefund > 0 ? `+${Math.floor(sellRefund)}g` : '0g'}</span>
             <span class="btn-hotkey">X</span>
           </button>
         `;
@@ -361,7 +404,10 @@ export class Sidebar {
       if (battle) {
         html += `<div class="context-hint" style="color:#fa0">Battle in progress...</div>`;
       } else if (attackerPower <= effectiveDefPower) {
-        html += `<div class="context-hint" style="color:#f66">Need Pwr > ${effectiveDefPower}</div>`;
+        const needText = garrisonBonus > 0
+          ? `Need Pwr > ${defPower} +${garrisonBonus} Garrison = ${effectiveDefPower}`
+          : `Need Pwr > ${effectiveDefPower}`;
+        html += `<div class="context-hint" style="color:#f66">${needText}</div>`;
       }
     }
 

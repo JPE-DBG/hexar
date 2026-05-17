@@ -28,6 +28,9 @@ let state: GameState | null = null;
 let myPlayerId = 0;
 let roomCode = '';
 let selectedHex: HexDTO | null = null;
+let hoveredQ: number | null = null;
+let hoveredR: number | null = null;
+let smartBuildEnabled = false;
 let selectedTool: string | null = null;
 let dropMap = new Set<string>();
 let connection: Connection | null = null;
@@ -73,6 +76,7 @@ const sidebar = new Sidebar(document.body, {
       if (player) techTreePanel.update(player);
     }
   },
+  onSmartToggle: (enabled) => { smartBuildEnabled = enabled; },
 });
 
 const techTreePanel = new TechTreePanel(document.body, (techId) => {
@@ -95,64 +99,76 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Sidebar tool shortcuts with toggle
+  // Sidebar tool shortcuts with toggle — smart build/action on hovered hex (LoL style)
   const key = e.key.toUpperCase();
+  const target = smartBuildEnabled && hoveredQ !== null
+    ? (state?.hexes.get(`${hoveredQ},${hoveredR}`) ?? null)
+    : null;
+
+  const trySmartBuild = (building: string) => {
+    if (!target || !state) return false;
+    if (target.owner !== myPlayerId || target.building !== 0) return false;
+    if (state.battles.find(b => b.dq === target.q && b.dr === target.r)) return false;
+    connection?.send({ type: 'action', action: 'upgrade', q: target.q, r: target.r, building });
+    return true;
+  };
+
   switch (key) {
     case 'Q':
-      sidebar.selectTool(selectedTool === 'economy' ? null : 'economy');
+      if (!trySmartBuild('gold')) sidebar.selectTool(selectedTool === 'economy' ? null : 'economy');
       break;
     case 'W':
-      sidebar.selectTool(selectedTool === 'power' ? null : 'power');
+      if (!trySmartBuild('power')) sidebar.selectTool(selectedTool === 'power' ? null : 'power');
       break;
     case 'E':
-      sidebar.selectTool(selectedTool === 'research' ? null : 'research');
+      if (!trySmartBuild('research')) sidebar.selectTool(selectedTool === 'research' ? null : 'research');
       break;
     case 'ESCAPE':
       sidebar.selectTool(null);
       break;
   }
 
-  // Context action shortcuts (require selected hex)
-  if (!selectedHex || !state) return;
+  // Context action shortcuts — act on hovered hex, fall back to selected hex
+  const actionHex = target ?? selectedHex;
+  if (!actionHex || !state) return;
 
   switch (key) {
     case ' ': // Space = upgrade
       e.preventDefault();
-      if (selectedHex.owner === myPlayerId && selectedHex.building > 0) {
-        connection?.send({ type: 'action', action: 'upgrade', q: selectedHex.q, r: selectedHex.r });
+      if (actionHex.owner === myPlayerId && actionHex.building > 0) {
+        connection?.send({ type: 'action', action: 'upgrade', q: actionHex.q, r: actionHex.r });
       }
       break;
     case 'A': // Attack
-      if (selectedHex.owner !== myPlayerId && selectedHex.owner > 0) {
-        connection?.send({ type: 'action', action: 'attack', q: selectedHex.q, r: selectedHex.r });
+      if (actionHex.owner !== myPlayerId && actionHex.owner > 0) {
+        connection?.send({ type: 'action', action: 'attack', q: actionHex.q, r: actionHex.r });
       }
       break;
     case 'D': // Demolish
-      if (selectedHex.owner === myPlayerId && selectedHex.building > 0) {
-        connection?.send({ type: 'action', action: 'demolish', q: selectedHex.q, r: selectedHex.r });
+      if (actionHex.owner === myPlayerId && actionHex.building > 0) {
+        connection?.send({ type: 'action', action: 'demolish', q: actionHex.q, r: actionHex.r });
         selectedHex = null;
         renderer.setSelected(null);
         sidebar.hide();
       }
       break;
     case 'X': // Sell hex
-      if (selectedHex.owner === myPlayerId && !selectedHex.capital) {
-        connection?.send({ type: 'action', action: 'drop-hex', q: selectedHex.q, r: selectedHex.r });
+      if (actionHex.owner === myPlayerId && !actionHex.capital) {
+        connection?.send({ type: 'action', action: 'drop-hex', q: actionHex.q, r: actionHex.r });
         selectedHex = null;
         renderer.setSelected(null);
         sidebar.hide();
       }
       break;
     case 'F': // Fortify
-      if (selectedHex.owner === myPlayerId) {
-        connection?.send({ type: 'action', action: 'fortify', q: selectedHex.q, r: selectedHex.r });
+      if (actionHex.owner === myPlayerId) {
+        connection?.send({ type: 'action', action: 'fortify', q: actionHex.q, r: actionHex.r });
       }
       break;
     case 'C': { // Counter-spend
-      const hex = selectedHex;
-      const battle = state.battles.find(b => b.dq === hex.q && b.dr === hex.r);
-      if (battle && hex.owner === myPlayerId) {
-        connection?.send({ type: 'action', action: 'counter-spend', q: hex.q, r: hex.r });
+      const battle = state.battles.find(b => b.dq === actionHex.q && b.dr === actionHex.r);
+      if (battle && actionHex.owner === myPlayerId) {
+        connection?.send({ type: 'action', action: 'counter-spend', q: actionHex.q, r: actionHex.r });
       }
       break;
     }
@@ -498,6 +514,8 @@ setupInput(
     sidebar.updateContext(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
   },
   (dx, dy) => renderer.pan(dx, dy),
+  (q, r) => { hoveredQ = q; hoveredR = r; },
+  () => { hoveredQ = null; hoveredR = null; },
 );
 
 // Try to reconnect from sessionStorage first, then URL hash, else show lobby

@@ -90,7 +90,7 @@ export interface TechDef {
 }
 
 export const TECH_DEFS: TechDef[] = [
-  { id: 0,  name: 'Blitz',          cost: 20, description: 'Unclaimed hex claims cost 0g',                       archetype: 'Aggressor'   },
+  { id: 0,  name: 'Blitz',          cost: 20, description: 'Claiming empty hex is free',                       archetype: 'Aggressor'   },
   { id: 1,  name: 'Fortify',        cost: 20, description: 'Spend 40g to prevent instant-takeover for 90s',      archetype: 'Defender'    },
   { id: 2,  name: 'Prosperity',     cost: 25, description: 'Economy buildings +1/sec additional',                archetype: 'Builder'     },
   { id: 3,  name: 'Reclamation',    cost: 25, description: 'Recapture previously-owned hex costs 50g',           archetype: 'Territorial' },
