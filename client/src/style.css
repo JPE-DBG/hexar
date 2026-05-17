@@ -413,8 +413,8 @@ canvas { display: block; touch-action: none; }
     flex-direction: row;
     flex-wrap: nowrap;
     align-items: center;
-    position: fixed;
-    top: 100px;
+    position: absolute;
+    bottom: 50px;
     left: 0;
     right: 0;
     min-height: 0; /* override desktop min-height: 260px */
@@ -423,6 +423,34 @@ canvas { display: block; touch-action: none; }
     padding: 6px 8px;
     gap: 6px;
     overflow-x: auto;
+  }
+
+  /* Hex info block: move to top-right, below HUD */
+  #sidebar.has-context .hex-info-block {
+    position: fixed;
+    top: 130px;
+    right: 8px;
+    left: auto;
+    max-width: 160px;
+    min-height: 55px;
+    background: rgba(22,33,62,0.9);
+    padding: 8px 10px;
+    border-radius: 4px;
+    z-index: 100;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  #sidebar.has-context .hex-coord {
+    position: fixed;
+    top: 215px;
+    right: 8px;
+    left: auto;
+    max-width: 140px;
+    font-size: 10px;
+    color: #999;
   }
 
   /* Hide destructive buttons from the context strip — they're in the top-left panel */
