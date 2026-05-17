@@ -590,13 +590,14 @@ setupInput(
     hoveredR = null;
     // When Smart Build is ON, revert sidebar to selected hex (if any)
     if (smartBuildEnabled && selectedHex && state) {
+      const hex = selectedHex;
       const player = state.players.get(String(myPlayerId));
       const gold = player?.gold ?? 0;
-      const isOwn = selectedHex.owner === myPlayerId;
-      const isEnemy = selectedHex.owner !== 0 && selectedHex.owner !== myPlayerId;
-      const atkPwr = isOwn ? 0 : bestAdjacentPower(state, myPlayerId, selectedHex, player);
-      const battle = state.battles.find(b => b.dq === selectedHex.q && b.dr === selectedHex.r) ?? null;
-      sidebar.updateContext(selectedHex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
+      const isOwn = hex.owner === myPlayerId;
+      const isEnemy = hex.owner !== 0 && hex.owner !== myPlayerId;
+      const atkPwr = isOwn ? 0 : bestAdjacentPower(state, myPlayerId, hex, player);
+      const battle = state.battles.find(b => b.dq === hex.q && b.dr === hex.r) ?? null;
+      sidebar.updateContext(hex, gold, isOwn, isEnemy, atkPwr, battle, player ?? null, state);
     }
   },
 );
