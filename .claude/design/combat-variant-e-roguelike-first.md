@@ -104,70 +104,113 @@ bar_fill_rate = (owned hexes × base_per_hex)
 ## Action Bar
 
 - Scale: 0–10
-- Hard unit cap: **3 simultaneous units per player** (chaos prevention) ❓
+- Unit cap: no hard cap initially — revisit if playtesting shows chaos ✅
 
-### ❓ Bar Fill Rate — UNRESOLVED
+### Bar Fill Rate ✅ (resolved above)
 
-The original proposal (+0.5/sec per Economy building) is broken at map scale.
-On a 50+ hex map a player could own 20+ hexes with Economy buildings → bar fills in ~4s → units sent every 4s → game becomes unreadable spam.
-
-**Three candidate models — needs decision:**
-
-**Option A: Hard cap on bar fill rate**
-- Economy buildings: +0.1/sec each, max fill rate 1.0/sec (hard cap)
-- Bar fills in minimum 10s regardless of economy size
-- Pro: simple ceiling; Con: economy investment loses value past ~8 buildings
-
-**Option B: Economy buildings reduce unit costs, bar fills at fixed rate**
-- Bar fills at fixed 0.5/sec (always 20s to full bar)
-- Each Economy building: −0.2 bar cost on all units (floor: 1)
-- With 5 buildings: Soldier costs 3 bar → sent every 12s at full bar
-- Pro: economy remains meaningful throughout; Con: two levers may confuse
-
-**Option C: Bar fills from hex count, not buildings**
-- Each hex owned: +0.015/sec (50 hexes = 0.75/sec → fills in ~13s)
-- Economy buildings serve a separate purpose (reduce unit cost or boost unit strength)
-- Pro: territory directly = military power; Con: economy buildings lose identity
+See Bar Fill Rate section. Formula: `hexes × base_per_hex + economy buildings × bonus − tower maintenance`. Numbers deferred.
 
 ---
 
-## Starting State (Turn 0)
+## Starting State (Turn 0) ✅
 
-**Cards in kit:** 2 ❓
-- **Settler** (cost: 2): spawns a unit that marches from capital toward nearest unclaimed hex, claims it on arrival, then dissolves
-- **Basic Soldier** (cost: 4): spawns a unit that marches toward enemy territory; captures hexes en route; fights enemy units on contact
+**Cards in kit:** 4 — always available from second 0, no research required
 
-Both players start identical with both cards. First direct interaction possible from the first seconds of the game.
+| Card | Cost | Effect |
+|------|------|--------|
+| **Settler** | 2 bar | Unit marches to nearest unclaimed hex, claims it, dissolves |
+| **Basic Soldier** | 4 bar | Unit marches toward enemy capital, captures hexes en route, fights on contact (1 HP) |
+| **Gold Mine** | TBD | Places Economy building on owned hex — boosts bar fill rate |
+| **Research Lab** | TBD | Places Research building on owned hex — generates research points passively |
 
-**Buildings available:** none yet (unlocked via research) ❓
+Both players start identical. First direct interaction possible from the first seconds of the game (Basic Soldier available immediately).
 
-**Bar fill rate:** see unresolved section above ❓
+**Economy and Research buildings:** always available — no research required to place them.
 
----
+**Towers and army unit upgrades:** require research to unlock (see Research System below).
 
-## Research System ❓
-
-Research points accumulate from **territory size** — owning more hexes progresses research faster. This ties exploration (Settlers) directly to kit development.
-
-| Hexes owned | Research pick unlocked |
-|-------------|----------------------|
-| 5 | Pick 1 (Tier 1) |
-| 9 | Pick 2 (Tier 1 or 2) |
-| 13 | Pick 3 (Tier 2) |
-| 17 | Pick 4 (Tier 2 or 3) |
-| 21 | Pick 5 (Tier 3) |
-| 25 | Pick 6 (Tier 3 or 4) |
-| 29+ | Pick 7+ (Tier 4) |
-
-Each pick: player sees **3 random cards from the next eligible tier**, chooses 1. The card is permanently added to their kit. Unpicked options are discarded.
-
-The game knows the player's current kit and skews options toward synergistic picks (e.g. if player has Soldier, Tier 2 options bias toward Soldier upgrades, not Tower upgrades).
+**Bar fill rate:** see Bar Fill Rate section above ✅. Exact numbers (base_per_hex, economy_bonus) deferred to playtesting.
 
 ---
 
-## Card Library ❓
+## Research System ✅
 
-### Tier 0 (Always Available)
+### How research works ✅
+- **Research buildings generate research points** passively (per second)
+- More Research Labs built = faster point accumulation
+- When a point threshold is reached: player sees **3 random stat bonuses**, picks 1 permanently
+- Picks are **unlimited** — player controls the pace entirely through Research Lab investment
+
+### Roguelike structure ✅
+- **Cards auto-unlock** at fixed research thresholds — deterministic, no choice involved
+- **Roguelike picks are stat bonuses only** (not cards)
+- Bonuses can improve any aspect: economy, army stats, bar fill, towers, research speed
+- Example bonuses: "+1 Soldier HP", "+20% bar fill rate", "+1 tower attack range", "+25% research points/sec"
+
+### Card unlock progression ✅ (structure confirmed, order = initial draft)
+Towers and army unit upgrades unlock automatically as research thresholds are crossed. Economy buildings (Gold Mine) and Research Lab are always available and do NOT require research.
+
+Initial draft unlock order (needs full brainstorm before finalizing):
+| Approx threshold | Card | Type |
+|-----------------|------|------|
+| 1 (early) | Watchtower (Tower L1) | Building |
+| 2 | Raider | Unit — targets Economy buildings |
+| 3 | Tower L2 (Archer) | Building upgrade |
+| 4 | Squad | Unit — replaces Basic Soldier |
+| 5 | Tower L3 (Ballista) | Building upgrade |
+| 6 | Assassin | Unit — bypasses towers |
+| 7 | Siege Engine | Unit — destroys towers |
+| 8 (late) | Tower L4 (Fortress) | Building upgrade |
+
+**⚠️ This card order is an initial draft — needs dedicated brainstorm session before implementation.**
+
+### Thresholds ❓
+- Exact point thresholds deferred — set after bar rate numbers and bonus pool finalized
+- Model: increasing cost per pick (each pick requires more points than previous)
+
+---
+
+## Card Library ⚠️ INITIAL DRAFT — NEEDS COMPLETE REDESIGN
+
+> The tier-based card system below is **obsolete**. The new structure is:
+> - 4 starting cards (always available): Settler, Basic Soldier, Gold Mine, Research Lab
+> - Remaining cards auto-unlock through research thresholds (no choice)
+> - Roguelike picks are **stat bonuses**, not cards
+>
+> The card list below is preserved as a brainstorm reference only. Nothing in it is confirmed.
+
+---
+
+### Bonus Pool ⚠️ INITIAL DRAFT — needs confirmation
+
+Each research pick shows 3 random bonuses from this pool. Player picks 1.
+
+**Economy:**
+- "Efficiency": Economy buildings +20% bar fill
+- "Territory Yield": Each owned hex +10% bar contribution
+- "Quick Build": Gold Mine and Research Lab cost 1 less bar
+
+**Research:**
+- "Accelerate": Research buildings generate 25% more points/sec
+- "Deep Focus": First research building placed generates double points
+
+**Army:**
+- "Hardened": All units +1 HP
+- "Swift": All units move 25% faster
+- "Raider Mastery": Raider destroys 2 economy buildings per contact instead of 1
+- "Siege Expert": Siege Engine takes 25% less damage
+
+**Tower:**
+- "Alert": Guarding Soldier chase leash +2 hexes
+- "Sniper": All towers +1 attack range
+- "Reinforced": All towers +1 HP
+- "Tower Network": Towers share vision — unit spotted by one is targeted by all in range
+
+---
+
+### Old Tier System (obsolete — for brainstorm reference only)
+
+#### Tier 0 (Always Available)
 | Card | Cost | Effect |
 |------|------|--------|
 | Settler | 2 | Unit marches to nearest unclaimed hex, claims it |
@@ -271,9 +314,15 @@ Capital hex has **2 built-in health** (takes 2 units to capture). This prevents 
 
 ---
 
-## Win Condition ❓
+## Win Condition ✅ (approach confirmed, HP value TBD)
 
-A unit enters the enemy capital hex for the **second time** (or first time if capital health was already at 1 from a previous hit). Capital health resets to 2 after 30 seconds if not hit again — a failed push is survivable but sets the stage for the next attempt.
+A unit enters the enemy capital hex → unit dissolves, capital loses 1 HP. When capital HP reaches 0, the game ends immediately.
+
+**Capital HP:** TBD — initial draft = 2 (requires 2 units to reach the capital). Subject to playtesting.
+
+**No HP reset** — capital damage is permanent. A failed push still weakens the capital; grinding it down over multiple pushes is a valid strategy.
+
+**Future:** Capital may have a built-in upgradeable tower as a defensive option — deferred, not in initial implementation.
 
 ---
 
