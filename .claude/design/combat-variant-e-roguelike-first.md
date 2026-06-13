@@ -20,12 +20,84 @@ Players start with only one card (Settler) ❓ and build their entire combat kit
 
 | Element | Description |
 |---------|-------------|
-| **Action bar** | 0–10, fills automatically. Rate depends on economy buildings owned. |
-| **Cards** | Spend bar to play a card → spawns a unit or places a building. |
+| **Action bar** | 0–10, fills automatically. Rate = hex count + economy buildings − tower maintenance. |
+| **Cards** | Spend bar to play a card → spawns a unit or places/upgrades a building. |
 | **Units** | Auto-march hex by hex toward their target. Fight enemy units on contact. |
-| **Buildings** | Static structures: Economy (speeds bar fill) or Tower (shoots units in range). |
-| **Research** | Triggered by owning N hexes. Each unlock = pick 1 of 3 new cards ❓. |
+| **Buildings** | Economy (boost bar fill), Research (generate research points), Tower (defend area). |
+| **Research** | Research buildings accumulate points → threshold reached → pick 1 of 3 roguelike cards. |
 | **Win** | A unit reaches and enters the enemy capital hex ❓. |
+
+---
+
+## Bar Fill Rate ✅
+
+Bar fills from **all three sources combined**:
+
+```
+bar_fill_rate = (owned hexes × base_per_hex)
+              + (economy buildings × economy_bonus)
+              − (tower maintenance per level)
+```
+
+- **Every owned hex**: +base/sec regardless of building on it
+- **Economy building**: additional +bonus/sec on that hex (amplifies it)
+- **Tower (any level)**: ongoing maintenance drain from bar rate
+- Numbers (base_per_hex, economy_bonus, maintenance) deferred until unit mechanics settled
+
+**Key property:** towers are net-negative on bar rate. Every tower built slows unit production. Defense costs offense. This is the anti-stalemate mechanism — a player who builds 15 towers has almost no bar to send soldiers.
+
+---
+
+## Buildings ✅ (behavior confirmed, costs/numbers deferred)
+
+### Economy Building
+- Placed on an owned hex via card play
+- Increases that hex's bar fill contribution
+- One per hex; stays until hex is captured (enemy unit reaching it destroys the building)
+
+### Research Building  
+- Placed on an owned hex via card play
+- Generates research points passively over time
+- More research buildings = faster roguelike pick unlocks
+- One per hex
+
+### Tower — Four Levels ✅
+
+| Level | Name | Chase leash | Attack range | Total coverage | Counter |
+|-------|------|-------------|--------------|----------------|---------|
+| L1 | Guarding Soldier | 4 hexes | 0 (melee) | 4 hexes | 1–2 soldiers |
+| L2 | Archer | 2 hexes | 2 hexes | 4 hexes (same as L1) | 2–3 soldiers |
+| L3 | Ballista | ❓ | 3 hexes | ❓ | 3–4 soldiers or siege |
+| L4 | Fortress | 0 (immovable) | ❓ high | high | Siege unit only |
+
+**L1 — Guarding Soldier:**
+- Chases approaching enemy units up to **4 hexes** from home hex
+- Melee only — must reach the enemy to fight
+- Returns to home hex when enemy retreats beyond leash or is destroyed
+- 1 HP base (dies in one fair fight); roguelike can upgrade HP
+
+**L2 — Archer:**
+- Moves up to **2 hexes** from home to reposition
+- Fires shots at units up to **2 hexes away** (attack range)
+- Total effective coverage = 4 hexes (same as Guarding Soldier, but from a distance)
+- Safer than L1: fires before enemy reaches it; L1 must close the gap
+- 1 HP base; roguelike can upgrade HP and/or range
+
+**L3 — Ballista:**
+- Chase leash and exact range ❓ — to be defined after L1/L2 playtesting
+- Stronger shots than Archer; slower fire rate ❓
+
+**L4 — Fortress:**
+- Cannot move (0 chase leash)
+- High range compensates for immobility ❓
+- Very high HP — regular soldiers highly inefficient against it
+- Requires Siege unit to counter effectively
+
+**Tower upgrade:** each level is an upgrade of the previous. Costs increasing bar to upgrade. Tower stays on same hex.
+
+**Tower maintenance cost:** drains bar rate per tick. Scales with level. **Values deferred** — set after unit mechanics and bar numbers finalized.
+
+**Siege unit implication:** L4 Fortress requires Siege unit as counter → must be unlockable via roguelike research. Strategic read: if opponent turtles Fortresses, research Siege.
 
 ---
 
