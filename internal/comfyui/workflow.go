@@ -2,6 +2,79 @@ package comfyui
 
 import "math/rand"
 
+// CompositeParams configures an image-on-image composite operation.
+type CompositeParams struct {
+	BaseImageName    string // uploaded name of the background image
+	OverlayImageName string // uploaded name of the image to place on top
+	MaskImageName    string // uploaded name of a mask PNG (optional; white=show overlay)
+	OutputPrefix     string
+	X                int  // x pixel offset for overlay
+	Y                int  // y pixel offset for overlay
+	ResizeSource     bool // resize overlay to match base dimensions
+}
+
+// CompositeImages builds a workflow that places one image on top of another.
+// If MaskImageName is set, its red channel is used as the overlay's alpha mask.
+func CompositeImages(p CompositeParams) map[string]any {
+	if p.OutputPrefix == "" {
+		p.OutputPrefix = "hexar-composite"
+	}
+
+	wf := map[string]any{
+		"1": map[string]any{
+			"class_type": "LoadImage",
+			"inputs":     map[string]any{"image": p.BaseImageName, "upload": "image"},
+		},
+		"2": map[string]any{
+			"class_type": "LoadImage",
+			"inputs":     map[string]any{"image": p.OverlayImageName, "upload": "image"},
+		},
+	}
+
+	if p.MaskImageName != "" {
+		wf["3"] = map[string]any{
+			"class_type": "LoadImage",
+			"inputs":     map[string]any{"image": p.MaskImageName, "upload": "image"},
+		}
+		wf["4"] = map[string]any{
+			"class_type": "ImageToMask",
+			"inputs":     map[string]any{"image": []any{"3", 0}, "channel": "red"},
+		}
+		wf["5"] = map[string]any{
+			"class_type": "ImageCompositeMasked",
+			"inputs": map[string]any{
+				"destination":   []any{"1", 0},
+				"source":        []any{"2", 0},
+				"mask":          []any{"4", 0},
+				"x":             p.X,
+				"y":             p.Y,
+				"resize_source": p.ResizeSource,
+			},
+		}
+		wf["6"] = map[string]any{
+			"class_type": "SaveImage",
+			"inputs":     map[string]any{"filename_prefix": p.OutputPrefix, "images": []any{"5", 0}},
+		}
+	} else {
+		wf["3"] = map[string]any{
+			"class_type": "ImageCompositeMasked",
+			"inputs": map[string]any{
+				"destination":   []any{"1", 0},
+				"source":        []any{"2", 0},
+				"x":             p.X,
+				"y":             p.Y,
+				"resize_source": p.ResizeSource,
+			},
+		}
+		wf["4"] = map[string]any{
+			"class_type": "SaveImage",
+			"inputs":     map[string]any{"filename_prefix": p.OutputPrefix, "images": []any{"3", 0}},
+		}
+	}
+
+	return wf
+}
+
 // Txt2ImgParams configures a basic text-to-image generation.
 type Txt2ImgParams struct {
 	Checkpoint     string

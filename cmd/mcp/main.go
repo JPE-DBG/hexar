@@ -235,6 +235,57 @@ func main() {
 		},
 	)
 
+	// ── comfyui_composite ────────────────────────────────────────────────────────
+	s.AddTool(
+		mcp.NewTool("comfyui_composite",
+			mcp.WithDescription("Combine two images by placing one on top of the other (e.g. building sprite on hex tile, card art on card frame). Uploads both images, composites in ComfyUI, returns job_id."),
+			mcp.WithString("base_image_path", mcp.Required(), mcp.Description("Absolute local path to the base (background) image")),
+			mcp.WithString("overlay_image_path", mcp.Required(), mcp.Description("Absolute local path to the image to place on top")),
+			mcp.WithString("output_name", mcp.Required(), mcp.Description("Filename prefix for the output")),
+			mcp.WithNumber("x", mcp.Description("X pixel offset for the overlay (default 0)")),
+			mcp.WithNumber("y", mcp.Description("Y pixel offset for the overlay (default 0)")),
+			mcp.WithString("mask_image_path", mcp.Description("Optional: absolute local path to a mask PNG (white = show overlay, black = transparent)")),
+		),
+		func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			args := req.GetArguments()
+
+			baseName, err := client.UploadImage(strArg(args, "base_image_path", ""))
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("upload base: %v", err)), nil
+			}
+			overlayName, err := client.UploadImage(strArg(args, "overlay_image_path", ""))
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("upload overlay: %v", err)), nil
+			}
+
+			var maskName string
+			if maskPath := strArg(args, "mask_image_path", ""); maskPath != "" {
+				maskName, err = client.UploadImage(maskPath)
+				if err != nil {
+					return mcp.NewToolResultError(fmt.Sprintf("upload mask: %v", err)), nil
+				}
+			}
+
+			params := comfyui.CompositeParams{
+				BaseImageName:    baseName,
+				OverlayImageName: overlayName,
+				MaskImageName:    maskName,
+				OutputPrefix:     strArg(args, "output_name", "hexar-composite"),
+				X:                int(floatArg(args, "x", 0)),
+				Y:                int(floatArg(args, "y", 0)),
+			}
+			jobID, err := client.QueuePrompt(comfyui.CompositeImages(params))
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("queue prompt: %v", err)), nil
+			}
+			result, _ := json.Marshal(map[string]any{
+				"job_id":  jobID,
+				"message": "queued — use comfyui_wait to poll",
+			})
+			return mcp.NewToolResultText(string(result)), nil
+		},
+	)
+
 	if err := server.ServeStdio(s); err != nil && !strings.Contains(err.Error(), "EOF") {
 		log.Fatal(err)
 	}
