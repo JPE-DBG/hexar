@@ -1,4 +1,4 @@
-import { HEX_SIZE } from './constants';
+import { HEX_SIZE } from './constants.js';
 
 export interface Hex {
   q: number;

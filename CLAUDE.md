@@ -332,11 +332,44 @@ Run all tests: `go test ./... && make test-e2e`
 | CLAUDE.md rewrite | ✅ Complete |
 | Graphical design (UI layout spec) | ✅ `.claude/design/ui-layout-deck-building.md` |
 | Delete old game logic / stub new state | ✅ Complete — new `internal/game/` compiles, all room tests pass |
+| Visual asset theme | ✅ `.claude/design/asset-theme.md` — parchment palette, hex tiles, card frame approved |
+| Client M0 — static UI shell | 🔄 Built, awaiting design approval — parchment layout, hex map (61 hexes, PNG sprites), bar meter, deck panel, shop strip |
 | Core backend (bar, deck, units, win) | ⬜ Not started |
 | Shop card pool design | ⬜ Not started |
 | Shop backend implementation | ⬜ Not started |
-| Client rewrite | ⬜ Not started |
+| Client M1 — wire UI to backend | ⬜ Not started |
 | Playtest + iterate | ⬜ Not started |
+
+---
+
+### Milestones
+
+#### M0 — Static UI Shell 🔄 Built, awaiting design approval
+Static browser UI with mock data. No WebSocket, no game logic.
+**Done when:** 61-hex map renders with PNG sprites, bar meter, deck panel, shop strip all visible with parchment theme.
+
+#### M1 — Core Backend
+Implement bar fill, deck cycling, unit march, combat, capital damage, win condition.
+**Files:** `internal/game/bar.go`, `deck.go`, `units.go`, `victory.go`, `action.go` + all `*_test.go`
+**Done when:** `go test ./internal/game/...` passes all cases from test table above.
+**Blocks:** M2
+
+#### M2 — Wire UI to Backend
+Replace mock state with real WebSocket. Bar fills in real-time, deck cycles on card play.
+**Files:** `client/src/net/connection.ts`, `client/src/state/state.ts`, `client/src/render/renderer.ts`, `internal/net/`, `internal/room/`
+**Done when:** Two browser tabs connect, bar fills at 0.1/sec, PLAY button sends action and cycles deck, units visible on map.
+**Depends on:** M0 ✅ + M1
+
+#### M3 — Shop Design + Backend
+Design shop card pool (cards, costs, quantities) → implement `internal/game/shop.go`.
+**Done when:** `shop_test.go` passes. BUY button deducts bar and adds card to deck bottom.
+**Depends on:** M1. Can run in parallel with M2.
+**Blocks:** M4
+
+#### M4 — Playtest Core Loop
+Two players, full game loop end-to-end. Tune constants until ~15 min games.
+**Done when:** Game feels playable — bar rate, march speed, capital HP produce intended pacing.
+**Depends on:** M2 + M3
 
 ### Open Questions (TBD)
 
