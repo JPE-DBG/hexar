@@ -67,9 +67,9 @@ Warm cream/parchment card backgrounds, hand-drawn illustration feel, medieval fa
 **Asset-driven (not CSS):**
 | Role | Status | Asset file |
 |---|---|---|
-| Player 1 territory | approved | `hex-v3-forestgreen.png` |
-| Player 2 territory | approved | `hex-v4-royalblue.png` |
-| Unclaimed hex tile | draft | — |
+| Player 1 territory | approved | `client/public/assets/hex-tile-p1.png` |
+| Player 2 territory | approved | `client/public/assets/hex-tile-p2.png` |
+| Unclaimed hex tile | draft | `client/public/assets/hex-tile-unclaimed.png` |
 
 **Note:** 10 hex color variants generated (`previews/hex-v3-*.png`, `previews/hex-v4-*.png`). Forest green + royal blue are P1/P2 defaults.
 
@@ -81,9 +81,9 @@ UI panels use generated texture assets layered under CSS text/controls, not flat
 
 | Asset | Description | Status |
 |---|---|---|
-| Card frame | Ornate gold medieval border, parchment center, portrait orientation | in progress |
+| Card frame | Warm brown border, cream parchment center, name banner at top, portrait orientation | **approved** — `client/public/assets/card-frame.png` |
 | Panel background | Parchment/aged paper texture, seamless or stretched | draft |
-| Bar meter trough | Stone or wood channel, landscape orientation | draft |
+| Bar meter trough | Stone or wood channel, landscape orientation | **approved** — `client/public/assets/bar-meter-trough.png` |
 | Board frame border | Decorative parchment trim around hex canvas | draft |
 
 **Approach:** Generated PNG placed as CSS `background-image` on DOM panels. Dynamic elements (bar fill %, button states, text) float on top via CSS/DOM.
@@ -131,7 +131,7 @@ border decorations
 
 | Asset | Description | Status |
 |---|---|---|
-| Unclaimed hex tile | Neutral color, no player ownership | draft |
+| Unclaimed hex tile | Neutral color, no player ownership | **approved** — `client/public/assets/hex-tile-unclaimed.png` |
 | Basic Soldier unit | Small token on hex, moves hex-by-hex | draft |
 | Tower building | Defensive building placed on hex | draft |
 | Bar Speed building | Economy building on hex | draft |

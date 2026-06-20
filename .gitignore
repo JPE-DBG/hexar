@@ -13,7 +13,7 @@ Thumbs.db
 Desktop.ini
 
 # Generated game assets (final assets will live elsewhere)
-client/public/assets/
+client/public/assets/previews/
 
 # Playwright artifacts
 test-results/

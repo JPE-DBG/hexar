@@ -63,20 +63,17 @@ Export all as CSS variables: `--bg`, `--chrome`, `--p1`, `--p2`, `--unclaimed`, 
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  HUD (40px)                                                     │
-│  [deck: 12 cards]  [timer 3:42]          [opp bar ████░░ 6/10] │
-├────────────────────────────────────────┬───────────────────────┤
-│                                        │                       │
-│                                        │   SHOP PANEL (200px)  │
-│             HEX MAP                    │                       │
-│         (~70% of width)                │   [card] [×3] [BUY]   │
-│                                        │   [card] [×5] [BUY]   │
-│      units march here                  │   [card] [×2] [BUY]   │
-│      buildings on hexes                │   ─────────────────   │
-│                                        │   REMOVE CARD [×][5▶] │
-│                                        │                       │
-│                                        │                       │
-├────────────────────────────────────────┴───────────────────────┤
+│  SHOP PANEL (60px)                                             │
+│  [⚔ Soldier ×3 BUY]  [🏗 Tower ×2 BUY]  [⚡ Bar Boost ×5 BUY] │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│                        HEX MAP                                 │
+│                    (full width)                                │
+│                                                                │
+│                  units march here                              │
+│                  buildings on hexes                            │
+│                                                                │
+├────────────────────────────────────────────────────────────────┤
 │  BAR METER (24px)                                              │
 │  [▮▮▮▮▮▮░░░░]  6.0 / 10                                       │
 ├────────────────────────────────────────────────────────────────┤
@@ -96,11 +93,10 @@ Export all as CSS variables: `--bg`, `--chrome`, `--p1`, `--p2`, `--unclaimed`, 
 ```
 
 **Proportions:**
-- HUD strip: 40px
-- Map + shop area: fills remaining height minus bar and deck panel
+- Shop strip: 60px (horizontal scrollable row of compact cards)
+- Map area: fills remaining height minus shop, bar, and deck panel
 - Bar meter strip: 24px
 - Deck panel: 190px (fixed, always visible)
-- Shop sidebar: 200px wide
 
 ---
 
@@ -201,34 +197,18 @@ Below the fan: `"12 cards"` in muted small text.
 
 ---
 
-## Shop Panel (right sidebar, 200px)
+## Shop Panel (top strip, 60px)
 
-Always visible — not collapsible. Players must be able to buy at any time without opening a panel.
+Always visible — not collapsible. Horizontal row across the full width. Scrolls horizontally if cards exceed screen width.
 
 ```
-┌──────────────────────┐
-│  SHOP                │  ← header
-│                      │
-│ ┌────────────────┐   │
-│ │ ⚔ Heavy Sold.  │   │  ← card name + type icon
-│ │  cost: 4  ×3   │   │  ← bar cost | quantity remaining
-│ │  [BUY]         │   │
-│ └────────────────┘   │
-│                      │
-│ ┌────────────────┐   │
-│ │ 🏗 Bar Boost   │   │
-│ │  cost: 3  ×5   │   │
-│ │  [BUY]         │   │
-│ └────────────────┘   │
-│  ... (scrollable)    │
-│                      │
-│ ──────────────────   │
-│  REMOVE CARD         │  ← shop service, not a card
-│  cost: 5             │
-│  target: top | aside │
-│  [REMOVE TOP]        │
-│  [REMOVE ASIDE]      │
-└──────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────► scroll
+│ ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ │⚔ Soldier  ×3│  │🏗 Tower    ×2│  │⚡ Bar Boost ×5│  │  REMOVE [5▶] │
+│ │  cost: 2     │  │  cost: 4     │  │  cost: 3     │  │  top | aside │
+│ │  [BUY]       │  │  [BUY]       │  │  [BUY]       │  │              │
+│ └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 - Each shop card: compact (~80px tall), shows icon, name, cost, quantity
