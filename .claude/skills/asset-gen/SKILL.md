@@ -196,7 +196,11 @@ Queue all jobs first (step 3 for each), collect job IDs, then wait+save in seque
 
 ## After Generation
 
-- Verify PNGs open with transparent background (not black)
-- Check hex shape is clean — controlnet_strength < 0.8 may cause shape bleed
-- Notify which asset filenames were written so the renderer can reference them
+> **NEVER read, display, or analyze generated PNG files with the Read tool.**
+> Images are large binaries; base64-encoding them into the request body causes 413 errors.
+> Trust `comfyui_save` success as confirmation the file was written correctly.
+
+- Report which asset filenames were written so the renderer can reference them
+- Trust the hex mask workflow for transparency — no need to open the file to verify
 - If a variant looks wrong, regenerate with a different seed (omit seed param to randomize)
+- Use `Glob` to confirm a file exists if needed — never `Read` a PNG

@@ -1,4 +1,17 @@
 {
+  "hooks": {
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreCompact\",\"additionalContext\":\"BEFORE COMPACTING: Check if any design decisions (art style, color palette, UI layout, asset prompts) were approved in this conversation but NOT yet written to .claude/design/asset-theme.md. If any are pending, write them to that file NOW before context is lost. The file tracks art direction, color palette, hex tile style, capital assets, and other visual assets with approved/draft status.\"}}'",
+            "statusMessage": "Checking for unsaved design decisions..."
+          }
+        ]
+      }
+    ]
+  },
   "mcpServers": {
     "hexar-comfyui": {
       "command": "c:/Dev/git/hexar/hexar-mcp.exe",

@@ -27,6 +27,7 @@ Reference games to study (visual patterns, not mechanics):
 - **mini metro** — information-dense minimalism under time pressure
 - **Into the Breach** — grid strategy UI that reads clearly under time pressure
 - **Polytopia** — clean flat hex style, readable at a glance
+- **Dominion** - theme based on board game Dominion cards theme
 
 ### 2. Color Palette (DRAFT — Not Approved)
 The palette in `ui-layout-deck-building.md` is an **initial draft only** — not reviewed or approved. Before implementing anything, this section must produce a finalized palette decision.
@@ -125,7 +126,7 @@ Rule: if removing an animation doesn't affect decision-making, it's decoration. 
 - **Animation budget is shared.** The 60fps animation loop and 100ms game-state loop must not fight each other. Never block the game loop for a cosmetic effect.
 - **Design systems, not one-offs.** A color chosen for one card will be reused elsewhere. Establish variables before writing any values.
 - **The layout doc is a draft.** `ui-layout-deck-building.md` is an initial proposal — use this skill to evaluate and finalize it, not implement from it blindly.
-- **Nothing is approved until stated.** Color palette, art style, layout proportions — all are open questions until explicitly signed off.
+- **Write decisions immediately, not at end of session.** The moment the user approves a decision (art direction, palette choice, layout, asset direction), write it to `.claude/design/asset-theme.md` before continuing. Do not batch decisions or wait — context can be compressed or the session can crash at any time.
 
 ---
 
