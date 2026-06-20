@@ -178,10 +178,20 @@ func ControlNetTxt2Img(p ControlNetParams) map[string]any {
 			"class_type": "VAEDecode",
 			"inputs":     map[string]any{"samples": []any{"8", 0}, "vae": []any{"1", 2}},
 		},
-		// 10: save
+		// 11: extract hex mask as alpha (white inside hex = 1.0, black outside = 0.0)
+		"11": map[string]any{
+			"class_type": "ImageToMask",
+			"inputs":     map[string]any{"image": []any{"5", 0}, "channel": "red"},
+		},
+		// 12: composite generated image with hex mask as alpha → RGBA
+		"12": map[string]any{
+			"class_type": "JoinImageWithAlpha",
+			"inputs":     map[string]any{"image": []any{"9", 0}, "alpha": []any{"11", 0}},
+		},
+		// 10: save RGBA PNG (transparent outside hex)
 		"10": map[string]any{
 			"class_type": "SaveImage",
-			"inputs":     map[string]any{"filename_prefix": p.OutputPrefix, "images": []any{"9", 0}},
+			"inputs":     map[string]any{"filename_prefix": p.OutputPrefix, "images": []any{"12", 0}},
 		},
 	}
 }
