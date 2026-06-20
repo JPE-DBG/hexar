@@ -8,7 +8,9 @@ type: skill
 
 Guides visual design decisions for Hexar: color palette, typography, hex rendering style, UI component layout, and animation priorities. Bridges game feel and technical feasibility.
 
-**Prerequisites:** Read CLAUDE.md and `.claude/design/ui-layout-deck-building.md` before evaluating visuals — the layout spec is the reference for all panel decisions.
+**Prerequisites:** Read CLAUDE.md and `.claude/design/ui-layout-deck-building.md` before evaluating visuals — the layout doc is a draft reference, not a finalized spec.
+
+**Important:** Visual decisions in this skill feed directly into AI image generation via ComfyUI. Style choices must be expressible as text-to-image prompt keywords. Avoid decisions that can only be described as "hand-drawn" or that require manual illustration — the asset pipeline is generative.
 
 ---
 
@@ -26,43 +28,20 @@ Reference games to study (visual patterns, not mechanics):
 - **Into the Breach** — grid strategy UI that reads clearly under time pressure
 - **Polytopia** — clean flat hex style, readable at a glance
 
-### 2. Color Palette (Defined — Verify Against Design Doc)
-All visual decisions flow from the palette. Defined in `ui-layout-deck-building.md`:
+### 2. Color Palette (DRAFT — Not Approved)
+The palette in `ui-layout-deck-building.md` is an **initial draft only** — not reviewed or approved. Before implementing anything, this section must produce a finalized palette decision.
 
-```css
---bg: #1a1a2e       /* deep navy background */
---chrome: #252545   /* UI panel surfaces */
---ui-border: #3a3a5c
---p1: #4ecdc4       /* Player 1 teal */
---p2: #ff6b6b       /* Player 2 red */
---unclaimed: #2d3748
---bar-fill: #f7c948 /* amber — the accent color */
---bar-empty: #3a3a5c
---card-unit: #2a3f6f
---card-building: #3d2e1e
---card-bar: #1e3d2e
---cost: #f7c948
---text-primary: #e8e8f0
---text-muted: #6b7280
---danger: #e53e3e
---win: #f6d860
-```
+Key questions still open:
+- Overall tone: dark navy? earthy? high-contrast neon? muted tactical?
+- Player differentiation: teal vs red is one option — are these the right hues?
+- Accent color: amber/gold for bar and cost — does this fit the chosen visual style?
+- Hex tile colors: unclaimed slate, owned in player color — right approach?
 
-Export as CSS variables immediately. Every hardcoded color string is a debt.
+When the palette is finalized, document it as CSS variables and save to `.claude/design/asset-theme.md`. Every hardcoded color string before that point is throwaway code.
 
-### 3. Screen Layout (Defined — See Design Doc)
+### 3. Screen Layout (DRAFT — Not Approved)
 
-The layout is specified in `ui-layout-deck-building.md`:
-- **HUD strip:** 40px top — deck count, timer, opponent bar
-- **Map + shop area:** fills remaining height
-- **Shop sidebar:** 200px right, always visible
-- **Bar meter strip:** 24px above deck panel
-- **Deck panel:** 190px bottom, always visible
-
-Do not redesign the layout — implement from the spec. Use this skill for:
-- Component-level visual decisions not covered by the spec
-- Mobile adaptation questions
-- Animation decisions
+`ui-layout-deck-building.md` contains an initial layout proposal. It is a starting point for discussion, not a spec to implement from. Use this skill to evaluate and finalize layout decisions before any client code is written.
 
 ### 4. Information Hierarchy for New UI Elements
 
@@ -145,4 +124,19 @@ Rule: if removing an animation doesn't affect decision-making, it's decoration. 
 - **Contrast is non-negotiable.** Player colors must pass WCAG AA at hex scale.
 - **Animation budget is shared.** The 60fps animation loop and 100ms game-state loop must not fight each other. Never block the game loop for a cosmetic effect.
 - **Design systems, not one-offs.** A color chosen for one card will be reused elsewhere. Establish variables before writing any values.
-- **The layout spec is the source.** For panel dimensions and positioning, `ui-layout-deck-building.md` wins. Use this skill for the decisions that spec doesn't cover.
+- **The layout doc is a draft.** `ui-layout-deck-building.md` is an initial proposal — use this skill to evaluate and finalize it, not implement from it blindly.
+- **Nothing is approved until stated.** Color palette, art style, layout proportions — all are open questions until explicitly signed off.
+
+---
+
+## Required Output — Asset Theme Doc
+
+When this skill produces finalized visual decisions, write them to `.claude/design/asset-theme.md`. This file is the handoff to `/asset-gen` and must include:
+
+1. **Art style** — 2–3 sentences + 5–8 ComfyUI-compatible style keywords (e.g. `flat vector, limited palette, top-down, crisp edges`)
+2. **Negative keywords** — what to exclude from all generations (e.g. `photorealistic, 3d render, gradients`)
+3. **Color palette** — finalized hex codes as CSS variables, with role labels
+4. **Per-asset direction** — one line per asset type (unclaimed hex, p1 hex, capital, soldier) describing the visual intent
+5. **Status** — mark each decision as `approved` or `draft`
+
+Do not write to `asset-theme.md` until decisions are actually confirmed in conversation.
