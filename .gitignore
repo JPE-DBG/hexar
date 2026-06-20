@@ -19,3 +19,4 @@ playwright-report/
 # copilot exported chat history
 .chat_history/
 .claude/settings.local.json
+*.exe

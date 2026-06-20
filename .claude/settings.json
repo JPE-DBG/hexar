@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "hexar-comfyui": {
+      "command": "go",
+      "args": [
+        "run",
+        "./cmd/mcp",
+        "--comfy",
+        "http://127.0.0.1:8000",
+        "--root",
+        "c:/Dev/git/hexar"
+      ],
+      "cwd": "c:/Dev/git/hexar"
+    }
+  }
+}
