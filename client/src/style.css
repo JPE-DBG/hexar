@@ -157,16 +157,17 @@ canvas {
   flex-shrink: 0;
 }
 
-/* === Bar Meter (24px) === */
+/* === Bar Meter (32px) === */
 #bar-meter {
-  height: 24px;
+  height: 32px;
   flex-shrink: 0;
   background: var(--chrome-dark);
   border-top: 1px solid var(--ui-border);
   border-bottom: 1px solid var(--ui-border);
   background-image: url(/assets/bar-meter-trough.png);
-  background-size: cover;
-  background-position: center;
+  background-size: auto 100%;
+  background-repeat: repeat-x;
+  background-position: left center;
   display: flex;
   align-items: center;
   padding: 2px 8px;
@@ -191,11 +192,11 @@ canvas {
   flex: 1;
   height: 14px;
   border-radius: 2px;
-  background: var(--bar-empty);
+  background: transparent;
 }
 
 .bar-seg.filled { background: var(--bar-fill); }
-.bar-seg.partial { background: linear-gradient(to right, var(--bar-fill) var(--fill-pct), var(--bar-empty) var(--fill-pct)); }
+.bar-seg.partial { background: linear-gradient(to right, var(--bar-fill) var(--fill-pct), transparent var(--fill-pct)); }
 
 /* === Deck Panel (bottom, 230px) === */
 #deck-panel {

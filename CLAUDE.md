@@ -26,6 +26,11 @@ Hexar is a fast-paced, real-time multiplayer hex strategy game. Players build a 
 - **Single currency:** bar pays for all actions — playing cards, buying shop cards, removing cards
 - Bar never resets; it accumulates until spent or capped
 
+**Bar meter display:**
+- Left label: integer count of whole bar units accumulated (`floor(bar)`) — this is the primary payment value the player reads
+- Fill segment: shows fractional progress toward the next whole unit (0→1 cycle); resets visually each time a full unit is earned
+- Example: bar = 6.2 → label shows `6`, segment is 20% filled
+
 ### Deck
 
 Each player has their own ordered deck of cards. The deck is a queue — cards cycle from top to bottom.
@@ -249,27 +254,26 @@ Phase 6: DELTA          — diff vs previous tick, broadcast to clients
 
 ## Client & UI
 
-### Layout (TBD — graphical design session required before implementation)
+### Layout — M0 implemented
 
-The deck-building UI is fundamentally different from the MVP1 sidebar layout. A dedicated graphical design session must produce a layout spec before client code is written. Key decisions pending:
+Full spec: `.claude/design/ui-layout-deck-building.md`
 
-- Overall screen split (hex map area vs deck/shop panels)
-- Deck queue visualization (top card prominent, aside slot, card backs visible behind)
-- Bar fill visualization (strip, meter, or edge)
-- Shop panel (always visible or pop-out)
-- Card anatomy (name, cost, effect text)
-- Unit representation on hex grid (token moving hex-by-hex)
+**Screen layout (top → bottom):**
+- **Shop strip (230px):** Horizontal scrollable row. Each card 160×210px (same size as deck top card). Cost badge top-right. BUY button at bottom. Remove card at end of strip.
+- **Hex map (flex: 1):** Canvas. Pointy-top hexes. PNG tiles rendered with 30° rotation to align flat-top assets with pointy-top clip path.
+- **Bar meter (32px):** Parchment trough PNG background tiled `repeat-x`. Left label shows `floor(bar)` as the integer payment value (large bold monospace). Single amber fill segment shows fractional progress toward the next integer (0→1).
+- **Deck panel (230px):** Top card (160×210px) + aside slot (120×160px) + fanned card backs. All use `card-frame.png` background.
 
-Output of design session: `.claude/design/ui-layout-deck-building.md`
+**Theme:** Parchment — `--chrome: #f0e6d0`, `--bg: #2c1e0f`. Full CSS variables in `client/src/style.css`; palette defined in `.claude/design/asset-theme.md`.
 
 ### Canvas + DOM Split
 
 - **Canvas (`renderer.ts`):** Hex grid, unit tokens marching hex-by-hex, buildings on hexes, effects
-- **DOM overlays:** HUD (bar meter), deck panel (top card + aside slot), shop panel, lobby/victory screens
+- **DOM overlays:** Bar meter, deck panel (top card + aside slot), shop strip, lobby/victory screens
 
 ### Known Issues (non-blocking, document before touching)
 
-None yet — client rewrite not started.
+None.
 
 ---
 
@@ -333,7 +337,7 @@ Run all tests: `go test ./... && make test-e2e`
 | Graphical design (UI layout spec) | ✅ `.claude/design/ui-layout-deck-building.md` |
 | Delete old game logic / stub new state | ✅ Complete — new `internal/game/` compiles, all room tests pass |
 | Visual asset theme | ✅ `.claude/design/asset-theme.md` — parchment palette, hex tiles, card frame approved |
-| Client M0 — static UI shell | 🔄 Built, awaiting design approval — parchment layout, hex map (61 hexes, PNG sprites), bar meter, deck panel, shop strip |
+| Client M0 — static UI shell | ✅ Complete — shop (230px, 160×210 cards), bar meter (32px, integer counter + fill), deck panel (230px, 160×210 top card), pointy-top hex map (61 hexes, PNG sprites), parchment theme |
 | Core backend (bar, deck, units, win) | ⬜ Not started |
 | Shop card pool design | ⬜ Not started |
 | Shop backend implementation | ⬜ Not started |
@@ -344,7 +348,7 @@ Run all tests: `go test ./... && make test-e2e`
 
 ### Milestones
 
-#### M0 — Static UI Shell 🔄 Built, awaiting design approval
+#### M0 — Static UI Shell ✅ Complete
 Static browser UI with mock data. No WebSocket, no game logic.
 **Done when:** 61-hex map renders with PNG sprites, bar meter, deck panel, shop strip all visible with parchment theme.
 
