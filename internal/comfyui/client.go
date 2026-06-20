@@ -98,24 +98,21 @@ func (c *Client) ListCheckpoints() ([]string, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	var info map[string]struct {
-		Input struct {
-			Required map[string][][]any `json:"required"`
-		} `json:"input"`
-	}
+	var info map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
 		return nil, err
 	}
-	node, ok := info["CheckpointLoaderSimple"]
-	if !ok {
-		return nil, fmt.Errorf("CheckpointLoaderSimple not found in object_info")
-	}
-	names := node.Input.Required["ckpt_name"]
-	if len(names) == 0 || len(names[0]) == 0 {
+	// Navigate: info["CheckpointLoaderSimple"]["input"]["required"]["ckpt_name"][0] -> []string
+	node, _ := info["CheckpointLoaderSimple"].(map[string]any)
+	input, _ := node["input"].(map[string]any)
+	required, _ := input["required"].(map[string]any)
+	ckptName, _ := required["ckpt_name"].([]any)
+	if len(ckptName) == 0 {
 		return nil, nil
 	}
-	result := make([]string, 0, len(names[0]))
-	for _, v := range names[0] {
+	names, _ := ckptName[0].([]any)
+	result := make([]string, 0, len(names))
+	for _, v := range names {
 		if s, ok := v.(string); ok {
 			result = append(result, s)
 		}

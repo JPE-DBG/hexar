@@ -12,6 +12,9 @@ client/dist/
 Thumbs.db
 Desktop.ini
 
+# Generated game assets (final assets will live elsewhere)
+client/public/assets/
+
 # Playwright artifacts
 test-results/
 playwright-report/
@@ -19,4 +22,7 @@ playwright-report/
 # copilot exported chat history
 .chat_history/
 .claude/settings.local.json
+
+# compiled binaries windows
 *.exe
+*.exe~

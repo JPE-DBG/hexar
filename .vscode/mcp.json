@@ -1,6 +1,7 @@
 {
-  "mcpServers": {
+  "servers": {
     "hexar-comfyui": {
+      "type": "stdio",
       "command": "c:/Dev/git/hexar/hexar-mcp.exe",
       "args": [
         "--comfy",
