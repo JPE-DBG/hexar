@@ -42,16 +42,16 @@ canvas {
   touch-action: none;
 }
 
-/* === Shop Strip (top, 60px) === */
+/* === Shop Strip (top, 230px) === */
 #shop-strip {
-  height: 60px;
+  height: 230px;
   flex-shrink: 0;
   background: var(--chrome);
   border-bottom: 2px solid var(--ui-border);
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
+  gap: 8px;
+  padding: 6px 10px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
@@ -64,34 +64,39 @@ canvas {
 
 .shop-card {
   flex-shrink: 0;
-  height: 48px;
-  min-width: 130px;
-  background: var(--chrome-dark);
-  border: 1px solid var(--ui-border);
+  width: 160px;
+  height: 210px;
+  background-image: url(/assets/card-frame.png);
+  background-size: 100% 100%;
   border-radius: 4px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  font-size: 12px;
+  padding: 8px 6px 6px;
+  font-size: 11px;
+  position: relative;
+  gap: 2px;
 }
 
 .shop-card-info {
   flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 1px;
+  text-align: center;
 }
 
 .shop-card-name {
   font-weight: bold;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-primary);
-  white-space: nowrap;
+  text-align: center;
+  line-height: 1.2;
 }
 
 .shop-card-meta {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-muted);
 }
 
@@ -108,27 +113,30 @@ canvas {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: absolute;
+  top: 6px;
+  right: 6px;
 }
 
 .shop-card .btn-buy {
-  flex-shrink: 0;
-  height: 26px;
-  padding: 0 8px;
+  width: 100%;
+  height: 22px;
   background: var(--ui-accent);
   color: #fff;
   border: none;
   border-radius: 3px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: bold;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .shop-card .btn-buy:hover { opacity: 0.85; }
 
 .shop-remove {
   flex-shrink: 0;
-  height: 48px;
-  min-width: 120px;
+  width: 160px;
+  height: 210px;
   background: var(--chrome-dark);
   border: 1px solid var(--ui-border);
   border-radius: 4px;
@@ -136,24 +144,12 @@ canvas {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 4px 8px;
+  gap: 4px;
+  padding: 6px;
   font-size: 10px;
   color: var(--text-muted);
-}
-
-.shop-remove .cost-badge {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--cost);
-  color: #fff;
-  font-size: 9px;
-  font-weight: bold;
-  font-family: monospace;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  position: relative;
+  text-align: center;
 }
 
 .shop-type-icon {
@@ -174,19 +170,26 @@ canvas {
   display: flex;
   align-items: center;
   padding: 2px 8px;
-  gap: 2px;
+  gap: 0;
   position: relative;
 }
 
-.bar-segments {
-  display: flex;
-  gap: 2px;
-  flex: 1;
-  height: 14px;
+.bar-value-label {
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--text-primary);
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+  line-height: 1;
+  z-index: 1;
+  margin-right: 6px;
 }
 
 .bar-seg {
   flex: 1;
+  height: 14px;
   border-radius: 2px;
   background: var(--bar-empty);
 }
@@ -194,18 +197,9 @@ canvas {
 .bar-seg.filled { background: var(--bar-fill); }
 .bar-seg.partial { background: linear-gradient(to right, var(--bar-fill) var(--fill-pct), var(--bar-empty) var(--fill-pct)); }
 
-.bar-label {
-  font-family: monospace;
-  font-size: 11px;
-  font-weight: bold;
-  color: var(--text-primary);
-  white-space: nowrap;
-  margin-left: 6px;
-}
-
-/* === Deck Panel (bottom, 190px) === */
+/* === Deck Panel (bottom, 230px) === */
 #deck-panel {
-  height: 190px;
+  height: 230px;
   flex-shrink: 0;
   background: var(--chrome);
   border-top: 2px solid var(--ui-border);
@@ -229,13 +223,13 @@ canvas {
 }
 
 .card-top-card {
-  width: 140px;
-  height: 170px;
+  width: 160px;
+  height: 210px;
 }
 
 .card-aside {
-  width: 110px;
-  height: 140px;
+  width: 120px;
+  height: 160px;
 }
 
 .card-aside-label {
@@ -321,8 +315,8 @@ canvas {
 
 /* Empty aside slot */
 .aside-empty {
-  width: 110px;
-  height: 140px;
+  width: 120px;
+  height: 160px;
   border: 2px dashed var(--ui-border);
   border-radius: 4px;
   display: flex;

@@ -82,7 +82,21 @@ export class Renderer {
         : hex.owner === 2 ? 'hex-tile-p2'
         : 'hex-tile-unclaimed';
 
-      this.ctx.drawImage(this.imgs[imgName], px - HEX_W / 2, py - HEX_H / 2, HEX_W, HEX_H);
+      // Clip to hex shape so square PNG edges don't bleed into neighbours
+      this.ctx.save();
+      this.ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 180) * (60 * i - 30);
+        const hx = px + HEX_SIZE * Math.cos(angle);
+        const hy = py + HEX_SIZE * Math.sin(angle);
+        if (i === 0) this.ctx.moveTo(hx, hy); else this.ctx.lineTo(hx, hy);
+      }
+      this.ctx.closePath();
+      this.ctx.clip();
+      this.ctx.translate(px, py);
+      this.ctx.rotate(Math.PI / 6);
+      this.ctx.drawImage(this.imgs[imgName], -HEX_H / 2, -HEX_W / 2, HEX_H, HEX_W);
+      this.ctx.restore();
 
       if (hex.unit !== undefined) {
         const r = HEX_SIZE * 0.28;

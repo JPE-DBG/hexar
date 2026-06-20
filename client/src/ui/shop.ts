@@ -20,12 +20,12 @@ export function renderShop(container: HTMLElement, cards: ShopCard[]) {
     const el = document.createElement('div');
     el.className = 'shop-card';
     el.innerHTML = `
+      <span class="cost-badge">${card.cost}</span>
       <span class="shop-type-icon">${TYPE_ICON[card.type]}</span>
       <div class="shop-card-info">
         <div class="shop-card-name">${card.name}</div>
-        <div class="shop-card-meta">×${card.qty} remaining</div>
+        <div class="shop-card-meta">×${card.qty} left</div>
       </div>
-      <span class="cost-badge">${card.cost}</span>
       <button class="btn-buy">BUY</button>
     `;
     container.appendChild(el);
@@ -34,8 +34,10 @@ export function renderShop(container: HTMLElement, cards: ShopCard[]) {
   const remove = document.createElement('div');
   remove.className = 'shop-remove';
   remove.innerHTML = `
-    <div>REMOVE CARD <span class="cost-badge">5</span></div>
-    <div style="font-size:9px;color:var(--text-muted)">top · aside</div>
+    <div style="font-size:16px">✂</div>
+    <div style="font-weight:bold;font-size:10px">REMOVE</div>
+    <span class="cost-badge">5</span>
+    <div style="font-size:9px">top · aside</div>
   `;
   container.appendChild(remove);
 }
