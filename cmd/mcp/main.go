@@ -169,6 +169,72 @@ func main() {
 	)
 
 	log.Printf("hexar-comfyui MCP server starting (comfy=%s, root=%s)", *comfyURL, root)
+
+	// ── comfyui_list_controlnets ──────────────────────────────────────────────
+	s.AddTool(
+		mcp.NewTool("comfyui_list_controlnets",
+			mcp.WithDescription("List ControlNet models installed in ComfyUI."),
+		),
+		func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			models, err := client.ListControlNets()
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("list controlnets: %v", err)), nil
+			}
+			result, _ := json.Marshal(map[string]any{"controlnets": models})
+			return mcp.NewToolResultText(string(result)), nil
+		},
+	)
+
+	// ── comfyui_generate_controlnet ───────────────────────────────────────────
+	s.AddTool(
+		mcp.NewTool("comfyui_generate_controlnet",
+			mcp.WithDescription("Generate an image guided by a ControlNet control image (e.g. hex mask). Uploads the control image, queues the workflow, returns a job_id."),
+			mcp.WithString("prompt", mcp.Required(), mcp.Description("Positive prompt")),
+			mcp.WithString("negative_prompt", mcp.Description("Negative prompt")),
+			mcp.WithString("output_name", mcp.Required(), mcp.Description("Filename prefix for output")),
+			mcp.WithString("checkpoint", mcp.Required(), mcp.Description("Checkpoint model filename from comfyui_models")),
+			mcp.WithString("controlnet_model", mcp.Required(), mcp.Description("ControlNet model filename from comfyui_list_controlnets")),
+			mcp.WithString("control_image_path", mcp.Required(), mcp.Description("Absolute local path to the control image PNG")),
+			mcp.WithNumber("controlnet_strength", mcp.Description("ControlNet influence 0.0–2.0 (default 1.0)")),
+			mcp.WithNumber("width", mcp.Description("Width in pixels (default 1024)")),
+			mcp.WithNumber("height", mcp.Description("Height in pixels (default 1024)")),
+			mcp.WithNumber("steps", mcp.Description("Sampling steps (default 25)")),
+			mcp.WithNumber("cfg", mcp.Description("CFG scale (default 7.0)")),
+		),
+		func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			args := req.GetArguments()
+			uploadedName, err := client.UploadImage(strArg(args, "control_image_path", ""))
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("upload control image: %v", err)), nil
+			}
+			params := comfyui.ControlNetParams{
+				Txt2ImgParams: comfyui.Txt2ImgParams{
+					Prompt:         strArg(args, "prompt", ""),
+					NegativePrompt: strArg(args, "negative_prompt", ""),
+					OutputPrefix:   strArg(args, "output_name", "hexar-cn"),
+					Checkpoint:     strArg(args, "checkpoint", ""),
+					Width:          int(floatArg(args, "width", 1024)),
+					Height:         int(floatArg(args, "height", 1024)),
+					Steps:          int(floatArg(args, "steps", 25)),
+					CFG:            floatArg(args, "cfg", 7.0),
+				},
+				ControlNetModel:    strArg(args, "controlnet_model", ""),
+				ControlImageName:   uploadedName,
+				ControlNetStrength: floatArg(args, "controlnet_strength", 1.0),
+			}
+			jobID, err := client.QueuePrompt(comfyui.ControlNetTxt2Img(params))
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("queue prompt: %v", err)), nil
+			}
+			result, _ := json.Marshal(map[string]any{
+				"job_id":         jobID,
+				"uploaded_image": uploadedName,
+				"message":        "queued — use comfyui_wait to poll",
+			})
+			return mcp.NewToolResultText(string(result)), nil
+		},
+	)
+
 	if err := server.ServeStdio(s); err != nil && !strings.Contains(err.Error(), "EOF") {
 		log.Fatal(err)
 	}

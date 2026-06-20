@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -92,8 +95,7 @@ func (c *Client) DownloadImage(filename, subfolder, imgType string) ([]byte, err
 	return io.ReadAll(resp.Body)
 }
 
-func (c *Client) ListCheckpoints() ([]string, error) {
-	resp, err := c.http.Get(c.baseURL + "/object_info/CheckpointLoaderSimple")
+func (c *Client) ListCheckpoints() ([]string, error) {	resp, err := c.http.Get(c.baseURL + "/object_info/CheckpointLoaderSimple")
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +113,69 @@ func (c *Client) ListCheckpoints() ([]string, error) {
 		return nil, nil
 	}
 	names, _ := ckptName[0].([]any)
+	result := make([]string, 0, len(names))
+	for _, v := range names {
+		if s, ok := v.(string); ok {
+			result = append(result, s)
+		}
+	}
+	return result, nil
+}
+
+// UploadImage uploads a local image file to ComfyUI's input directory.
+// Returns the filename ComfyUI assigned it (use in LoadImage nodes).
+func (c *Client) UploadImage(localPath string) (string, error) {
+	f, err := os.Open(localPath)
+	if err != nil {
+		return "", fmt.Errorf("open %s: %w", localPath, err)
+	}
+	defer f.Close()
+
+	body := &bytes.Buffer{}
+	w := multipart.NewWriter(body)
+	part, err := w.CreateFormFile("image", filepath.Base(localPath))
+	if err != nil {
+		return "", err
+	}
+	if _, err := io.Copy(part, f); err != nil {
+		return "", err
+	}
+	w.Close()
+
+	resp, err := c.http.Post(c.baseURL+"/upload/image", w.FormDataContentType(), body)
+	if err != nil {
+		return "", fmt.Errorf("upload: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("upload %d: %s", resp.StatusCode, b)
+	}
+	var result struct {
+		Name string `json:"name"`
+	}
+	return result.Name, json.NewDecoder(resp.Body).Decode(&result)
+}
+
+// ListControlNets returns filenames of installed ControlNet models.
+func (c *Client) ListControlNets() ([]string, error) {
+	resp, err := c.http.Get(c.baseURL + "/object_info/ControlNetLoader")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var info map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+		return nil, err
+	}
+	node, _ := info["ControlNetLoader"].(map[string]any)
+	input, _ := node["input"].(map[string]any)
+	required, _ := input["required"].(map[string]any)
+	cnName, _ := required["control_net_name"].([]any)
+	if len(cnName) == 0 {
+		return nil, nil
+	}
+	names, _ := cnName[0].([]any)
 	result := make([]string, 0, len(names))
 	for _, v := range names {
 		if s, ok := v.(string); ok {

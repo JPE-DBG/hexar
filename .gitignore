@@ -22,6 +22,7 @@ playwright-report/
 # copilot exported chat history
 .chat_history/
 .claude/settings.local.json
+.claude/settings.json
 
 # compiled binaries windows
 *.exe
