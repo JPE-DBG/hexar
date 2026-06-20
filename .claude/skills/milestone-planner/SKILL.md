@@ -6,20 +6,26 @@ type: skill
 
 # Milestone Planner Skill — Hexar Feature Planning
 
-Plans and sequences future Hexar features. M1–M9 are complete and deployed. This skill is for evaluating and ordering post-MVP work.
+Plans and sequences Hexar features during the active deck-building combat redesign. MVP1 (Power Gate) is frozen on `release_mvp_1`. Active work is on `mvp_fix_combat_2026_06_13`.
 
-**Prerequisites:** Read CLAUDE.md "Open Questions & Future Work" and "Current Status" sections first.
+**Prerequisites:** Read CLAUDE.md "Current Status" and "Open Questions" sections first.
 
 ---
 
 ## Context: Current State
 
-- M1–M9 complete and deployed to Fly.io
+- **MVP1** complete and frozen on `release_mvp_1` branch (deployed to Fly.io)
+- **Active branch** `mvp_fix_combat_2026_06_13`: deck-building combat redesign in progress
 - Stack: Go server + TypeScript client, WebSocket, Fly.io deployment, GitHub Actions CI/CD
-- Tests: 3 layers — Go unit tests (`internal/game/`), room integration (`internal/room/`), Playwright E2E (`e2e/`)
+- Tests: Go unit tests (`internal/game/`), room integration (`internal/room/`), Playwright E2E (`e2e/`) — game tests not yet written for new system
 - All decisions and architecture are documented in CLAUDE.md
 
-**Source of truth:** CLAUDE.md (this file). Do not create a separate MILESTONES.md — it duplicates content and drifts. Record milestone info in git commit messages if tracking is valuable.
+**Implementation progress (check CLAUDE.md Current Status for latest):**
+- Design spec, CLAUDE.md rewrite, UI layout spec: done
+- Old game logic deleted, new Go structs stubbed, compiles: done
+- Core backend (bar, deck, units, win), shop, client: pending
+
+**Source of truth:** CLAUDE.md (this file). Do not create a separate MILESTONES.md.
 
 ---
 
@@ -27,9 +33,9 @@ Plans and sequences future Hexar features. M1–M9 are complete and deployed. Th
 
 ### 1. Load Context from CLAUDE.md
 
-- Read "Open Questions & Future Work" — what's already identified as next
-- Read "Known Issues" — are there blockers that need fixing before new features?
-- Read "Balance Rules" and "Game Rules" for the mechanic context of any feature being added
+- Read "Current Status" implementation table — what's done, what's pending
+- Read "Open Questions" — what's TBD that might block a feature
+- Read "Game Rules" for the mechanic context of any feature being added
 - Check "Rejected Alternatives" — don't re-litigate settled decisions
 
 ### 2. Define the Feature Clearly
@@ -63,19 +69,48 @@ Group by milestone (1–2 weeks of solo work):
 
 ---
 
+## Remaining Implementation Sequence
+
+The implementation plan from CLAUDE.md, in dependency order:
+
+1. **Core backend** — bar fill, deck cycling, unit march, combat, capital damage, win condition
+   - `bar.go`, `deck.go`, `units.go`, `victory.go` already stubbed; needs full implementation + tests
+   - Done when: `go test ./internal/game/...` passes with all test cases from test-writer skill
+
+2. **Shop card pool design** — which cards, costs, quantities (design session, not code)
+   - Can run in parallel with core backend implementation
+   - Output: CLAUDE.md shop card pool section filled in
+   - Blocks shop backend implementation
+
+3. **Shop backend** — shared pool, BuyCard, card removal
+   - Blocked by: shop card pool design
+   - Done when: `shop_test.go` passes
+
+4. **Client rewrite** — state.ts, bar meter, deck panel, shop panel, unit token rendering
+   - Blocked by: core backend (needs DTOs to build against)
+   - Reference: `.claude/design/ui-layout-deck-building.md` for layout
+   - Done when: two browser tabs can claim hexes, deploy soldiers, and capital takes damage
+
+5. **Playtest core loop** — validate bar rate, deck cycle feel, soldier march speed
+   - Blocked by: client rewrite
+   - Output: adjusted constants in CLAUDE.md and constants.go
+
+6. **Shop integration** — add shop cards one at a time, playtest each
+   - Blocked by: playtest core loop + shop backend
+
+---
+
 ## Milestone Design Principles
 
 **Short milestones beat long ones.** Balance flaws found at week 1 are 10x cheaper than at week 4.
 
-**Update CLAUDE.md before implementing.** Design spec first, then code, then tests. Tests validate the spec, not the implementation.
-
-**Don't re-plan completed work.** M1–M9 history is in git. Focus on what's next.
+**Update CLAUDE.md before implementing.** Design spec first, then code, then tests.
 
 **Post-MVP sequencing priorities:**
-1. Balance/playtesting gaps first (these can invalidate subsequent features)
-2. Known issues that block player experience
-3. Tech debt that creates friction for future features
-4. New mechanics that expand archetypes
+1. Core loop playability first (bar rate, soldier feel, capital HP)
+2. Shop card pool design — needed before shop can be built
+3. Shop implementation
+4. Polish and additional card types
 
 ---
 
@@ -106,3 +141,4 @@ Group by milestone (1–2 weeks of solo work):
 - **Mark risks honestly.** Every feature should name what could go wrong.
 - **CLAUDE.md first.** If a feature changes game rules, write the spec in CLAUDE.md before writing code.
 - **One test layer per feature.** Don't add Playwright for something fully covered by Go unit tests.
+- **Check open questions.** If a TBD in CLAUDE.md blocks this feature, resolve it first.

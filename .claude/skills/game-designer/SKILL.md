@@ -16,10 +16,10 @@ On-demand skill for **qualitative** design iteration: finding broken interaction
 
 Design issues in Hexar typically emerge from **playtesting, not upfront analysis**. They arrive as:
 - `BUG: [observed behavior] / [expected behavior]` — often contains an implicit design decision
-- Rename or relabel requests that reveal a conceptual mismatch ("Economy → Gold")
+- Rename or relabel requests that reveal a conceptual mismatch
 - Formula corrections discovered after seeing the wrong number in the UI
 
-When a BUG report contains an embedded design decision (e.g., "i dont want to differentiate between placing building and upgrading"), treat it as both a code fix AND a design change: implement the fix, then update CLAUDE.md to reflect the new rule before moving on.
+When a BUG report contains an embedded design decision, treat it as both a code fix AND a design change: implement the fix, then update CLAUDE.md to reflect the new rule before moving on.
 
 Formal `/game-designer` invocations are for proactive analysis when the user wants to stress-test a mechanic before building it, not for responding to play-discovered issues.
 
@@ -33,7 +33,7 @@ Formal `/game-designer` invocations are for proactive analysis when the user wan
 - Identify which mechanic/system the user wants examined.
 
 ### 2. Identify Issues (Qualitative)
-- Look for **broken interactions** between systems (e.g., two techs that cancel each other)
+- Look for **broken interactions** between systems
 - Find **dead strategies** (options no rational player would ever pick)
 - Spot **dominant strategies** (options that are always optimal regardless of opponent)
 - Check for **undefined behavior** (what happens when X meets Y?)
@@ -44,7 +44,7 @@ For each mechanic, ask:
 - Does this create meaningful player decisions? (If one choice is always better, it's fake)
 - Does this interact with other systems in interesting ways? (Isolated mechanics add complexity without depth)
 - Can the opponent counterplay? (No counterplay = frustrating, not fun)
-- Does this fit the 30-minute session target? (Mechanics that matter at minute 45 are dead weight)
+- Does this fit the ~15-minute session target? (Mechanics that matter at minute 20 are dead weight)
 
 ### 4. Present Findings
 Use the output format below. Always show:
@@ -64,9 +64,11 @@ Use the output format below. Always show:
 - "Find mechanics that don't create meaningful decisions"
 - "Which strategies are dominant / which are dead?"
 - "What interactions between systems are undefined?"
-- "Stress-test [specific mechanic] against degenerate play"
-- "Review all victory conditions for achievability and counterplay"
-- "What does a player do if they're losing at minute 15?"
+- "Stress-test the aside slot against degenerate play"
+- "What happens if a player only buys cards and never plays them?"
+- "Review all edge cases for deck lockout prevention"
+- "What does a player do if they're losing at minute 10?"
+- "Is there any combo between cards that breaks the single-resource model?"
 
 ---
 
@@ -99,9 +101,11 @@ Option B: [Alternative]
 - **Complexity without depth:** A rule that's hard to learn but doesn't create interesting play
 - **Unfun counterplay:** "The only counter to X is to also do X"
 - **Win-more mechanics:** Strong players get stronger, weak players get weaker
-- **Unresolvable stalemates:** Two players can lock each other out indefinitely
+- **Unresolvable stalemates:** Two players can lock each other out indefinitely (this was the MVP1 Power Gate failure mode)
 - **Too-early wins:** Victory conditions achievable before the "interesting phase" of the game
 - **Dead features:** Mechanics that never trigger in realistic play
+- **Deck bloat trap:** Buying cards always feels good but large decks make the game worse — players must be able to identify when NOT to buy
+- **Aside slot abuse:** Holding one card in aside forever as a "panic button" — is this intended or a dominant strategy?
 
 ---
 
@@ -111,3 +115,4 @@ Option B: [Alternative]
 - Focus on qualitative design health, not numeric precision
 - When a finding requires exact math to prove, hand off to `/balance-sim`
 - Design changes should be minimal — fix the problem, don't redesign adjacent systems
+- The single-resource model (bar only) is a deliberate simplification — do not propose adding a second resource

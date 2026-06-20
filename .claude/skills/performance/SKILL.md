@@ -16,10 +16,10 @@ Diagnoses and fixes performance issues in Hexar across three layers: Go server (
 
 | Layer | Budget | Current state | Break point |
 |---|---|---|---|
-| Go tick loop | < 5ms per tick (100ms interval) | Lightweight | Breaks if RunTick O(n²) on hex count |
-| Delta message | < 500 bytes steady state | ~300-400 bytes | Breaks at 4-player or large maps |
-| Canvas render (game state) | < 16ms at 100ms intervals | Fine at 70 hexes | Breaks with particle effects |
-| rAF animation loop | < 16ms every frame (60fps) | Not yet implemented | Will matter once effects added |
+| Go tick loop | < 5ms per tick (100ms interval) | Lightweight | Breaks if RunTick O(n²) on unit count |
+| Delta message | < 500 bytes steady state | TBD (client not yet built) | Breaks at 4-player or many units |
+| Canvas render (game state) | < 16ms at 100ms intervals | Fine at 70 hexes | Breaks with many unit tokens + effects |
+| rAF animation loop | < 16ms every frame (60fps) | Not yet implemented | Will matter once unit march effects added |
 | WebSocket round-trip | < 100ms | Fine on LAN | Matters for remote players |
 
 ---
@@ -33,11 +33,11 @@ Diagnoses and fixes performance issues in Hexar across three layers: Go server (
 | Symptom | Likely layer |
 |---|---|
 | Game state updates feel laggy (>100ms stale) | Go tick loop or WebSocket |
-| Animations stutter even when game state is fine | Canvas rAF loop |
+| Unit tokens stutter even when game state is fine | Canvas rAF loop |
 | High CPU in browser, game responsive | Canvas over-drawing |
 | High CPU in Go process | RunTick hot path or GC |
-| Delta messages growing over time | Delta diff logic, hex state accumulation |
-| Memory grows indefinitely | Goroutine leak or slice append without cap |
+| Delta messages growing over time | Player/unit list serialization |
+| Memory grows indefinitely | Goroutine leak or unit slice append |
 
 ### 2. Profiling: Go Server
 
@@ -59,7 +59,7 @@ import _ "net/http/pprof"
 
 Key things to look for:
 - `game.RunTick` — should be < 1ms per call
-- `json.Marshal` in `client.SendSnapshot` — can be hot if called every tick for many clients
+- `json.Marshal` in `client.SendSnapshot` — hot if many clients or large unit lists
 - `runtime.GC` — if > 5% of CPU, you have allocation pressure in the hot path
 
 ### 3. Profiling: Canvas Renderer
@@ -69,7 +69,7 @@ Open Chrome DevTools → Performance → Record 5 seconds of gameplay.
 Look for:
 - **Long tasks (> 50ms)** in the main thread during game renders
 - **Forced reflows** — reading layout properties after DOM writes in the same frame
-- **Canvas `drawImage` or `fillRect` call count** — should scale linearly with hex count, not quadratically
+- **Canvas `drawImage` or `fillRect` call count** — should scale linearly with hex+unit count
 - **`requestAnimationFrame` callback duration** — must stay < 16ms
 
 Quick Canvas profiling in code:
@@ -89,51 +89,65 @@ if _, isDelta := msg.(*DeltaMsg); isDelta && len(data) > maxDeltaBytes {
 }
 ```
 
+**What's always included in deltas (intentional — they change every tick):**
+- Players (bar, deck, BarBoosts) — continuously changing
+- Units (all units, all positions) — moves and dies every tick; empty list correctly clears client
+- Elapsed — always changes
+
+**What's diffed (only sent when changed):**
+- Hex changes (owner, HasBuilding) — sparse in steady state
+
 If deltas are growing:
-- **Players always included** — intentional, they change every tick (gold/TP)
-- **Battles always included** — intentional, timers change every tick
-- **Hex changes** — should be near zero in a static board; spike during combat is expected
+- **Many units on screen** — unit list scales linearly with active soldiers; expected spike during pushes
+- **Deck serialization** — 7–20 cards with type IDs; should be small
+- **BarBoosts array** — only grows when +15% cards are active; bounded
 
 Optimisation options if needed (in order of impact):
 1. **MessagePack** instead of JSON — 40-60% size reduction, no schema change needed
-2. **Omit unchanged player fields** — only send gold/TP/vanguardTimer when they change
-3. **Quantise floats** — gold to 1 decimal, timers to 2 decimals (already reasonable)
+2. **Omit BarBoosts when empty** — only send boosts array when at least 1 is active
+3. **Quantise bar** — send bar to 2 decimal places (already reasonable)
 
 ### 5. Canvas vs PixiJS Decision
 
 Migrate to PixiJS **only if:**
 - rAF loop consistently > 12ms with effects enabled (measured, not estimated)
-- You need effects that require GPU: particle systems, shaders, glow filters, fog of war
-- Canvas `drawImage` on a 70-hex board is measurably slow (it won't be)
+- You need effects that require GPU: particle systems, shaders, glow filters
+- Canvas is measurably slow on the 70-hex board + unit tokens (it won't be)
 
 Stay on Canvas if:
-- Adding gradients and border glow only (CSS-style operations, fine on Canvas)
-- Effect layer is limited to capture flash + floating numbers
+- Unit token rendering is a circle + letter + HP dots — trivial Canvas ops
+- Effect layer is limited to pulse rings and bar fill animations
 - Performance budget is met
 
-Migration cost: ~500 lines rewrite of `client/src/render/renderer.ts`. Only justified by a profiling result, not anticipated need.
+Migration cost: ~500 lines rewrite of `client/src/render/renderer.ts`. Only justified by a profiling result.
 
 ### 6. Common Hexar-Specific Bottlenecks
 
-**Hot path allocation in RunTick:**
+**Hot path allocation in RunTick — unit slice operations:**
 ```go
-// Bad: allocates slice every tick
-func (r *Room) drainActions() []game.Action {
-    var pending []game.Action  // new alloc every call
-    ...
-}
+// Bad: allocates new slice every tick in removeDeadUnits
+alive := make([]*Unit, 0, len(state.Units))
 
-// Better: pre-allocate with expected capacity
-pending := make([]game.Action, 0, 16)
+// Better: reuse slice backing with [:0]
+alive := state.Units[:0]
+for _, u := range state.Units {
+    if u.HP > 0 { alive = append(alive, u) }
+}
+state.Units = alive
 ```
+(This is already the pattern in `units.go` — verify it stays this way.)
+
+**Unit march animation blocking game state:**
+- Unit positions update every 2 seconds in game state (1 hex / SoldierMovePeriod)
+- Visual march must be a client-side interpolation between positions, not tied to server ticks
+- Never use server tick timing to drive CSS/canvas animations — they're independent loops
 
 **Canvas over-drawing:**
-- Only redraw hexes that changed (dirty rect tracking)
 - Skip rendering when `state.Waiting = true` or `state.Paused = true` — board doesn't change
+- Only redraw unit tokens that moved since last frame
 
 **Goroutine leak — room never stopped:**
 ```go
-// Verify rooms are cleaned up
 // After game over, r.Stop() must be called or the ticker goroutine leaks
 ```
 
@@ -151,7 +165,7 @@ pending := make([]game.Action, 0, 16)
 - [ ] Change is isolated to one variable
 
 ### Go Server
-- [ ] `RunTick` completes in < 1ms on a 70-hex board
+- [ ] `RunTick` completes in < 1ms on a 70-hex board with 10+ active units
 - [ ] No allocation in the tick hot path (use `go test -benchmem`)
 - [ ] No goroutine leaks after game over (check pprof goroutine endpoint)
 - [ ] Delta messages < 500 bytes steady state (existing log covers this)
@@ -161,6 +175,7 @@ pending := make([]game.Action, 0, 16)
 - [ ] rAF animation loop < 16ms per frame
 - [ ] No forced reflows in render path
 - [ ] Static board (pause/waiting) skips unnecessary redraws
+- [ ] Unit march is visual interpolation — never blocks on server tick
 
 ---
 
@@ -169,5 +184,5 @@ pending := make([]game.Action, 0, 16)
 - **Measure first, always.** "This might be slow" is not a reason to optimise.
 - **One change at a time.** Two changes = you don't know which one helped.
 - **The 500-byte delta budget is the server performance KPI.** If it's met, the server is fine.
-- **Canvas is fast enough for 70 hexes.** Don't pre-emptively migrate to PixiJS — wait for a measured reason.
+- **Canvas is fast enough for 70 hexes + 20 unit tokens.** Don't pre-emptively migrate to PixiJS — wait for a measured reason.
 - **GC pressure matters in Go.** Allocating in the tick hot path (called 10/sec) accumulates. Use benchmarks with `-benchmem` to catch it.

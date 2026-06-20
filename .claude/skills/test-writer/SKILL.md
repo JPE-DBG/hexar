@@ -47,11 +47,12 @@ TypeScript          → Type checking (not behavioral tests)
 `RunTick(state *GameState, dt float64, actions []Action)` — pure function, no I/O, deterministic.
 
 ```go
-func TestEconomyTick(t *testing.T) {
-    state := buildMinimalState() // helper in same file or shared helpers
+func TestBarAccrual(t *testing.T) {
+    state := buildMinimalState()
     game.RunTick(state, 0.1, nil)
-    if state.Players[pid1].Gold < 0.2 { // 2/sec × 0.1s = 0.2
-        t.Errorf("gold not accruing correctly")
+    // 0.1 bar/sec × 0.1s = 0.01 per tick, per player
+    if state.Players[pid1].Bar < 0.009 {
+        t.Errorf("bar not accruing correctly")
     }
 }
 ```
@@ -59,33 +60,41 @@ func TestEconomyTick(t *testing.T) {
 ### Table-Driven Tests (Standard Pattern)
 
 ```go
-func TestAttackValidation(t *testing.T) {
+func TestPlayTopCard(t *testing.T) {
     tests := []struct {
-        name    string
-        setup   func(*game.GameState)
-        action  game.Action
-        wantErr error
+        name      string
+        setup     func(*game.GameState)
+        wantBar   float64
+        wantDeck  int // expected deck length after play
     }{
         {
-            name:    "insufficient power",
-            setup:   func(s *game.GameState) { /* attacker P1, defender P2 */ },
-            action:  game.Action{Type: game.ActionAttack, Player: 1, Target: game.Hex{Q: 1, R: 0}},
-            wantErr: game.ErrInsufficientPower,
+            name: "soldier costs 2 bar",
+            setup: func(s *game.GameState) {
+                s.Players[pid1].Bar = 3.0
+                s.Players[pid1].Deck.Cards = []game.Card{{Type: game.CardBasicSoldier}}
+            },
+            wantBar:  1.0,
+            wantDeck: 1, // card cycles to bottom
         },
         {
-            name:    "insufficient gold",
-            setup:   func(s *game.GameState) { /* attacker has 50g, needs 100g */ },
-            action:  game.Action{Type: game.ActionAttack, Player: 1, Target: game.Hex{Q: 1, R: 0}},
-            wantErr: game.ErrInsufficientGold,
+            name: "insufficient bar does nothing",
+            setup: func(s *game.GameState) {
+                s.Players[pid1].Bar = 1.0
+                s.Players[pid1].Deck.Cards = []game.Card{{Type: game.CardBasicSoldier}}
+            },
+            wantBar:  1.0,
+            wantDeck: 1, // card stays at top
         },
     }
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             state := buildMinimalState()
             tt.setup(state)
-            err := game.ValidateAttack(state, tt.action)
-            if err != tt.wantErr {
-                t.Errorf("got %v, want %v", err, tt.wantErr)
+            game.RunTick(state, 0.0, []game.Action{
+                {Type: game.ActionPlayTopCard, Player: pid1},
+            })
+            if state.Players[pid1].Bar != tt.wantBar {
+                t.Errorf("bar: got %.2f, want %.2f", state.Players[pid1].Bar, tt.wantBar)
             }
         })
     }
@@ -97,25 +106,34 @@ func TestAttackValidation(t *testing.T) {
 Each test file builds its own minimal state. There is no shared `testhelpers_test.go` — helpers are local to the test file that needs them.
 
 ```go
+const (
+    pid1 = game.Player1
+    pid2 = game.Player2
+)
+
 func buildMinimalState() *game.GameState {
-    state := &game.GameState{
-        Players: make(map[game.PlayerID]*game.Player),
-        Hexes:   make(map[game.Hex]*game.HexState),
-    }
-    // add capital hexes, players with gold
+    state := game.NewGameState()
+    // Capital hexes
+    cap1 := game.Hex{Q: -4, R: 0}
+    cap2 := game.Hex{Q: 4, R: 0}
+    state.Hexes[cap1] = &game.HexState{Owner: pid1, Capital: true}
+    state.Hexes[cap2] = &game.HexState{Owner: pid2, Capital: true}
+    // Players with starting deck
+    state.Players[pid1] = game.NewPlayer(pid1)
+    state.Players[pid2] = game.NewPlayer(pid2)
     return state
 }
 ```
 
 ### Calling Unexported Functions
 
-`package game` tests can call unexported functions directly (same package). Useful for testing selection algorithms without engineering complex RunTick scenarios:
+`package game` tests can call unexported functions directly (same package). Useful for testing internal helpers:
 
 ```go
-// autoDropLowestHex is unexported — call directly to test selection algorithm
-dropped := autoDropLowestHex(state, pid)
-if dropped.Q != expectedQ {
-    t.Errorf("wrong hex dropped: got %v", dropped)
+// cycleTopCard is unexported — call directly to test deck cycling
+cycleTopCard(p)
+if p.Deck.Cards[0].Type != game.CardHexClaim {
+    t.Errorf("wrong card at top after cycle")
 }
 ```
 
@@ -131,17 +149,15 @@ func runTicks(state *game.GameState, n int, actions ...game.Action) {
 }
 ```
 
-### Existing Tests
+### Test Files and Coverage (What to Write)
 
-| File | What it covers |
+| File | Test cases |
 |---|---|
-| `action_test.go` | Counter-spend cap/time-cap/flip; tech unlock via action; voluntary drop clears auto-drop flag |
-| `building_test.go` | Upgrade mechanics, costs, demolish refunds |
-| `economy_test.go` | Gold accrual, stepped maintenance, Prosperity + Compound Growth formula |
-| `combat_test.go` | Attack validation, battle resolution, instant takeover |
-| `tech_test.go` | Tech unlock, Reclamation + Vanguard 0g attack cost |
-| `victory_test.go` | Capital capture → WinReason "capital"; forfeit → WinReason "forfeit" |
-| `autodrop_test.go` | Grace period, forced drop, refund, Resilience, selection algorithm, protected hexes |
+| `bar_test.go` | Bar accrues at 0.1/tick; caps at 10; bar deducted on PlayTopCard; BarBoost ticks down; stacking two BarBoosts adds rates correctly |
+| `deck_test.go` | Play from top cycles card to bottom; aside slot blocks on push; aside card plays and goes to bottom; cannot push when slot occupied; auto-cycle timer moves stuck card to bottom; starting deck initialized with correct 7 cards; CardCost returns correct costs |
+| `units_test.go` | Unit spawns at capital hex; unit advances toward enemy capital each move tick; 1v1 combat both die after 2s; 2v1 correct HP after fight; unit consumed on capital contact; capital HP decrements; dead units removed from list |
+| `shop_test.go` | BuyCard deducts bar; bought card goes to bottom of deck; shared pool quantity decrements; second player blocked when quantity 0; RemoveTopCard removes card from deck; RemoveAsideCard removes aside card |
+| `victory_test.go` | Capital at 0 HP sets WinReason "capital"; damage is permanent between ticks; forfeit sets WinReason "forfeit" |
 
 Run: `go test ./internal/game/...`
 
@@ -159,40 +175,33 @@ Run: `go test ./internal/game/...`
 ### Fake Client
 
 ```go
-type fakeClient struct {
-    msgs [][]byte
-    mu   sync.Mutex
+type MockClientSender struct {
+    mu        sync.Mutex
+    snapshots []*game.GameState
 }
 
-func (f *fakeClient) Send(b []byte) error {
-    f.mu.Lock()
-    defer f.mu.Unlock()
-    f.msgs = append(f.msgs, b)
-    return nil
+func (m *MockClientSender) SendSnapshot(state *game.GameState) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    m.snapshots = append(m.snapshots, state)
 }
-
-func (f *fakeClient) Close() {}
 ```
 
 ### Room Integration Test Pattern
 
 ```go
 func TestPauseOnDisconnect(t *testing.T) {
-    r := newTestRoom()
-    c1, c2 := &fakeClient{}, &fakeClient{}
+    r := New()
+    c1, c2 := &MockClientSender{}, &MockClientSender{}
 
     r.OnConnect(c1, pid1)
     r.OnConnect(c2, pid2)  // starts the loop
 
+    time.Sleep(150 * time.Millisecond)
     r.OnDisconnect(pid1, c1)
-    time.Sleep(150 * time.Millisecond) // 1-2 tick durations
 
-    state := r.State()
-    if !state.Paused {
+    if !r.state.Paused {
         t.Error("expected game to be paused after disconnect")
-    }
-    if state.PauseTimeLeft < 119.0 {
-        t.Errorf("PauseTimeLeft too low: %v", state.PauseTimeLeft)
     }
 }
 ```
@@ -209,7 +218,7 @@ Room tests need real `time.Sleep` because the loop goroutine is real. Keep sleep
 | Test | What it asserts |
 |---|---|
 | `TestWaitingState` | `Waiting=true` until 2nd player; `Waiting=false` on 2nd connect |
-| `TestWaitingStateNoGoldAccrual` | Gold unchanged while waiting |
+| `TestWaitingStateNoBarAccrual` | Bar unchanged while waiting |
 | `TestPauseOnDisconnect` | `state.Paused=true`; `PauseTimeLeft` ≈ 120s |
 | `TestUnpauseOnReconnect` | `state.Paused=false`; grace saved to `remainingGrace` |
 | `TestCumulativeGrace` | 2nd disconnect uses saved grace, not reset to 120s |
@@ -225,7 +234,7 @@ Run: `go test ./internal/room/...`
 
 ### When to Add E2E Tests
 
-Add E2E for: new tech (player behavior changes), disconnect/reconnect flows, new UI screens, new responsive layouts. Skip E2E for: game logic (covered by Go), serialization (thin layer).
+Add E2E for: disconnect/reconnect flows, new UI screens, new responsive layouts, full game flow changes. Skip E2E for: game logic (covered by Go), serialization (thin layer).
 
 ### Setup
 
@@ -248,49 +257,32 @@ test('pause banner appears on opponent disconnect', async ({ browser }) => {
   const p1 = await ctx1.newPage();
   const p2 = await ctx2.newPage();
 
-  // create game with p1
   await p1.goto('http://localhost:5173');
   await p1.click('#create-btn');
   const code = await p1.locator('#room-code').textContent();
 
-  // join with p2
   await p2.goto('http://localhost:5173');
   await p2.fill('#join-code', code!);
   await p2.click('#join-btn');
 
-  // wait for game to start
   await p1.waitForSelector('#hud');
   await p2.waitForSelector('#hud');
 
-  // disconnect p2
   await p2.close();
 
-  // p1 should see pause banner
   await expect(p1.locator('#pause-banner')).toBeVisible();
 });
 ```
 
-### Responsive Layout Testing
+### E2E Tests to Write (Client Not Yet Built)
 
-```typescript
-test('mobile portrait layout', async ({ browser }) => {
-  const ctx = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-  });
-  const page = await ctx.newPage();
-  // ... join game, verify sidebar at bottom
-  await expect(page.locator('#sidebar')).toHaveCSS('bottom', '0px');
-});
-```
-
-### Existing Specs
+Once the client is implemented, priority E2E specs:
 
 | Spec | Tests |
 |---|---|
 | `lobby.spec.ts` | Create shows 4-char code; join with bad code errors; waiting overlay; HUD on P2 join |
-| `gameplay.spec.ts` | Canvas visible; gold increases; sidebar visible |
+| `gameplay.spec.ts` | Canvas visible; bar meter fills; deck panel shows top card; SPACE plays top card; E pushes to aside |
 | `connection.spec.ts` | Duplicate tab → "Already Connected"; URL hash reconnects; pause banner on disconnect |
-| `responsive.spec.ts` | Desktop/mobile portrait/landscape layout verification |
 
 Run: `make test-e2e`
 
@@ -308,9 +300,8 @@ cd client && npx tsc --noEmit
 
 **Common type errors after DTO changes:**
 - Adding optional `?` fields to `PlayerDTO` in `state.ts` → downstream code using them without `?? 0` null coalescing will fail
-- Changing `battles` in `DeltaMsg` from required to optional → code accessing `msg.battles` directly (not `msg.battles ?? state.battles`) will have type issues
-
-**Type safety rule for optional fields:** Fields that can be absent from delta but are always present on the full client `GameState` interface must use null coalescing at the merge point in `applyDelta`. Never use `!` non-null assertions on optional DTO fields.
+- Changing `units` list — always present, never optional; code accessing it directly is safe
+- DeckDTO fields (cards, asideCard, autoTimer) — asideCard can be null; code must handle `null` not just `undefined`
 
 ---
 

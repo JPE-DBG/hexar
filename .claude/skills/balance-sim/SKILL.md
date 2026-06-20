@@ -20,9 +20,9 @@ Runs traced, step-by-step numeric simulations using **exact current CLAUDE.md va
 - List the constants used at the top of your output so the user can verify.
 
 ### 2. Define Simulation Parameters
-- What scenario is being tested? (e.g., "time to reach Tech Level 4 with 3 Research buildings")
-- What are the initial conditions? (starting hexes, gold, time)
-- What assumptions are made? (player behavior, expansion rate, opponent interference)
+- What scenario is being tested? (e.g., "time to play Basic Soldier if starting bar = 0")
+- What are the initial conditions? (starting bar, deck order, card costs)
+- What assumptions are made? (player plays top card immediately when affordable, etc.)
 
 ### 3. Run Step-by-Step Trace
 - Show every intermediate value — not just final results.
@@ -44,35 +44,41 @@ Runs traced, step-by-step numeric simulations using **exact current CLAUDE.md va
 
 ## Common Simulation Types
 
-### Economy Projection
-Trace gold accumulation over time for a given expansion/building strategy.
-- Input: expansion rate, building placement timing, tech unlocks
-- Output: gold/sec and total gold at key time points
-- Validate: can player afford key actions at intended time?
+### Bar Accrual
+Trace bar over time for a given strategy.
+- Input: starting bar, fill rate (base + active boosts), elapsed time
+- Output: bar at key time points
+- Validate: can player afford key cards at intended time?
 
-### Upgrade Payoff (Break-Even)
-Calculate how long until an upgrade pays for itself.
-- Input: upgrade cost, income delta from upgrade
-- Output: break-even time in seconds
-- Validate: is break-even fast enough to matter in a 30-min game?
+### Deck Cycle Time
+How long until a given card comes back to the top after being played.
+- Input: deck size, card costs, bar fill rate
+- Output: seconds per full cycle
+- Validate: does a 7-card starting deck cycle in a reasonable window?
 
-### Maintenance Threshold
-Trace at what hex count income goes negative (auto-drop trigger).
-- Input: number of hexes, number/level of Economy buildings
-- Output: exact hex count where net income ≤ 0
-- Validate: does it match CLAUDE.md's claimed threshold?
+### Auto-Cycle Timer Impact
+When does the stuck-card timer fire relative to bar recovery?
+- Input: DeckAutoCycleTimer, card cost, current bar, bar fill rate
+- Output: does the timer fire before the player can afford the card?
+- Validate: is the lockout timer a help (moves unaffordable cards) or a problem (moves cards just as they become affordable)?
 
-### TP Timeline
-Calculate time to reach specific Tech Levels.
-- Input: number of Research buildings, their levels, start time
-- Output: time to unlock each tech tier
-- Validate: is Tech Dominance achievable in the intended time window?
+### Combat Duration
+Given unit stats, how long does a fight last?
+- Input: HP, attack power, attack period for each side, unit count
+- Output: time until one side is eliminated, surviving HP
+- Validate: matches the design description in CLAUDE.md combat section
 
-### Battle Outcome Matrix
-Given Power values, enumerate all possible outcomes including counter-spend.
-- Input: attacker Power, defender Power, Garrison status
-- Output: result (fail/standard/instant), battle duration, counter-spend options
-- Validate: do battles resolve in intended time frame?
+### Capital Kill Time
+Given a steady stream of soldiers, how long to reduce capital to 0 HP?
+- Input: soldiers per minute (derived from bar fill / soldier cost / deck cycle), capital HP
+- Output: minimum time to win
+- Validate: is this achievable in the ~15-min target game?
+
+### Bar Speed Card ROI
+Does a +15% bar speed card pay back its bar cost within its duration?
+- Input: base bar fill rate, BarSpeedBonus, BarSpeedDuration, card cost
+- Output: net bar gain over duration vs cost paid
+- Validate: is it a net positive? By how much?
 
 ---
 
@@ -106,45 +112,33 @@ Given Power values, enumerate all possible outcomes including counter-spend.
 ## Quick Reference (verify against CLAUDE.md — these may be outdated)
 
 ```
-Economy:
-  Base income: 2/sec per hex
-  Maintenance: 1/sec (hexes 1-10), 2/sec (11-20), 3/sec (21+)
-  Net per hex: T1=+1/sec, T2=0/sec, T3=-1/sec (without Economy building)
-  Economy building: +50% bonus, formula = (base + 0.6 × level) × 1.5
-    L1=3.9/sec, L2=4.8/sec, L3=5.7/sec; delta +0.9/sec per level
-  Upgrade formula (all buildings): BuildCost × 2^currentLevel
-  Economy upgrade costs (BuildCost=60): L1=60, L2=120, L3=240, L4=480
-  Defense upgrade costs (BuildCost=60): L1=60, L2=120, L3=240, L4=480
-  Research upgrade costs (BuildCost=80): L1=80, L2=160, L3=320, L4=640
-  All demolish refund: BuildCost × (2^level - 1) × 0.5
-  No separate build action — upgrading empty hex to L1 costs BuildCost
+Bar:
+  Fill rate: 0.1 bar/sec (fixed — no territory or building bonus)
+  Scale: 0–10 (capped)
+  +15% Bar Speed card: +0.15/sec bonus for 15s (stacks additively)
+    At base rate: +15% = 0.115/sec; 2 active = 0.130/sec
+  +1 Bar Burst card: instant +1 bar (0 cost, free to play)
 
-Combat:
-  Unclaimed hex: 10 gold, instant
-  Enemy hex: 100 gold, battle
-  Battle duration: 5 + (Attacker Power + Defender Power) / 2 seconds
-  Counter-spend: 50 gold/sec, cap = min(+3, seconds_remaining)
-  Garrison shares counter-spend cap (+2 max from Garrison, +3 total)
-  Instant takeover: Power diff > 3
+Starting deck (7 cards):
+  ×2 Hex Claim: 1 bar each
+  ×2 +1 Bar Burst: 0 bar each
+  ×2 +15% Bar Speed: 1 bar each
+  ×1 Basic Soldier: 2 bar
 
-Tech (12 total, 460 TP to unlock all — no game unlocks everything):
-  Research buildings: +0.2 TP/sec per level
-  Blitz: 20 TP | Fortify: 20 TP | Prosperity: 25 TP | Reclamation: 25 TP
-  Vanguard: 30 TP | Garrison: 30 TP | War Chest: 30 TP | Supply Lines: 40 TP
-  Resilience: 45 TP | Iron Grip: 55 TP | Compound Growth: 65 TP | Siege Mastery: 75 TP
-  Tech bonuses:
-    Prosperity: +1.0/sec per Economy building (flat, after Compound Growth multiplier)
-    Compound Growth: Economy output ×1.25 (before Prosperity flat bonus)
-    Supply Lines: maintenance 0.9/1.8/2.7 per tier (vs 1.0/2.0/3.0)
-    Iron Grip: all owned hexes +1 Power (static, always-on)
-    Garrison: adjacent owned hexes +1 Power in defense, cap +2 (defense-battle only)
-    Reclamation: recapture own hex costs 50g (−50g)
-    Vanguard: after capture, next attack within 12s costs 50g (−50g)
-    Reclamation + Vanguard stack: 100 − 50 − 50 = 0g (free attack)
+Soldier:
+  Bar cost: 2 | HP: 2 | Attack: 1/sec | Move: 1 hex per 2 sec
+  1v1: both die after 2s
+  2v1: defender dies 1s; one attacker at 1 HP, one at 2 HP
 
-Victory:
-  Capital Capture only — capture the enemy capital hex to win instantly.
-  All loser hexes become unclaimed immediately.
+Capital:
+  HP: 20 | Damage per soldier contact: 1
+  Soldier vs capital: soldier consumed, capital −1 HP
+
+Deck auto-cycle: 5s (stuck top card moves to bottom after 5s)
+
+Shop:
+  Card removal cost: 5 bar (removes top or aside card permanently)
+  Shop card pool: TBD (not yet designed)
 ```
 
 ---
@@ -155,4 +149,4 @@ Victory:
 - **Show your work:** Every calculation visible, no "and therefore the result is X"
 - **No mechanic opinions:** If the problem is the mechanic design (not the number), say "hand off to /game-designer" and stop
 - **Precision:** Use exact values. Only round for display if stated explicitly
-- **Assumptions visible:** State all behavioral assumptions (e.g., "player expands 1 hex every 5 seconds")
+- **Assumptions visible:** State all behavioral assumptions (e.g., "player plays top card immediately when affordable")
