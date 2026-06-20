@@ -1,42 +1,20 @@
 package game
 
-func ForfeitPlayer(state *GameState, loser PlayerID) {
-	var winner PlayerID
-	for pid := range state.Players {
-		if pid != loser {
-			winner = pid
-			break
+func CheckVictory(state *GameState) {
+	for pid, p := range state.Players {
+		if p.CapitalHP <= 0 {
+			winner := opponentOf(pid)
+			triggerVictory(state, winner, "capital")
+			return
 		}
 	}
-	TriggerVictory(state, winner)
-	state.WinReason = "forfeit"
 }
 
-func TriggerVictory(state *GameState, winner PlayerID) {
+func triggerVictory(state *GameState, winner PlayerID, reason string) {
 	if state.Over {
 		return
 	}
 	state.Over = true
 	state.Winner = winner
-	state.WinReason = "capital"
-	for pid := range state.Players {
-		if pid == winner {
-			continue
-		}
-		for _, hs := range state.Hexes {
-			if hs.Owner == pid {
-				hs.Owner = NoPlayer
-				hs.Building = BuildingNone
-				hs.Level = 0
-				hs.Capital = false
-			}
-		}
-		remaining := state.Battles[:0]
-		for _, b := range state.Battles {
-			if b.Attacker != pid && b.Defender != pid {
-				remaining = append(remaining, b)
-			}
-		}
-		state.Battles = remaining
-	}
+	state.WinReason = reason
 }

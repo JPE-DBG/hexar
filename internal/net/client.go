@@ -83,8 +83,7 @@ func (c *Client) ReadPump(ctx context.Context) {
 			Action   string `json:"action"`
 			Q        int    `json:"q"`
 			R        int    `json:"r"`
-			Building string `json:"building"`
-			TechID   int    `json:"techId"`
+			CardType int    `json:"cardType"`
 		}
 		if json.Unmarshal(data, &raw) != nil {
 			continue
@@ -97,40 +96,24 @@ func (c *Client) ReadPump(ctx context.Context) {
 		var action game.Action
 
 		switch raw.Action {
-		case "claim":
-			action = game.Action{Type: game.ActionClaim, Player: c.playerID, Target: target}
-		case "upgrade":
-			bt := parseBuildingType(raw.Building)
-			action = game.Action{Type: game.ActionUpgrade, Player: c.playerID, Target: target, Building: bt}
-		case "demolish":
-			action = game.Action{Type: game.ActionDemolish, Player: c.playerID, Target: target}
-		case "attack":
-			action = game.Action{Type: game.ActionAttack, Player: c.playerID, Target: target}
-		case "counter-spend":
-			action = game.Action{Type: game.ActionCounterSpend, Player: c.playerID, Target: target}
-		case "unlock-tech":
-			action = game.Action{Type: game.ActionUnlockTech, Player: c.playerID, TechID: game.TechID(raw.TechID)}
-		case "drop-hex":
-			action = game.Action{Type: game.ActionDropHex, Player: c.playerID, Target: target}
-		case "fortify":
-			action = game.Action{Type: game.ActionFortify, Player: c.playerID, Target: target}
+		case "play-top":
+			action = game.Action{Type: game.ActionPlayTopCard, Player: c.playerID}
+		case "play-aside":
+			action = game.Action{Type: game.ActionPlayAsideCard, Player: c.playerID}
+		case "push-aside":
+			action = game.Action{Type: game.ActionPushAside, Player: c.playerID}
+		case "buy-card":
+			action = game.Action{Type: game.ActionBuyCard, Player: c.playerID, CardType: game.CardType(raw.CardType)}
+		case "remove-top":
+			action = game.Action{Type: game.ActionRemoveTopCard, Player: c.playerID}
+		case "remove-aside":
+			action = game.Action{Type: game.ActionRemoveAsideCard, Player: c.playerID}
+		case "claim-hex":
+			action = game.Action{Type: game.ActionClaimHex, Player: c.playerID, Target: target}
 		default:
 			continue
 		}
 
 		c.room.EnqueueAction(action)
-	}
-}
-
-func parseBuildingType(s string) game.BuildingType {
-	switch s {
-	case "gold":
-		return game.BuildingGold
-	case "power":
-		return game.BuildingPower
-	case "research":
-		return game.BuildingResearch
-	default:
-		return game.BuildingNone
 	}
 }

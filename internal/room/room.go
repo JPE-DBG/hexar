@@ -36,7 +36,7 @@ func New() *Room {
 	remainingGrace := make(map[game.PlayerID]float64, len(spawns))
 	for i, pos := range spawns {
 		pid := game.PlayerID(i + 1)
-		state.Players[pid] = &game.Player{ID: pid}
+		state.Players[pid] = game.NewPlayer(pid)
 		state.Hexes[pos].Owner = pid
 		state.Hexes[pos].Capital = true
 		remainingGrace[pid] = disconnectGrace.Seconds()

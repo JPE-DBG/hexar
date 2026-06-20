@@ -17,7 +17,7 @@ const (
 type DeltaMsg struct {
 	Type          MsgType      `json:"type"`
 	Players       []*PlayerDTO `json:"players"`
-	Battles       []*BattleDTO `json:"battles"`
+	Units         []*UnitDTO   `json:"units"`
 	Elapsed       float64      `json:"elapsed"`
 	Over          bool         `json:"over"`
 	Winner        int          `json:"winner,omitempty"`
@@ -34,17 +34,18 @@ type WelcomeMsg struct {
 }
 
 type ActionMsg struct {
-	Type   MsgType `json:"type"`
-	Action string  `json:"action"`
-	Q      int     `json:"q"`
-	R      int     `json:"r"`
+	Type     MsgType `json:"type"`
+	Action   string  `json:"action"`
+	Q        int     `json:"q"`
+	R        int     `json:"r"`
+	CardType int     `json:"cardType"`
 }
 
 type SnapshotMsg struct {
 	Type          MsgType               `json:"type"`
 	Hexes         map[string]*HexDTO    `json:"hexes"`
 	Players       map[string]*PlayerDTO `json:"players"`
-	Battles       []*BattleDTO          `json:"battles"`
+	Units         []*UnitDTO            `json:"units"`
 	Elapsed       float64               `json:"elapsed"`
 	Over          bool                  `json:"over"`
 	Winner        int                   `json:"winner"`
@@ -55,36 +56,43 @@ type SnapshotMsg struct {
 }
 
 type HexDTO struct {
-	Q             int     `json:"q"`
-	R             int     `json:"r"`
-	Owner         int     `json:"owner"`
-	Building      int     `json:"building"`
-	Level         int     `json:"level"`
-	Capital       bool    `json:"capital"`
-	FortifyTimer  float64 `json:"fortifyTimer"`
-	UpgradeTimer  float64 `json:"upgradeTimer"`
-	PreviousOwner int     `json:"previousOwner"`
+	Q           int  `json:"q"`
+	R           int  `json:"r"`
+	Owner       int  `json:"owner"`
+	Capital     bool `json:"capital"`
+	HasBuilding bool `json:"hasBuilding"`
+}
+
+type CardDTO struct {
+	Type int `json:"type"`
+}
+
+type BarBoostDTO struct {
+	Bonus    float64 `json:"bonus"`
+	TimeLeft float64 `json:"timeLeft"`
+}
+
+type DeckDTO struct {
+	Cards     []CardDTO `json:"cards"`
+	AsideCard *CardDTO  `json:"asideCard"`
+	AutoTimer float64   `json:"autoTimer"`
 }
 
 type PlayerDTO struct {
-	ID             int     `json:"id"`
-	Gold           float64 `json:"gold"`
-	TP             float64 `json:"tp"`
-	Tech           []bool  `json:"tech,omitempty"`
-	AutoDropActive bool    `json:"autoDropActive"`
-	AutoDropGrace  float64 `json:"autoDropGrace"`
-	VanguardTimer  float64 `json:"vanguardTimer"`
+	ID        int           `json:"id"`
+	Bar       float64       `json:"bar"`
+	BarBoosts []BarBoostDTO `json:"barBoosts"`
+	Deck      DeckDTO       `json:"deck"`
+	CapitalHP int           `json:"capitalHp"`
 }
 
-type BattleDTO struct {
-	AQ           int     `json:"aq"`
-	AR           int     `json:"ar"`
-	DQ           int     `json:"dq"`
-	DR           int     `json:"dr"`
-	TimeLeft     float64 `json:"timeLeft"`
-	Attacker     int     `json:"attacker"`
-	Defender     int     `json:"defender"`
-	CounterBoost int     `json:"counterBoost"`
+type UnitDTO struct {
+	ID    int `json:"id"`
+	Owner int `json:"owner"`
+	Type  int `json:"type"`
+	Q     int `json:"q"`
+	R     int `json:"r"`
+	HP    int `json:"hp"`
 }
 
 func BuildSnapshot(state *game.GameState) *SnapshotMsg {
@@ -92,7 +100,7 @@ func BuildSnapshot(state *game.GameState) *SnapshotMsg {
 		Type:          MsgSnapshot,
 		Hexes:         make(map[string]*HexDTO, len(state.Hexes)),
 		Players:       make(map[string]*PlayerDTO, len(state.Players)),
-		Battles:       make([]*BattleDTO, 0, len(state.Battles)),
+		Units:         make([]*UnitDTO, 0, len(state.Units)),
 		Elapsed:       state.Elapsed,
 		Over:          state.Over,
 		Winner:        int(state.Winner),
@@ -105,47 +113,58 @@ func BuildSnapshot(state *game.GameState) *SnapshotMsg {
 	for hex, hs := range state.Hexes {
 		key := hexKey(hex)
 		msg.Hexes[key] = &HexDTO{
-			Q:             hex.Q,
-			R:             hex.R,
-			Owner:         int(hs.Owner),
-			Building:      int(hs.Building),
-			Level:         hs.Level,
-			Capital:       hs.Capital,
-			FortifyTimer:  hs.FortifyTimer,
-			UpgradeTimer:  hs.UpgradeTimer,
-			PreviousOwner: int(hs.PreviousOwner),
+			Q:           hex.Q,
+			R:           hex.R,
+			Owner:       int(hs.Owner),
+			Capital:     hs.Capital,
+			HasBuilding: hs.HasBuilding,
 		}
 	}
 
 	for pid, p := range state.Players {
 		key := playerKey(pid)
-		tech := make([]bool, game.TechCount)
-		copy(tech, p.Tech[:])
-		msg.Players[key] = &PlayerDTO{
-			ID:             int(p.ID),
-			Gold:           p.Gold,
-			TP:             p.TP,
-			Tech:           tech,
-			AutoDropActive: p.AutoDropActive,
-			AutoDropGrace:  p.AutoDropGrace,
-			VanguardTimer:  p.VanguardTimer,
-		}
+		msg.Players[key] = playerToDTO(p)
 	}
 
-	for _, b := range state.Battles {
-		msg.Battles = append(msg.Battles, &BattleDTO{
-			AQ:           b.AttackerHex.Q,
-			AR:           b.AttackerHex.R,
-			DQ:           b.DefenderHex.Q,
-			DR:           b.DefenderHex.R,
-			TimeLeft:     b.TimeLeft,
-			Attacker:     int(b.Attacker),
-			Defender:     int(b.Defender),
-			CounterBoost: b.CounterBoost,
+	for _, u := range state.Units {
+		msg.Units = append(msg.Units, &UnitDTO{
+			ID:    u.ID,
+			Owner: int(u.Owner),
+			Type:  int(u.Type),
+			Q:     u.Pos.Q,
+			R:     u.Pos.R,
+			HP:    u.HP,
 		})
 	}
 
 	return msg
+}
+
+func playerToDTO(p *game.Player) *PlayerDTO {
+	cards := make([]CardDTO, len(p.Deck.Cards))
+	for i, c := range p.Deck.Cards {
+		cards[i] = CardDTO{Type: int(c.Type)}
+	}
+	var aside *CardDTO
+	if p.Deck.AsideCard != nil {
+		d := CardDTO{Type: int(p.Deck.AsideCard.Type)}
+		aside = &d
+	}
+	boosts := make([]BarBoostDTO, len(p.BarBoosts))
+	for i, b := range p.BarBoosts {
+		boosts[i] = BarBoostDTO{Bonus: b.Bonus, TimeLeft: b.TimeLeft}
+	}
+	return &PlayerDTO{
+		ID:        int(p.ID),
+		Bar:       p.Bar,
+		BarBoosts: boosts,
+		Deck: DeckDTO{
+			Cards:     cards,
+			AsideCard: aside,
+			AutoTimer: p.Deck.AutoTimer,
+		},
+		CapitalHP: p.CapitalHP,
+	}
 }
 
 func hexKey(h game.Hex) string {

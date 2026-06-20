@@ -59,19 +59,19 @@ func TestWaitingState(t *testing.T) {
 	}
 }
 
-func TestWaitingStateNoGoldAccrual(t *testing.T) {
+func TestWaitingStateNoBarAccrual(t *testing.T) {
 	room := newTestRoom(t)
 	pid1 := game.PlayerID(1)
 
 	client1 := &MockClientSender{}
 	room.OnConnect(client1, pid1)
 
-	goldBefore := room.state.Players[pid1].Gold
+	barBefore := room.state.Players[pid1].Bar
 	time.Sleep(150 * time.Millisecond)
-	goldAfter := room.state.Players[pid1].Gold
+	barAfter := room.state.Players[pid1].Bar
 
-	if goldAfter != goldBefore {
-		t.Errorf("gold changed while waiting: %.2f → %.2f (expected no change)", goldBefore, goldAfter)
+	if barAfter != barBefore {
+		t.Errorf("bar changed while waiting: %.2f → %.2f (expected no change)", barBefore, barAfter)
 	}
 }
 

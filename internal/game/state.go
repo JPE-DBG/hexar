@@ -2,86 +2,88 @@ package game
 
 type PlayerID int
 
-const NoPlayer PlayerID = 0
-
-type BuildingType int
-
 const (
-	BuildingNone     BuildingType = 0
-	BuildingGold     BuildingType = 1
-	BuildingPower    BuildingType = 2
-	BuildingResearch BuildingType = 3
+	NoPlayer PlayerID = 0
+	Player1  PlayerID = 1
+	Player2  PlayerID = 2
 )
 
-type HexState struct {
-	Owner         PlayerID     `json:"owner"`
-	Building      BuildingType `json:"building"`
-	Level         int          `json:"level"`
-	Capital       bool         `json:"capital"`
-	PreviousOwner PlayerID     `json:"previousOwner"`
-	FortifyTimer  float64      `json:"fortifyTimer"`
-	UpgradeTimer  float64      `json:"upgradeTimer"`
-}
-
-func (h *HexState) Power() int {
-	p := 0
-	if h.Capital {
-		p = 1
-	}
-	if h.Building == BuildingPower {
-		p += h.Level
-	}
-	return p
-}
-
-type TechID int
+type CardType int
 
 const (
-	TechBlitz TechID = iota
-	TechFortify
-	TechProsperity
-	TechReclamation
-	TechVanguard
-	TechGarrison
-	TechSupplyLines
-	TechWarChest
-	TechResilience
-	TechIronGrip
-	TechCompoundGrowth
-	TechSiegeMastery
-	TechCount // = 12
+	CardHexClaim     CardType = iota // 1 bar — claim adjacent hex
+	CardBarBurst                     // 0 bar — +1 bar instantly
+	CardBarSpeed                     // 1 bar — +15% fill rate for 15s
+	CardBasicSoldier                 // 2 bar — deploy soldier
 )
+
+type Card struct {
+	Type CardType
+}
+
+// BarBoost tracks an active +15% bar speed effect.
+type BarBoost struct {
+	Bonus    float64
+	TimeLeft float64
+}
+
+// Deck is the player's card queue: top = index 0, bottom = last.
+type Deck struct {
+	Cards     []Card
+	AsideCard *Card
+	AutoTimer float64 // counts up; card auto-cycles when it exceeds DeckAutoCycleTimer
+}
 
 type Player struct {
-	ID             PlayerID        `json:"id"`
-	Gold           float64         `json:"gold"`
-	TP             float64         `json:"tp"`
-	Tech           [TechCount]bool `json:"tech"`
-	AutoDropGrace  float64         `json:"autoDropGrace"`
-	AutoDropActive bool            `json:"autoDropActive"`
-	VanguardTimer  float64         `json:"vanguardTimer"`
+	ID        PlayerID
+	Bar       float64
+	BarBoosts []BarBoost
+	Deck      Deck
+	CapitalHP int
 }
 
-type Battle struct {
-	AttackerHex  Hex      `json:"attackerHex"`
-	DefenderHex  Hex      `json:"defenderHex"`
-	Attacker     PlayerID `json:"attacker"`
-	Defender     PlayerID `json:"defender"`
-	TimeLeft     float64  `json:"timeLeft"`
-	CounterBoost int      `json:"counterBoost"`
+type UnitType int
+
+const (
+	UnitBasicSoldier UnitType = iota
+)
+
+type Unit struct {
+	ID          int
+	Owner       PlayerID
+	Type        UnitType
+	Pos         Hex
+	HP          int
+	MoveTimer   float64 // counts up; unit moves when it reaches SoldierMovePeriod
+	AttackTimer float64 // counts up; unit attacks when it reaches SoldierAttackPeriod
+}
+
+type HexState struct {
+	Owner       PlayerID
+	Capital     bool
+	HasBuilding bool
+}
+
+type ShopEntry struct {
+	CardType CardType
+	BarCost  float64
+	Quantity int
 }
 
 type GameState struct {
-	Hexes         map[Hex]*HexState    `json:"hexes"`
-	Players       map[PlayerID]*Player `json:"players"`
-	Battles       []Battle             `json:"battles"`
-	Elapsed       float64              `json:"elapsed"`
-	Over          bool                 `json:"over"`
-	Winner        PlayerID             `json:"winner"`
-	WinReason     string               `json:"winReason"`
-	Waiting       bool                 `json:"waiting"`
-	Paused        bool                 `json:"paused"`
-	PauseTimeLeft float64              `json:"pauseTimeLeft"`
+	Hexes      map[Hex]*HexState
+	Players    map[PlayerID]*Player
+	Units      []*Unit
+	Shop       []ShopEntry
+	NextUnitID int
+
+	Elapsed       float64
+	Over          bool
+	Winner        PlayerID
+	WinReason     string
+	Waiting       bool
+	Paused        bool
+	PauseTimeLeft float64
 }
 
 func NewGameState() *GameState {
@@ -89,4 +91,21 @@ func NewGameState() *GameState {
 		Hexes:   make(map[Hex]*HexState),
 		Players: make(map[PlayerID]*Player),
 	}
+}
+
+func NewPlayer(id PlayerID) *Player {
+	p := &Player{
+		ID:        id,
+		Bar:       0,
+		CapitalHP: CapitalStartHP,
+	}
+	p.Deck = InitStartingDeck()
+	return p
+}
+
+func opponentOf(id PlayerID) PlayerID {
+	if id == Player1 {
+		return Player2
+	}
+	return Player1
 }

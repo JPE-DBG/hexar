@@ -2,165 +2,155 @@
 
 ## Overview
 
-Hexar is a fast-paced, real-time multiplayer hex strategy game inspired by Antiyoy. Players conquer hexes through economic growth and strategic upgrades on a small hexagonal map. Target game length: 25–30 minutes.
+Hexar is a fast-paced, real-time multiplayer hex strategy game. Players build a cycling deck of cards and spend a continuously-filling bar resource to play them. Units auto-march across a hex map toward the enemy capital. Target game length: ~15 minutes.
 
-**Core Loop:** Earn gold → Upgrade buildings → Gain power → Conquer adjacent hexes → Repeat
+**Core Loop:** Bar fills → play top card of deck (spend bar) → card cycles back → buy new cards from shared shop → units march to enemy capital → first to reduce enemy capital to 0 HP wins
 
-**Genre:** RTS economic conquest | **Players:** 1v1 (2–4 planned) | **Win Condition:** Capital Capture
+**Genre:** Real-time deck-building strategy | **Players:** 1v1 (2–4 planned) | **Win Condition:** Capital destruction
 
 ### Design Pillars
 
-1. **Economic Competition:** Victory through resource management and smart upgrades, not reflexes
-2. **Meaningful Decisions:** Each building choice and tech unlock trades off against alternatives
-3. **Tense Endgame:** Border warfare and tight resource battles in final minutes
-4. **No Snowballing:** Stepped maintenance costs keep powerful players vulnerable
+1. **Single Resource:** One currency (bar) pays for everything — playing cards, buying from shop, removing cards. No secondary resources.
+2. **Deck as Strategy:** Deck composition is the primary strategic axis. Buying cards and removing cards are as important as playing them.
+3. **Readable Combat:** Units are visible on the hex grid, move at human-readable speed, fight when they meet. No hidden rolls.
+4. **Meaningful Map:** Distance = reaction time. Claimed hexes = building slots. Map is space and time, not income.
 
 ---
 
 ## Game Rules
 
-### Hexes & Ownership
+### Bar
 
-- **Unclaimed:** No owner, Power 0, free to claim for 10 gold (instant if Attacker Power ≥ 1)
-- **Owned:** Controlled by a player; generates 2 gold/sec base income; can hold one building
-- **Capital:** Each player starts with one capital hex. Innate Power 1 (no building needed). Losing it ends the game. Power buildings stack on top of innate Power (e.g., capital + Power L1 = Power 2 total).
+- **Fill rate:** 0.1 bar/sec (fixed — does not change with territory or buildings)
+- **Scale:** 0–10 (accumulates; capped at 10)
+- **Single currency:** bar pays for all actions — playing cards, buying shop cards, removing cards
+- Bar never resets; it accumulates until spent or capped
 
-**Maintenance costs (stepped):**
-| Hex range | Cost/sec each |
-|---|---|
-| 1–10 | 1 |
-| 11–20 | 2 |
-| 21+ | 3 |
+### Deck
 
-**Why stepped:** Flat 1/sec maintenance can never exceed 2/sec base income, so auto-drop would be unreachable. Stepped costs force Economy building investment as territory scales.
+Each player has their own ordered deck of cards. The deck is a queue — cards cycle from top to bottom.
 
-**Auto-drop rules:**
-- When net income goes negative, a 10-second grace period begins (20s with Resilience tech)
-- Player chooses which hex to drop; UI shows a prompt with the timer
-- If no choice made: server drops the hex with lowest income; ties broken by lowest building investment; capital and battle-active hexes are protected
-- On drop: 50% building refund (70% with Resilience); hex becomes unclaimed instantly
+**Playing a card:**
+- The top card is always visible
+- Pay its bar cost → effect resolves immediately → card goes to the bottom of the deck
+- All cards cycle back (including building cards — playing a building card again places another copy on a different hex)
 
-**Maintenance math example:**
-```
-30 hexes: maintenance 60/sec vs income 60/sec → net 0/sec (needs Economy buildings)
-31 hexes: maintenance 63/sec vs income 62/sec → net -1/sec (auto-drop triggers)
+**Aside slot:**
+- Push the current top card sideways into the aside slot — no bar cost to push
+- The aside slot is blocked until you pay the card's cost and play it
+- Played aside card goes to the bottom of the deck
+- You cannot push a new card while the aside slot is occupied
+- Starting aside slots: **1**
+- Additional aside slots: unlocked by placing a specific building card (from shop) on a free hex
 
-With 10 Economy L1 buildings on 30 hexes:
-  income = 10 × 3.9/sec + 20 × 2/sec = 79/sec → net +19/sec (sustainable)
-```
+**Deck lockout prevention:**
+- If the top card cannot be played (insufficient bar, or no free hex for a building card), it auto-moves to the bottom after a fixed timer (TBD — single constant, tuned during playtesting)
+- Ensures the deck keeps moving in all edge cases
 
----
-
-### Resources
-
-- **Gold:** Main currency — buildings, upgrades, attacks, counter-spend
-- **Tech Points (TP):** Earned from Research buildings (0.2 TP/sec per level); spent on tech tree
+**Deck size:**
+- Starting deck: 7 cards (see Starting Deck below)
+- No maximum — buying cards from the shop grows the deck
+- Larger deck = each card appears less frequently (trade-off: power vs cycle speed)
+- Card removal (via shop) permanently removes a card from the deck, thinning it
 
 ---
 
-### Buildings
+### Starting Deck (7 cards, both players identical)
 
-One building per hex. No separate "build" action — upgrading an empty hex to L1 is the first step. Buildings can be demolished for a 50% refund and replaced.
-
-**Upgrade cost formula:** `BuildCost × 2^currentLevel`
-
-| Building | BuildCost | Effect | Income formula |
-|---|---|---|---|
-| Economy (Gold) | 60g | +income from this hex | `(2 + 0.6 × level) × 1.5` → L1: 3.9/sec |
-| Power | 60g | +1 Power per level | — |
-| Research | 80g | +0.2 TP/sec per level | — |
-
-**Economy building costs:** L1=60, L2=120, L3=240, L4=480  
-**Power building costs:** L1=60, L2=120, L3=240, L4=480  
-**Research building costs:** L1=80, L2=160, L3=320, L4=640
-
-**Tech bonus stacking on Economy:**
-```
-No techs:             (2 + 0.6 × level) × 1.5       → L1: 3.9/sec
-+ Prosperity:         (2 + 0.6 × level) × 1.5 + 1.0 → L1: 4.9/sec
-+ Compound Growth:    (2 + 0.6 × level) × 1.5 × 1.25→ L1: 4.875/sec
-+ Both:               (2 + 0.6 × level) × 1.5 × 1.25 + 1.0 → L1: 5.875/sec
-```
-
-**Demolish refund:** `BuildCost × (2^level - 1) × 0.5`  
-Examples: Gold L1 → 30g; Gold L2 → 90g; Gold L3 → 210g
+| Card | Cost | Effect | Qty |
+|------|------|--------|-----|
+| Hex Claim | 1 bar | Claim one adjacent unclaimed hex (player chooses which) | ×2 |
+| +1 Bar Burst | 0 bar | Instantly add +1 to current bar | ×2 |
+| +15% Bar Speed | 1 bar | Bar fill rate ×1.15 for 15s (stacks additively with other active copies) | ×2 |
+| Basic Soldier | 2 bar | Deploy a soldier unit toward the enemy capital | ×1 |
 
 ---
 
-### Combat
+### Map
 
-**Claiming unclaimed hex:** 10 gold, instant (attacker needs Power ≥ 1). No battle.
+**Claimed hexes:**
+- Each player starts with their capital hex claimed
+- Hex Claim cards expand territory to adjacent unclaimed hexes (player chooses which)
+- Claimed hexes are building slots — one building per hex
+- No free claimed hex = building cards are unplayable (auto-cycle via lockout timer)
+- Players keep hex ownership even if the building on it is destroyed
+- A destroyed building frees the hex for a new building
 
-**Attacking enemy hex:**
-- Cost: 100 gold (only attacker pays)
-- Requirement: Attacker Power > Defender Power (strictly greater; ≤ 0 diff = attack fails, no gold spent)
-- Power diff > 3 → instant takeover (no timer)
-- Power diff 1–3 → standard battle
-
-**Battle duration:** `5 + (AttackerPower + DefenderPower) / 2` seconds (min 6s, max ~15s)
-
-Winner determined when timer reaches 0 — whoever has higher Power at that moment. Attacker cannot cancel after committing 100 gold.
-
-**Counter-spend (defender active defense):**
-- Cost: 50 gold → +1 Power for remainder of battle
-- Cap: `min(+3, seconds remaining)` — time pressure limits how much defender can buy
-- **Garrison tech:** Each adjacent owned hex adds +1 passive (cap +2). Garrison and counter-spend share the +3 total cap.
-- **Siege Mastery** (attacker): Timers 40% shorter, compressing defender's reaction window
-- Example: Battle at 7s, losing 3 vs 5 — spend 150g over 3s → Power 6, win
-- Example: 1s left in battle → max +1 Power boost (50g), regardless of gold available
-- Example with Garrison: 2 adjacent owned hexes give +2 passive (cap reached) → counter-spend max is +1 (total cap +3)
-
-**Power diff > 3 → instant takeover** (enemy hexes only; unclaimed hexes always instant)
-
-**Garrison threshold in UI:** Effective attack requirement shown as `Defender Power + Garrison bonus`. UI blocks guaranteed-loss attacks; server validates only base power.
+**Unit movement:**
+- Units march hex-by-hex toward the enemy capital via shortest path
+- Units fight enemy soldiers and towers they encounter en route
+- Units ignore non-combat buildings (MVP)
+- Units do not capture hexes they pass through (MVP)
 
 ---
 
-### Tech Tree
+### Units
 
-Research buildings generate 0.2 TP/sec per level. Unlock any tech in any order — no prerequisites. **Total tree: 460 TP across 12 techs.** No single game unlocks everything.
+#### Basic Soldier
 
-| Tech | Cost | Effect | Archetype |
-|------|------|--------|-----------|
-| Blitz | 20 TP | Claiming empty hex is free | Aggressor |
-| Fortify | 20 TP | Spend 40g to prevent instant-takeover on one hex for 90s | Defender |
-| Prosperity | 25 TP | Each Economy building +1/sec flat bonus | Builder |
-| Reclamation | 25 TP | Recapturing a previously owned hex costs 50g | Territorial |
-| Vanguard | 30 TP | After capturing an enemy hex, next attacks within 12s cost 50g (timer refreshes on each capture) | Aggressor |
-| Garrison | 30 TP | During battle, each adjacent owned hex +1 defense Power (cap +2; total cap +3 shared with counter-spend) | Defender |
-| Supply Lines | 40 TP | Maintenance: 0.9/sec (1–10), 1.8/sec (11–20), 2.7/sec (21+) | Builder |
-| War Chest | 30 TP | Recover 30g when capturing an enemy hex | Territorial |
-| Resilience | 45 TP | Auto-drop grace 10s→20s; drop refund 50%→70% | Defender |
-| Iron Grip | 55 TP | All owned hexes permanently +1 Power | Aggressor |
-| Compound Growth | 65 TP | Economy buildings ×1.25 output (applied before Prosperity flat bonus) | Builder |
-| Siege Mastery | 75 TP | Your battle timers −40% (min 3s); equal-Power ties → attacker wins | Aggressor |
+| Stat | Value |
+|------|-------|
+| Bar cost | 2 |
+| HP | 2 |
+| Attack power | 1 |
+| Attack speed | 1 hit/sec |
 
-**Tech archetypes:**
-- **Blitz Aggressor:** Blitz → Vanguard → Iron Grip — free land-grab, chain attacks, territory-wide Power
-- **Economic Builder:** Prosperity → Supply Lines → Compound Growth — wide sustainable territory
-- **Fortress Defender:** Garrison → Fortify → Iron Grip → Resilience — make attacking expensive
-- **Siege Striker:** Iron Grip → Siege Mastery → Vanguard — fast decisive battles
-- **Territorial:** Reclamation → Vanguard → War Chest — fluid borders, gold recovery
+**Combat resolution (simultaneous attacks):**
 
-**Stacking rules:**
-- **Reclamation + Vanguard both active:** Attack cost 100g − 50g − 50g = 0g (free reclaim during Vanguard window)
-- **Compound Growth + Prosperity:** Multiplier applied first, then flat bonus: `× 1.25 + 1.0`
-- **Iron Grip + Garrison:** Iron Grip always-on (+1 to all hexes, shown in hex label). Garrison defense-only, dynamic (+N def shown separately in UI, excluded from static hex label)
+*1v1:* Both attack once/sec. Equal soldiers die after 2 seconds.
 
-**Research investment guide:**
-- 1 Research L1: ~180 TP in 15 min → ~5 cheap techs
-- 2 Research L1: ~360 TP in 15 min → ~8 techs
-- 3 Research L1: ~540 TP in 15 min → ~11 techs (full tree by min 13)
+*2 attackers vs 1 defender:*
+- Defender takes 2 damage/sec → dies in 1 second
+- Defender attacks one attacker: 1 damage before dying
+- Result: one attacker at 1 HP, one at 2 HP — both continue to capital
+
+*Soldier vs Tower:*
+- Tower fires at soldiers within its range (stats vary by tower card)
+- Soldier attacks tower on contact
+- Soldier may die to tower fire before reaching it, or survive and destroy the tower
+
+*Soldier vs Capital:*
+- Soldier reaches capital hex → deals 1 HP damage to capital → soldier consumed
+- Capital does not fight back (no built-in defense)
 
 ---
 
-### Victory
+### Shop
 
-**Capital Capture:** Capture the enemy capital → win immediately. All loser hexes become unclaimed instantly.
+- **Shared pool** visible to both players at all times
+- **Dominion-style:** fixed set of available card types, each with limited quantity
+- **Buy at any time:** pay bar cost → new card goes to the bottom of your deck
+- **Competition:** both players draw from the same pool — first to buy gets the card
+- **Card removal:** shop service (not a card) — permanently removes your current top card or aside card from your deck; mid-to-high bar cost (TBD)
 
-- Capital is captured like any enemy hex (battle or instant if diff > 3)
-- Captured capital becomes a normal hex for the winner (loses innate Power 1)
-- `state.WinReason`: `"capital"` or `"forfeit"` (disconnect budget exhausted)
+**Buying trade-offs:**
+- Growing the deck makes each card appear less often
+- High-cost purchases drain bar, slowing play
+- Removing weak starter cards thins the deck, cycling to power cards faster
+
+#### Shop Card Pool (TBD — design session required before implementation)
+
+Card types confirmed for the shop:
+
+| Type | Category | Notes |
+|------|----------|-------|
+| Tower | Building / Military | Fights soldiers within range; HP and attack stats TBD |
+| Bar Speed Building | Building / Economy | Permanent bar fill rate boost on its hex; bonus value TBD |
+| Spawner Building | Building / Military | Produces a unit every X seconds off-deck; high cost; stats TBD |
+| Aside Slot Building | Building / Utility | Permanently adds 1 aside slot; requires free hex |
+| Additional unit cards | Unit | Faster, tankier, or special-behavior variants; TBD |
+| Capital Heal | Misc | Restores capital HP; TBD |
+
+Exact card costs, stats, and quantities are TBD — to be designed before shop implementation.
+
+---
+
+### Win Condition
+
+- **Capital HP:** 20 (subject to playtesting)
+- **No built-in defense:** capital is a pure HP counter
+- **Permanent damage:** no HP regeneration (capital heal may be a shop card — TBD)
+- When capital HP reaches 0, that player loses immediately
 
 ---
 
@@ -172,7 +162,7 @@ Research buildings generate 0.2 TP/sec per level. Unlock any tech in any order �
 |---|---|---|
 | Server | Go | — |
 | Client | TypeScript | — |
-| Rendering | HTML Canvas + DOM overlays | Svelte for complex UI |
+| Rendering | HTML Canvas + DOM overlays | — |
 | Bundler | Vite | — |
 | Networking | WebSocket, JSON | MessagePack for 4-player |
 | WebSocket lib | `github.com/coder/websocket` | — |
@@ -189,16 +179,16 @@ hexar/
 ├── cmd/server/main.go           # HTTP+WS entry point, serves client
 ├── internal/
 │   ├── game/                    # PURE logic — zero I/O, zero network, deterministic
-│   │   ├── state.go            # GameState, Hex, Player, Battle structs
-│   │   ├── tick.go             # RunTick(state, dt) — 6-phase function
-│   │   ├── economy.go          # income, maintenance, auto-drop
-│   │   ├── combat.go           # attack validation, battle resolution
-│   │   ├── building.go         # build, upgrade, demolish
-│   │   ├── tech.go             # unlock validation, bonus computation
-│   │   ├── victory.go          # victory condition checks
+│   │   ├── state.go            # GameState, HexState, Player, Deck, Unit structs
+│   │   ├── tick.go             # RunTick(state, dt) — phase function
+│   │   ├── bar.go              # bar fill accumulation
+│   │   ├── deck.go             # deck queue, aside slot, card play, auto-cycle
+│   │   ├── units.go            # unit march, combat resolution
+│   │   ├── shop.go             # shared shop pool, buy, card removal
+│   │   ├── victory.go          # capital HP win condition
 │   │   ├── action.go           # Action types, validate+apply dispatch
 │   │   ├── hexmath.go          # axial coords, adjacency, distance
-│   │   └── constants.go        # ALL numeric constants from CLAUDE.md
+│   │   └── constants.go        # ALL numeric constants
 │   ├── room/                    # Owns GameState + ticker goroutine
 │   │   ├── room.go
 │   │   └── loop.go
@@ -214,9 +204,9 @@ hexar/
 │       ├── main.ts
 │       ├── net/                 # WebSocket, reconnect, message types
 │       ├── state/               # Game state mirror, apply delta/snapshot
-│       ├── render/              # Canvas hex grid, buildings, battles
+│       ├── render/              # Canvas hex grid, unit tokens, buildings
 │       ├── input/               # Pixel→hex detection, action dispatch
-│       ├── ui/                  # DOM: HUD, sidebar, tech tree
+│       ├── ui/                  # DOM: HUD (bar meter), deck panel, shop panel
 │       ├── hexmath.ts           # Axial math (mirrors server)
 │       └── constants.ts         # Mirrors server constants
 └── .claude/skills/
@@ -229,207 +219,85 @@ hexar/
 6 phases, executed strictly in sequence every 100ms:
 
 ```
-Phase 1: PROCESS ACTIONS — drain queued player intentions, validate, apply
-Phase 2: ECONOMY      — accrue gold/TP (×0.1 per tick)
-Phase 3: BATTLES      — decrement timers 0.1s, resolve expired
-Phase 4: AUTO-DROP    — check negative income, manage grace, drop if expired
-Phase 5: VICTORY      — check capital capture, unclaim loser hexes
-Phase 6: DELTA        — diff vs previous tick, broadcast to clients
+Phase 1: PROCESS ACTIONS — drain queued player actions (PlayCard, BuyCard, PushAside, ClaimHex)
+Phase 2: BAR            — accrue bar for each player (×0.1 per tick)
+Phase 3: UNITS          — advance unit positions, resolve combat, deal capital damage
+Phase 4: DECK           — advance auto-cycle timers, move stuck cards to bottom
+Phase 5: VICTORY        — check capital HP, trigger win
+Phase 6: DELTA          — diff vs previous tick, broadcast to clients
 ```
-
-Actions first = immediate effect. Economy before battles = counter-spend gold deducted before battle resolves. Victory last = reflects true final state.
 
 ### State Sync
 
 - **Snapshot:** Full state on initial connect and reconnect (`prevSnapshot = nil` forces full send)
 - **Delta:** Only changed fields per tick. Target: < 500 bytes/tick at idle
-  - `Tech []bool` omitted when unchanged (only goes false→true, never reverts)
-  - `Battles` always sent — reverts to empty when all battles resolve; omitting would leave client with stale active battles (same class of bug as AutoDropActive/VanguardTimer)
-  - `AutoDropActive`, `AutoDropGrace`, `VanguardTimer` always sent — these fields revert to zero/false at runtime; omitting them would leave the client with stale nonzero values via delta merge spread
-  - `FortifyTimer` quantized to 1-second boundaries to avoid appearing in every tick
-
-**Delta merge pattern (client):**
-```typescript
-players.set(String(p.id), { ...(existing ?? {}), ...p, tech: p.tech ?? existing?.tech ?? [] });
-```
+- Deck state: always sent in full (order matters; partial delta would corrupt queue)
+- Bar: always sent (continuously changing; omitting would leave stale value)
+- Units: always sent — reverts to empty when all units die; omitting would leave stale units on client
 
 ### Session & Connection
 
-**Lobby flow:**
-- `POST /lobby/create` → room code (4-char hex) + session token (32-char hex) + playerID
-- `POST /lobby/join` → token + playerID (room full after 2 players)
-- `GET /ws?code=…&token=…` → WebSocket connection; server validates token before upgrading
+**Lobby flow:** Same as MVP1 — `POST /lobby/create`, `POST /lobby/join`, `GET /ws?code=&token=`
 
-**Session persistence (URL hash):**
-- On game start, client writes `/#CODE:TOKEN` into the URL (`history.replaceState`)
-- On page load: check sessionStorage first (network-drop), then URL hash (tab-close)
-- URL hash is per-tab — two players in the same browser get different hashes and don't collide
-- Hash cleared on game end
+**Session persistence:** URL hash `/#CODE:TOKEN` — same reconnect mechanism as MVP1.
 
-**Waiting state:**
-- Room created → `state.Waiting = true`; game loop goroutine NOT started
-- Second player connects → server sets `state.Waiting = false`, starts loop, broadcasts to P1
+**Pause on disconnect:** Same forfeit budget (120s cumulative). Loop ticks continue but `RunTick` skipped while paused.
 
-**Pause on disconnect:**
-- Any player disconnects → `state.Paused = true`, `PauseTimeLeft` set to remaining budget
-- Loop ticks continue (clients get countdown) but `RunTick` is skipped — economy/battles/auto-drop frozen
-- Reconnect → `state.Paused = false`, budget saved to `remainingGrace[pid]`
-- Budget exhausted → loop enqueues `ActionForfeit`; next tick processes it
-
-**Forfeit budget:** 120 seconds cumulative per player across the whole game (not reset per disconnect)
-
-**Duplicate tab:** Server closes new WS with code 4001; client shows "Already Connected" overlay. Second `OnConnect` for same player during active game replaces the old client (evicts from activeClients, sends snapshot to new client).
-
-### Edge Cases
-
-| Scenario | Decision |
-|---|---|
-| Disconnect mid-game | Pause immediately; 120s cumulative budget; exhausted → forfeit |
-| Two attacks on same hex | First-in-queue wins; second rejected (one battle per hex) |
-| Reconnection | Full snapshot sent (`prevSnapshot = nil`); delta resumes after |
-| Capital captured during outgoing attack | Immediate game over, all battles canceled |
-| Counter-spend same tick as battle expires | Applied (Phase 1 runs before Phase 3) |
-| Gold below 0 | Clamped to 0; actions rejected if insufficient |
-| Player trapped (no Power ≥ 1 border) | Must build Power to regain attack ability |
-| Both players not yet connected | Loop not started; `state.Waiting = true` |
-| Capture flash trigger | Compare `hex.owner` in incoming delta against current `state.hexes` owner. **Never** use `hex.previousOwner` — server sets it on capture and never resets it, so any subsequent delta for that hex (e.g. fortifyTimer tick) would re-fire the flash spuriously |
+**Duplicate tab:** Server closes new WS with code 4001.
 
 ---
 
 ## Client & UI
 
+### Layout (TBD — graphical design session required before implementation)
+
+The deck-building UI is fundamentally different from the MVP1 sidebar layout. A dedicated graphical design session must produce a layout spec before client code is written. Key decisions pending:
+
+- Overall screen split (hex map area vs deck/shop panels)
+- Deck queue visualization (top card prominent, aside slot, card backs visible behind)
+- Bar fill visualization (strip, meter, or edge)
+- Shop panel (always visible or pop-out)
+- Card anatomy (name, cost, effect text)
+- Unit representation on hex grid (token moving hex-by-hex)
+
+Output of design session: `.claude/design/ui-layout-deck-building.md`
+
 ### Canvas + DOM Split
 
-- **Canvas (`renderer.ts`):** Hex grid, buildings, battles, effects, timers
-- **DOM overlays:** HUD, sidebar, lobby/victory screens, tech tree
-- Effects are client-side only — never in game state. `addCaptureFlash(hex, color)` and `addFloater(hex, text)` triggered by state transitions in `applyDelta`.
-
-### Power Display Conventions
-
-- Hex canvas labels show **effective combat power** (base + Iron Grip), not raw building level
-  - Power L1 + Iron Grip → label "P2"; Capital + Power L1 + Iron Grip → "P3"
-  - Non-Power owned hexes show a small yellow power badge if power > 0 (capital innate or Iron Grip)
-- **Garrison excluded from hex label** — defense-only, dynamic; shown as `"+N def"` note in sidebar, excluded from static hex label
-- `drawHexFill` is intentionally flat — sprite-based 3D/material look planned for a future pass; do not add gradients
-
-### Timer Visualization Conventions
-
-| Timer | Type | Visual |
-|---|---|---|
-| Fortify (90s) | Hex timer | Lime `#c8ff70` border segments, clockwise, shrink to 0 |
-| Battle (6–15s) | Battle timer | Amber pulsing ring + countdown text + boost dots |
-| Vanguard (12s) | Player timer | HUD text `⚡Vanguard X.Xs` |
-
-**Hex timers** (state on a specific hex): clockwise shrinking border segments, full ring at max → empty at 0. Fortify is the reference implementation. All future hex-level timers must follow this pattern. Color must be readable on both player colors (teal P1, red P2); lime `#c8ff70` is established for Fortify.
-
-**Player timers** (state on a player, not a hex): HUD text indicator only — no border segments.
-
-**Timer stacking:** Battle timer always renders at full brightness (priority). Passive hex timers (Fortify) dim to 40% opacity, lineWidth 1.5 while a battle is active on that hex.
-
-### Sidebar & Controls
-
-**Pattern:** Left sidebar (180px wide), sticky build tools, dynamic context area
-
-**Sections:**
-1. **CONTEXT** (top, dynamic): Upgrade/Attack/Demolish/Sell Hex/Fortify/Counter-spend based on selected hex
-2. **BUILD** (bottom, always visible): Economy [Q], Power [W], Research [E], Tech Tree [T]
-
-**Sticky tool behavior:**
-- Click tool button or press hotkey → highlights → click hexes to place buildings
-- Tool stays selected for batch building
-- Toggle to deselect: click again, press hotkey again, or press ESC
-- Clicking a hex under active battle falls through to context selection (shows counter-spend)
-
-**Keyboard shortcuts:**
-| Key | Action |
-|---|---|
-| Q / W / E | Smart ON + mouse over own empty hex → build immediately; Smart OFF or no valid target → toggle tool mode |
-| T | Open Tech Tree |
-| Space | Upgrade hex under mouse (Smart ON) or selected hex |
-| A | Attack hex under mouse (Smart ON) or selected hex |
-| F | Fortify hex under mouse (Smart ON) or selected hex (requires Fortify tech) |
-| C | Counter-spend during battle on hex under mouse (Smart ON) or selected hex |
-| D | Demolish hex under mouse (Smart ON) or selected hex → deselects hex |
-| X | Sell Hex under mouse (Smart ON) or selected hex → deselects hex |
-| ESC | Deselect tool |
-
-**Smart build toggle:** Sidebar BUILD section — "Smart OFF/ON" chip. Default: OFF. When ON, all hotkeys execute on the hex currently under the mouse cursor (LoL-style). When OFF, hotkeys require a click-selected hex.
-
-**Battle restrictions:** No building placement or upgrade on hexes under active battle (server enforces `ErrBattleInProgress`). Demolish allowed — defender may recover gold for counter-spend.
-
-### Responsive Behavior
-
-| Viewport | Layout |
-|---|---|
-| Desktop (>1024px) | Left sidebar, full labels, context area |
-| Mobile landscape (896×414) | Bottom bar 60px, icon + label |
-| Mobile portrait (<768px) | Bottom bar 50px, icons only; destructive actions (Demolish/Sell) in separate top-left panel |
-
-**Destructive panel:** `#destructive-panel` lives outside `#sidebar` so `position: fixed` is viewport-relative (backdrop-filter on `#sidebar` would make fixed children relative to it). CSS controls which copy is shown — buttons exist twice in DOM.
+- **Canvas (`renderer.ts`):** Hex grid, unit tokens marching hex-by-hex, buildings on hexes, effects
+- **DOM overlays:** HUD (bar meter), deck panel (top card + aside slot), shop panel, lobby/victory screens
 
 ### Known Issues (non-blocking, document before touching)
 
-| Issue | Location | Risk |
-|---|---|---|
-| Destructive DOM duplication | `sidebar.ts` — `this.destructiveEl.innerHTML` mirrors button HTML | Demolish/Sell buttons exist twice; CSS controls visibility. Querying `data-action` finds two nodes. Refactor before adding more destructive actions. |
-| Mobile CSS transparency | `style.css` — portrait mode sets sidebar background to `transparent` | No backdrop-filter, no border; relies on canvas fill for contrast. Light hexes may cause readability issues. |
+None yet — client rewrite not started.
 
 ---
 
 ## Testing
 
-**Policy:** Update CLAUDE.md first (design spec), implement the feature, then add tests. This ensures tests validate the spec, not the implementation.
+**Policy:** Update CLAUDE.md first (design spec), implement the feature, then add tests. Tests validate the spec, not the implementation.
 
 ### Layer 1: Game Logic (`internal/game/`)
 
-Pure functions, stdlib only, no goroutines, table-driven. `package game` — tests can call unexported functions directly.
+Pure functions, stdlib only, no goroutines, table-driven. `package game`.
 
 | File | Test cases |
 |---|---|
-| `action_test.go` | Counter-spend cap/time-cap/flip; tech unlock via action deducts TP; TP accumulation from Research buildings; voluntary drop action clears auto-drop flag |
-| `building_test.go` | Building upgrade mechanics, costs, demolish refunds |
-| `economy_test.go` | Gold accrues at 2/s per hex; stepped maintenance triggers at 10/20 hex boundaries; Prosperity + Compound Growth formula matches CLAUDE.md math |
-| `combat_test.go` | Attack validation: insufficient power, insufficient gold, hex already in battle; battle resolution: winner at timer expiry, loser retains on tie (unless Siege Mastery); instant takeover when diff > 3 |
-| `tech_test.go` | Tech unlock deducts TP and sets bool; Reclamation + Vanguard both active + conditions met = 0g attack cost |
-| `victory_test.go` | Capital capture sets `WinReason = "capital"`, all loser hexes unclaimed; `ForfeitPlayer` sets `WinReason = "forfeit"` |
-| `autodrop_test.go` | Negative net income triggers 10s grace; forced drop when grace expires; 50% refund on dropped hex; Resilience extends grace to 20s and refund to 70%; selection by lowest income then lowest invested; capital and battle-active hexes protected |
+| `bar_test.go` | Bar accrues at 0.1/tick; caps at 10; bar correctly deducted on PlayCard; bar correctly deducted on BuyCard |
+| `deck_test.go` | Play from top cycles card to bottom; aside slot blocks on push; aside slot card plays and goes to bottom; cannot push when slot occupied; auto-cycle timer moves stuck card to bottom; starting deck initialized with correct 7 cards |
+| `units_test.go` | Unit march advances toward capital; 1v1 combat both die after 2s; 2v1 correct HP after fight; unit consumed on capital contact; capital HP decrements |
+| `shop_test.go` | BuyCard deducts bar; bought card goes to bottom of deck; shared pool quantity decrements; second player blocked when quantity 0; card removal permanently removes card from deck |
+| `victory_test.go` | Capital at 0 HP sets WinReason; damage is permanent (no reset between ticks) |
 
 Run: `go test ./internal/game/...`
 
 ### Layer 2: Room Integration (`internal/room/`)
 
-Real goroutines, minimal `time.Sleep` (1–2 tick durations only). `package room` — tests access unexported fields directly (`room.activeClients`, `room.clientPlayer`, `room.remainingGrace`).
-
-| Test | Asserts |
-|---|---|
-| `TestWaitingState` | `Waiting=true` until 2nd player connects; loop doesn't start with 1 player; `Waiting=false` when 2nd connects |
-| `TestWaitingStateNoGoldAccrual` | Player 1 gold unchanged while waiting (loop not running) |
-| `TestPauseOnDisconnect` | `state.Paused=true` immediately; `PauseTimeLeft` ≈ 120s; remaining client gets pause delta |
-| `TestUnpauseOnReconnect` | `state.Paused=false` on reconnect; grace saved to `remainingGrace` |
-| `TestCumulativeGrace` | 2nd disconnect uses saved grace (doesn't reset to 120s); decrements cumulatively |
-| `TestForfeitEnqueued` | `PauseTimeLeft`→0 enqueues `ActionForfeit`; next tick → `WinReason="forfeit"` |
-| `TestDuplicateConnectReplaces` | 2nd `OnConnect` for same player replaces old client; new client is in `activeClients`; old evicted |
-| `TestDuplicateConnectDuringPause` | Reconnect during pause succeeds (not treated as duplicate) |
-
-Run: `go test ./internal/room/...`
+Real goroutines, minimal `time.Sleep`. Same patterns and test structure as MVP1.
 
 ### Layer 3: Playwright E2E (`e2e/`)
 
-Multi-player scenarios use two `BrowserContext` objects in one test process. Playwright's `webServer` config auto-starts both Go server (`:8080`) and Vite dev server (`:5173`).
-
-| Spec | Tests |
-|---|---|
-| `lobby.spec.ts` | Create shows 4-char code; join with bad code shows error; waiting overlay appears; HUD activates when P2 joins |
-| `gameplay.spec.ts` | Canvas + HUD visible after both connect; gold counter increases over time; sidebar visible |
-| `connection.spec.ts` | Duplicate tab shows "Already Connected"; URL hash reconnects after tab close; pause banner on opponent disconnect |
-| `responsive.spec.ts` | Desktop: sidebar left, destructive panel hidden; Mobile portrait: sidebar bottom, destructive panel top-left; Mobile landscape: sidebar + HUD visible |
-
-**Setup:**
-```bash
-npm install                   # installs @playwright/test from root package.json
-npx playwright install chromium
-make test-e2e                 # starts both servers, runs e2e/, exits
-```
+Two `BrowserContext` objects, `webServer` config auto-starts both servers. Test specs written after client implementation.
 
 Run all tests: `go test ./... && make test-e2e`
 
@@ -440,96 +308,72 @@ Run all tests: `go test ./... && make test-e2e`
 ### Infrastructure
 
 - **Host:** Fly.io (`hexar.fly.dev`)
-- **Dockerfile:** Multi-stage — `node:20-alpine` (Vite build) → `golang:1.23-alpine` (server build, `CGO_ENABLED=0 GOOS=linux`) → `gcr.io/distroless/static-debian12` (runtime; no shell, minimal attack surface)
-- **`fly.toml`:** `auto_stop_machines = false` (CRITICAL — Fly default sleep kills active WebSocket connections), `min_machines_running = 1`, `force_https = true` (auto TLS upgrades `ws://` → `wss://`)
-- **Health endpoint:** `GET /health` → `{"status":"ok","version":"..."}` — Fly.io uses this for crash detection
+- **Dockerfile:** Multi-stage — `node:20-alpine` (Vite build) → `golang:1.23-alpine` (server build, `CGO_ENABLED=0 GOOS=linux`) → `gcr.io/distroless/static-debian12` (runtime)
+- **`fly.toml`:** `auto_stop_machines = false` (CRITICAL — Fly default sleep kills active WebSocket connections), `min_machines_running = 1`, `force_https = true`
+- **Health endpoint:** `GET /health` → `{"status":"ok","version":"..."}`
 
 ### CI/CD Pipeline (GitHub Actions)
 
-`.github/workflows/deploy.yml`:
-
-```yaml
-on:
-  push:
-    branches: [main]
-    paths:                 # skip pipeline for doc-only changes
-      - 'cmd/**'
-      - 'internal/**'
-      - 'client/**'
-      - 'go.mod'
-      - 'go.sum'
-      - 'Dockerfile'
-      - 'fly.toml'
-jobs:
-  test: ...               # go test ./...
-  deploy:
-    needs: test
-    if: "!contains(github.event.head_commit.message, '[skip deploy]')"
-```
-
-- Add `[skip deploy]` to commit message to skip the deploy job while still running tests
-- `FLY_API_TOKEN` stored in GitHub secrets
-
-### Known Limitations
-
-- Rooms are in-memory — a server restart ends all active games. Future fix: SQLite via `modernc.org/sqlite` (pure Go, no CGO) persisting room state as JSON blob.
-- WebSocket URL switches automatically: `wss://` in production, `ws://` in dev (`import.meta.env.PROD`)
+`.github/workflows/deploy.yml` — deploys on push to `main` when code paths change. Add `[skip deploy]` to commit message to skip deploy while running tests.
 
 ---
 
-## Current Status & Future Work
+## Current Status
 
-**🎉 MVP Status: COMPLETE** (Deployed to Fly.io)
+**MVP1:** Complete on `release_mvp_1` branch (Power gate combat system). Deployed to Fly.io.
 
-### Status: M1–M9 Complete
+**Active branch (`mvp_fix_combat_2026_06_13`):** Redesigning combat to deck-building system.
 
-All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, delta sync. M7: visual polish + sidebar. M8: testing (Go unit + room integration + Playwright E2E). M9: Fly.io deployment + GitHub Actions CI/CD.
+### Implementation Progress
 
-### Post-M9 Fixes
+| Step | Status |
+|------|--------|
+| Design spec (deck-building concept) | ✅ `.claude/design/combat-deck-building-concept.md` |
+| CLAUDE.md rewrite | ✅ Complete |
+| Graphical design (UI layout spec) | ✅ `.claude/design/ui-layout-deck-building.md` |
+| Delete old game logic / stub new state | ✅ Complete — new `internal/game/` compiles, all room tests pass |
+| Core backend (bar, deck, units, win) | ⬜ Not started |
+| Shop card pool design | ⬜ Not started |
+| Shop backend implementation | ⬜ Not started |
+| Client rewrite | ⬜ Not started |
+| Playtest + iterate | ⬜ Not started |
 
-| Fix | Trigger |
-|---|---|
-| Mobile destructive actions moved to top-left panel | On mobile, context actions at bottom bar were obscured or mis-tapped |
-| Deselect on demolish | After demolish, hex stayed selected — stale upgrade/attack buttons remained |
-| Fortify timer capture flash | Hex re-flashed every 1s when fortified — `previousOwner` never reset by server; fixed by comparing `hex.owner` vs `state.hexes` owner, not wire `previousOwner` |
-| Delta quantization for FortifyTimer | Timer changed every 100ms tick → fortified hexes in every delta; now only sent when timer crosses a 1-second boundary |
-| Keyboard shortcut deselect (D/X) | After D (Demolish) or X (Sell Hex), hex stayed selected; fixed by adding `selectedHex = null; renderer.setSelected(null); sidebar.hide()` to both keyboard handlers |
-| Delta packet size optimization | Idle game sent 526 bytes/tick (>500 limit); fixed by diffing `Tech []bool` in `buildDelta` (omit when unchanged) and making `Battles` omitempty |
-| omitempty safety on reverting PlayerDTO fields | Caught in review: `AutoDropActive/Grace/VanguardTimer` must never be omitempty — they revert to zero/false and the delta spread would preserve stale client values. Documented in State Sync; added defensive optional types on client with `?? 0` null coalescing |
-| Battle stuck in progress after resolution | `Battles` had `omitempty` — when battles cleared to `[]`, field was omitted from delta; client `?? state.battles` fallback preserved stale battles. Fixed by removing `omitempty` from `Battles` in `DeltaMsg` and removing the `??` fallback in `applyDelta` |
-| CI/CD path filters | Pipeline ran on every commit including doc-only changes; added `paths:` filter + `[skip deploy]` convention |
+### Open Questions (TBD)
 
-### Open Questions (Playtesting)
-
-- [ ] Does the exponential cost curve feel right? Too fast/slow?
-- [ ] Is the +3 counter-spend cap balanced? Does it create interesting battles?
-- [ ] Does the 70-hex map hit the 30-min game length target?
-- [ ] Do all tech archetypes appear in practice, or do 2–3 dominate?
-- [ ] Choke point deadlock: narrow maps allow a single high-Power hex to block all expansion. Map generation must avoid single-hex corridors, or add a flanking mechanic.
-- [ ] Vanguard stacking: timer refreshes on each capture. Does this create an unstoppable snowball?
+- [ ] Shop card pool: which cards, costs, quantities
+- [ ] Tower stats (HP, range, fire rate)
+- [ ] Spawner unit type and spawn interval
+- [ ] Bar speed building bonus value
+- [ ] Auto-cycle lockout timer value
+- [ ] Map size and capital distance
+- [ ] Capital damage per soldier (likely 1)
+- [ ] Bar scale cap (is 0–10 correct?)
+- [ ] +15% bar stacking: additive confirmed, exact formula TBD
 
 ### Future Mechanics (Post-MVP)
 
-- [ ] **Tech Tree Benefit Display:** Show quantitative benefits (e.g., "Prosperity: +3.0 gold/s total with 3 Economy buildings"). Deferred — current static descriptions sufficient.
 - [ ] **4-player support** (2v2 with shared resources; MessagePack for bandwidth)
-- [ ] **SQLite match history** (`modernc.org/sqlite` for room state persistence)
-- [ ] **OAuth authentication** + ranked ladder + cosmetics
-- [ ] **Special hex types** (mountains, water, resource nodes)
-- [ ] **Sprite-based hex rendering** (replace flat fill with 3D/material look; `drawHexFill` intentionally minimal until then)
+- [ ] **SQLite match history** (`modernc.org/sqlite`)
+- [ ] **OAuth authentication** + ranked ladder
+- [ ] **Special hex types** (terrain effects on unit speed)
+- [ ] **Additional unit and building card expansion**
 
 ---
 
 ## Rejected Alternatives
+
+### Combat System
+
+- **Power gate (MVP1 — `release_mvp_1`):** Permanent stalemates when both players stack Power buildings at borders. Neither player can break through once power is matched.
+- **Action Bar + Roguelike (Variant E):** Bar fills from hex count + economy buildings − tower maintenance. Research points as second resource. Roguelike stat-bonus picks. Too many parallel systems running simultaneously (bar + research points + territory income + pick management). Replaced by single-resource deck-building.
+
+### Infrastructure
 
 - **Node.js server:** Go developer; worse concurrency model for tick loops
 - **Phaser/PixiJS:** Overkill for colored hexagons + text; adds framework weight
 - **React/Vue/Svelte (for MVP):** Ceremony for "draw hexagons, update numbers" UI
 - **WebRTC:** Massive complexity for P2P; WebSocket + 100ms ticks is fine for Hexar
 - **Serverless (Lambda):** Can't maintain WebSocket + tick loop — wrong model for real-time games
-- **Player-hosted P2P:** Trust issues, NAT traversal, cheating risk
-- **Radial context menu:** Occludes adjacent hexes during battles when Garrison bonuses are visible
-- **Bottom build menu:** 40% slower for batch building (10 actions vs 6 for placing 5 buildings)
-- **Neutral hex state (between unclaimed/owned):** Adds UI complexity with no gameplay benefit; matches Antiyoy's simpler 2-state model
 
 ---
 
@@ -537,37 +381,6 @@ All milestones shipped and deployed to Fly.io. M1–M6: core game loop, lobby, d
 
 **Purpose:** Track what changed during beta testing and why.
 
-### Beta Cycle 1 (May 2026) — [Czech Tester](.claude/feedback/sessions/tester_czech_2026-05-17.md)
+### Beta Cycle 1 (May 2026) — MVP1 Power Gate System
 
-| Status | Issue | Change | Reasoning |
-|--------|-------|--------|-----------|
-| ✅ | HUD: "TP" label confusing | Rename to "Research" in HUD + Tech Tree display | New players didn't know what TP meant; "Research" ties directly to the building that generates it |
-| ✅ | Sidebar: selected hex shows no building info | Add building name (Gold Mine/Barracks/Laboratory), level, and output (g/s / Pwr / Research/s) | Testers couldn't tell what was on a hex without guessing from canvas label |
-| ✅ | Sidebar: hex position on same line as info | Move `[q,r]` to muted second line | Coords are secondary info; shouldn't compete with building name |
-| ✅ | Buttons: context vs build different sizes | Standardize all `.sidebar-btn` and icon sizes | Visual inconsistency; unpredictable hit areas |
-| ✅ | Buttons: icons different sizes | Standardize all SVG icons to 20×20 | Same as above |
-| ✅ | Smart building: Q/W/E on selected hex | All hotkeys act on hex under mouse cursor (LoL-style); Q/W/E fall back to tool toggle when no valid hover target; toggle chip in BUILD section (default OFF) | Experienced players wanted faster flow without clicking first; toggle lets new players keep familiar click-select behavior |
-| ✅ | Attack preview: Garrison not shown in power req | Show breakdown `Pwr > base + Garrison = total` when Garrison active | Testers misclicked attacks that failed due to hidden Garrison bonus |
-| ✅ | Tech tree: no close button | Add ✕ button top-right | Standard modal UX; ESC-only was not discoverable |
-| ✅ | Empty hex: Demolish/Sell show no feedback | Show `0g` + disable buttons when hex has no building | Buttons appeared active but did nothing — misleading |
-| ✅ | HUD: Research label misaligns numeric values | Increased `.hud-label` min-width 50px → 70px | "Research:" longer than "Gold:"/"Hexes:" broke column alignment |
-| ✅ | Sidebar: context buttons jump position | Wrap hex info in fixed-height `hex-info-block` (36px) | Variable lines (0–2) between power label and buttons caused layout shift |
-| ✅ | Sidebar: Pwr:0 shown on empty hexes | Only render power label when `defPower > 0` | Zero power is noise — no combat relevance for own empty hexes |
-| ✅ | Sidebar: building level shown as "L2" | Changed to `(Level 2)` | Shorthand was unclear to new players |
-
-**Legend:** ⬜ Planned · 🔄 In Progress · ✅ Done · ❌ Rejected
-
-### Beta Cycle 1 — Round 2 (May 2026) — [Czech Tester](.claude/feedback/sessions/tester_czech_2026-05-17-round2.md)
-
-| Status | Issue | Change | Reasoning |
-|--------|-------|--------|-----------|
-| ✅ | Empty hex has no name | Added "Unclaimed Territory" (unowned) and "Empty Field" (owned) labels in sidebar | Selecting unclaimed hex showed nothing meaningful |
-| ✅ | Capital: Pwr label above building name | Power label moved below building info; building output + innate Pwr merged (e.g. `+3.9 g/s  Pwr: 1`); Power building on capital shows combined total (e.g. `Pwr: 3`) | Capital can have both innate power and a building; order showed them out of sequence |
-| ✅ | Smart Build ON still enters sticky tool mode | When Smart Build ON, Q/W/E fire instantly on hovered hex — sticky mode never entered | Two interaction models active simultaneously caused confusion |
-| ✅ | Build and upgrade via same hotkey | Q/W/E: build on empty hex, upgrade if matching building present; cost visible in sidebar context | Separate flows felt redundant |
-| ✅ | Attack by clicking opponent hex directly | Smart Build ON: clicking enemy hex attacks directly; sidebar updates on hover to show cost/power diff | Current select→A flow felt slow |
-| ❌ | Auto counter-spend: spend only when needed to flip | Not implemented — player agency prioritized over automation | Manual counter-spend preserves tactical depth and strategic decisions |
-| ✅ | Buildings should take time to upgrade | 5s construction delay per upgrade; blue timer ring (like Fortify); sidebar shows "Upgrading... Xs"; captured/dropped hexes reset timer | Instant upgrades removed tension; delay rewards planning |
-| ✅ | Mobile: hex info placement | Hex info block fixed top-right below HUD; context buttons remain in bottom bar | Bottom-bar hex info obscured / hard to reach on mobile |
-
-**Legend:** ⬜ Planned · 🔄 In Progress · ✅ Done · ❌ Rejected
+Full feedback log preserved on `release_mvp_1` branch CLAUDE.md. MVP1 testing revealed the stalemate problem that motivated the deck-building redesign.
