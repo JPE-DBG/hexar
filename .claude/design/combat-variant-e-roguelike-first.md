@@ -12,7 +12,7 @@ Parent concept: `combat-unit-rush-concept.md`
 
 ## One-Line Pitch
 
-Players start with only one card (Settler) ❓ and build their entire combat kit through roguelike research picks. Every game feels different because the kit is assembled from scratch.
+Players start with 4 cards and unlock a complete combat kit through fixed research thresholds. Roguelike picks (stat bonuses + behavioral evolutions) make every game play differently within the same card set.
 
 ---
 
@@ -34,17 +34,26 @@ Players start with only one card (Settler) ❓ and build their entire combat kit
 Bar fills from **all three sources combined**:
 
 ```
-bar_fill_rate = (owned hexes × base_per_hex)
-              + (economy buildings × economy_bonus)
+bar_fill_rate = (owned hexes × 0.1/sec)
+              + (economy buildings × 0.3/sec)
               − (tower maintenance per level)
 ```
 
-- **Every owned hex**: +base/sec regardless of building on it
-- **Economy building**: additional +bonus/sec on that hex (amplifies it)
-- **Tower (any level)**: ongoing maintenance drain from bar rate
-- Numbers (base_per_hex, economy_bonus, maintenance) deferred until unit mechanics settled
+| Source | Rate |
+|--------|------|
+| Each owned hex | +0.1/sec |
+| Gold Mine | +0.3/sec additional |
+| Tower L1 | −0.1/sec drain |
+| Tower L2 | −0.2/sec drain |
+| Tower L3 | −0.3/sec drain |
+| Tower L4 | −0.5/sec drain |
 
-**Key property:** towers are net-negative on bar rate. Every tower built slows unit production. Defense costs offense. This is the anti-stalemate mechanism — a player who builds 15 towers has almost no bar to send soldiers.
+**Representative values:**
+- 5 hexes: 0.5/sec → Basic Soldier every 8s
+- 10 hexes + 2 Gold Mines: 1.6/sec → Basic Soldier every 2.5s (unit cap binding)
+- 20 hexes + 5 Gold Mines + 3 Tower L2s: 2.0 + 1.5 − 0.6 = 2.9/sec
+
+**Key property:** towers are net-negative on bar rate. Defense costs offense. A player with 5 Tower L4s loses 2.5/sec — their offensive output is severely limited. This is the anti-stalemate mechanism.
 
 ---
 
@@ -104,11 +113,11 @@ bar_fill_rate = (owned hexes × base_per_hex)
 ## Action Bar
 
 - Scale: 0–10
-- Unit cap: no hard cap initially — revisit if playtesting shows chaos ✅
+- Unit cap: **3 simultaneous units per player** ✅ — prevents bar overflow at full expansion; bar fills but no unit spawns if 3 are active
 
 ### Bar Fill Rate ✅ (resolved above)
 
-See Bar Fill Rate section. Formula: `hexes × base_per_hex + economy buildings × bonus − tower maintenance`. Numbers deferred.
+See Bar Fill Rate section. Formula: `hexes × 0.1 + economy buildings × 0.3 − tower maintenance`.
 
 ---
 
@@ -119,17 +128,17 @@ See Bar Fill Rate section. Formula: `hexes × base_per_hex + economy buildings �
 | Card | Cost | Effect |
 |------|------|--------|
 | **Settler** | 2 bar | Unit marches to nearest unclaimed hex, claims it, dissolves |
-| **Basic Soldier** | 4 bar | Unit marches toward enemy capital, captures hexes en route, fights on contact (1 HP) |
-| **Gold Mine** | TBD | Places Economy building on owned hex — boosts bar fill rate |
-| **Research Lab** | TBD | Places Research building on owned hex — generates research points passively |
+| **Basic Soldier** | 4 bar | 1 HP, marches toward enemy capital, captures hexes en route, fights on contact |
+| **Gold Mine** | 5 bar | Places Economy building — +0.3/sec bar fill (16.7s payback — real tradeoff vs Soldiers) |
+| **Research Lab** | 3 bar | Places Research building — generates research points passively |
 
-Both players start identical. First direct interaction possible from the first seconds of the game (Basic Soldier available immediately).
+Both players start identical. First direct interaction possible from the first seconds (Basic Soldier available immediately).
 
 **Economy and Research buildings:** always available — no research required to place them.
 
 **Towers and army unit upgrades:** require research to unlock (see Research System below).
 
-**Bar fill rate:** see Bar Fill Rate section above ✅. Exact numbers (base_per_hex, economy_bonus) deferred to playtesting.
+**Bar fill rate:** see Bar Fill Rate section ✅.
 
 ---
 
@@ -138,77 +147,132 @@ Both players start identical. First direct interaction possible from the first s
 ### How research works ✅
 - **Research buildings generate research points** passively (per second)
 - More Research Labs built = faster point accumulation
-- When a point threshold is reached: player sees **3 random stat bonuses**, picks 1 permanently
-- Picks are **unlimited** — player controls the pace entirely through Research Lab investment
+- Two types of events when threshold is crossed:
+  1. **Card unlock** (deterministic) — a new card becomes available to all players at fixed thresholds
+  2. **Roguelike pick** (player choice) — player sees 3 random stat bonuses/evolutions, picks 1 permanently
+- Picks are **unlimited** — player controls pace through Research Lab investment
 
 ### Roguelike structure ✅
-- **Cards auto-unlock** at fixed research thresholds — deterministic, no choice involved
-- **Roguelike picks are stat bonuses only** (not cards)
-- Bonuses can improve any aspect: economy, army stats, bar fill, towers, research speed
-- Example bonuses: "+1 Soldier HP", "+20% bar fill rate", "+1 tower attack range", "+25% research points/sec"
+- **Cards auto-unlock** at fixed research thresholds — deterministic, same for all players, no choice
+- **Roguelike picks are stat bonuses and behavioral evolutions** (not cards)
+- Picks differentiate players: same card pool, different power modifiers
 
-### Card unlock progression ✅ (structure confirmed, order = initial draft)
-Towers and army unit upgrades unlock automatically as research thresholds are crossed. Economy buildings (Gold Mine) and Research Lab are always available and do NOT require research.
+### Card unlock progression ✅
 
-Initial draft unlock order (needs full brainstorm before finalizing):
-| Approx threshold | Card | Type |
-|-----------------|------|------|
-| 1 (early) | Watchtower (Tower L1) | Building |
-| 2 | Raider | Unit — targets Economy buildings |
-| 3 | Tower L2 (Archer) | Building upgrade |
-| 4 | Squad | Unit — replaces Basic Soldier |
-| 5 | Tower L3 (Ballista) | Building upgrade |
-| 6 | Assassin | Unit — bypasses towers |
-| 7 | Siege Engine | Unit — destroys towers |
-| 8 (late) | Tower L4 (Fortress) | Building upgrade |
+| Threshold | Card Unlocked | Bar Cost | Category |
+|-----------|--------------|----------|----------|
+| 1 | **Scout** | 1 | Unit — cycle/pressure |
+| 2 | **Tower L1 (Watchtower)** | 3 | Building — first defense |
+| 3 | **Raider** | 3 | Unit — economy disruptor |
+| 4 | **Tower L2 (Archer)** | 4 | Building — ranged defense (requires L1) |
+| 5 | **Heavy Soldier** | 6 | Unit — tank win condition (2 HP) |
+| 6 | **Catapult** | 5 | Unit — splash support |
+| 7 | **Tower L3 (Ballista)** | 5 | Building — strong defense (requires L2) |
+| 8 | **Assassin** | 5 | Unit — tower-bypass win condition |
+| 9 | **Siege Engine** | 7 | Unit — tower destroyer |
+| 10 | **Tower L4 (Fortress)** | 6 | Building — ultimate defense (requires L3) |
 
-**⚠️ This card order is an initial draft — needs dedicated brainstorm session before implementation.**
+Siege Engine (threshold 9) unlocks before Tower L4 (threshold 10) — counter always available before ultimate defense.
 
 ### Thresholds ❓
-- Exact point thresholds deferred — set after bar rate numbers and bonus pool finalized
+- Exact point values deferred — set after implementation
 - Model: increasing cost per pick (each pick requires more points than previous)
 
 ---
 
-## Card Library ⚠️ INITIAL DRAFT — NEEDS COMPLETE REDESIGN
+## Unit Types ✅
 
-> The tier-based card system below is **obsolete**. The new structure is:
+### All Bar Costs
+
+| Card | Bar | HP | Speed | Behavior |
+|------|-----|----|-------|---------|
+| Scout | 1 | 0 (no combat) | 1 hex/sec | Claims 1 unclaimed hex toward opponent, dissolves |
+| Settler | 2 | 0 (no combat) | 0.5 hex/sec | Claims nearest unclaimed hex, dissolves |
+| Basic Soldier | 4 | 1 | 0.5 hex/sec | Marches to capital |
+| Raider | 3 | 1 | 0.5 hex/sec | Targets Economy buildings first, then capital |
+| Heavy Soldier | 6 | 2 | 0.5 hex/sec | Marches to capital, survives 2 tower hits |
+| Catapult | 5 | 1 | 0.3 hex/sec | Advances to capital; on death: 1 damage to all units/towers in 1-hex radius |
+| Assassin | 5 | 1 | 0.5 hex/sec | Ignores towers (doesn't trigger them), goes to capital |
+| Siege Engine | 7 | 3 | 0.3 hex/sec | Targets towers first, takes 0 damage while attacking a tower |
+
+### Unit Target Priority
+
+| Unit | Priority 1 | Priority 2 | Priority 3 |
+|------|-----------|-----------|-----------|
+| Basic Soldier | Enemy units | Towers | Capital |
+| Heavy Soldier | Enemy units | Towers | Capital |
+| Scout | Nearest unclaimed hex toward opponent | Dissolves on claim | — |
+| Raider | Economy buildings | Research Labs | Capital |
+| Assassin | Capital directly | (ignores towers and enemy units) | — |
+| Catapult | Advances to capital | Explodes on death (1-hex splash) | — |
+| Siege Engine | Towers | Then normal advance | Capital |
+
+### Counter Triangle
+
+```
+3× Basic Soldiers (swarm)  →  countered by  →  Catapult (splash kills cluster)
+Catapult (slow, 1 HP)      →  countered by  →  Heavy Soldier (survives, kills before arrival)
+Heavy Soldier (tank)       →  countered by  →  Tower L2+ (ranged fire kills 2-HP unit)
+Tower (static defense)     →  countered by  →  Siege Engine (destroys towers)
+Siege Engine (slow)        →  countered by  →  Basic Soldiers (fast, cheap, overwhelm)
+                                                    ↕ loops back to Catapult countering swarm
+```
+
+---
+
+## Roguelike Pick Pool ✅
+
+### Behavioral Evolutions (behavior changes, not stat boosts)
+
+| Pick | Effect |
+|------|--------|
+| "Raider Network" | Raider now targets ALL buildings (Research Labs + Economy) |
+| "Ghost Protocol" | Assassin ignores enemy units too (full ghost — passes through everything) |
+| "Siege Armor" | Siege Engine takes 0 damage from towers it is currently attacking |
+| "Tower Refund" | When one of your towers kills an enemy unit → +1 bar (**defensive win path**) |
+| "Pack Tactics" | Basic Soldiers gain +1 HP when 3 are active simultaneously |
+
+### Stat Bonuses
+
+| Pick | Effect |
+|------|--------|
+| "Hardened" | All units +1 HP |
+| "Swift" | All units +25% movement speed |
+| "Sniper" | All towers +1 attack range |
+| "Reinforced" | All towers +1 HP |
+| "Alert" | Guarding Soldier chase leash +2 hexes |
+| "Efficiency" | Gold Mine +25% bar fill (0.3 → 0.375/sec) |
+| "Accelerate" | Research Labs +25% points/sec |
+
+**Tower Refund** is the defensive win path: kill enemy unit with tower → gain +1 bar → counter-push while opponent's bar regenerates.
+
+---
+
+## Archetypes ✅
+
+| Archetype | Core Strategy | Key Cards | Key Picks |
+|-----------|--------------|-----------|-----------|
+| **Aggressor** | Constant Soldier pressure + Raider economy destruction | Soldier, Raider, Assassin | Swift, Raider Network |
+| **Turtle-Pusher** | Tower line → Tower Refund farm → Siege breach | Towers, Siege Engine | Tower Refund, Siege Armor |
+| **Economist** | Gold Mine first, delayed but powerful army | Gold Mine × 3, Heavy Soldier | Efficiency, Hardened |
+| **Rusher** | Scout cycle + 3× Soldiers before opponent builds towers | Scout, Basic Soldier | Pack Tactics, Swift |
+
+---
+
+## Card Library ✅
+
+> The tier-based card system below this section is **obsolete**. Current structure:
 > - 4 starting cards (always available): Settler, Basic Soldier, Gold Mine, Research Lab
-> - Remaining cards auto-unlock through research thresholds (no choice)
-> - Roguelike picks are **stat bonuses**, not cards
->
-> The card list below is preserved as a brainstorm reference only. Nothing in it is confirmed.
+> - 10 cards auto-unlock through research thresholds (see Research System above)
+> - Roguelike picks are **stat bonuses + behavioral evolutions** (see Roguelike Pick Pool above)
 
 ---
 
-### Bonus Pool ⚠️ INITIAL DRAFT — needs confirmation
-
-Each research pick shows 3 random bonuses from this pool. Player picks 1.
-
-**Economy:**
-- "Efficiency": Economy buildings +20% bar fill
-- "Territory Yield": Each owned hex +10% bar contribution
-- "Quick Build": Gold Mine and Research Lab cost 1 less bar
-
-**Research:**
-- "Accelerate": Research buildings generate 25% more points/sec
-- "Deep Focus": First research building placed generates double points
-
-**Army:**
-- "Hardened": All units +1 HP
-- "Swift": All units move 25% faster
-- "Raider Mastery": Raider destroys 2 economy buildings per contact instead of 1
-- "Siege Expert": Siege Engine takes 25% less damage
-
-**Tower:**
-- "Alert": Guarding Soldier chase leash +2 hexes
-- "Sniper": All towers +1 attack range
-- "Reinforced": All towers +1 HP
-- "Tower Network": Towers share vision — unit spotted by one is targeted by all in range
+### Bonus Pool ✅ (see Roguelike Pick Pool section above)
 
 ---
 
-### Old Tier System (obsolete — for brainstorm reference only)
+### Old Tier System (obsolete — preserved for reference only, do not use)
 
 #### Tier 0 (Always Available)
 | Card | Cost | Effect |
@@ -320,7 +384,7 @@ A unit enters the enemy capital hex → unit dissolves, capital loses 1 HP. When
 
 **Capital HP:** TBD — initial draft = 2 (requires 2 units to reach the capital). Subject to playtesting.
 
-**No HP reset** — capital damage is permanent. A failed push still weakens the capital; grinding it down over multiple pushes is a valid strategy.
+**No HP reset** — capital damage is permanent. A failed push still weakens the capital; grinding it down over multiple pushes is a valid strategy. Reaserch can add option to heal capital.
 
 **Future:** Capital may have a built-in upgradeable tower as a defensive option — deferred, not in initial implementation.
 
