@@ -12,6 +12,9 @@ export interface MockHex {
 const SQRT3 = Math.sqrt(3);
 const HEX_W = SQRT3 * HEX_SIZE;
 const HEX_H = 2 * HEX_SIZE;
+// Clip path is scaled down slightly so it falls inside the PNG hex boundary,
+// preventing the dark canvas background from bleeding through at hex edges.
+const HEX_CLIP_SCALE = 0.90;
 
 export class Renderer {
   private canvas: HTMLCanvasElement;
@@ -74,8 +77,8 @@ export class Renderer {
 
     for (const hex of this.hexes) {
       const { x, y } = hexToPixel(hex);
-      const px = x + this.offsetX;
-      const py = y + this.offsetY;
+      const px = x * HEX_CLIP_SCALE + this.offsetX;
+      const py = y * HEX_CLIP_SCALE + this.offsetY;
 
       const imgName = hex.capital ? 'hex-tile-capital'
         : hex.owner === 1 ? 'hex-tile-p1'
@@ -87,8 +90,8 @@ export class Renderer {
       this.ctx.beginPath();
       for (let i = 0; i < 6; i++) {
         const angle = (Math.PI / 180) * (60 * i - 30);
-        const hx = px + HEX_SIZE * Math.cos(angle);
-        const hy = py + HEX_SIZE * Math.sin(angle);
+        const hx = px + HEX_SIZE * HEX_CLIP_SCALE * Math.cos(angle);
+        const hy = py + HEX_SIZE * HEX_CLIP_SCALE * Math.sin(angle);
         if (i === 0) this.ctx.moveTo(hx, hy); else this.ctx.lineTo(hx, hy);
       }
       this.ctx.closePath();
